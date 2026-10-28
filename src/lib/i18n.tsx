@@ -20,6 +20,11 @@ const dict = {
   },
   email: { ar: 'البريد الإلكتروني', en: 'Email' },
   password: { ar: 'كلمة المرور', en: 'Password' },
+  notAppUserTitle: { ar: 'الحساب ده مش متسجل في خدمة', en: 'This account is not registered in Khedma' },
+  notAppUserHelp: {
+    ar: 'الحساب ده بتاع تطبيق تاني. اطلب من الأدمن يضيفك، أو اعمل حساب جديد من صفحة الدخول.',
+    en: 'This account belongs to another app. Ask the admin to add you, or create a new account from the sign-in page.',
+  },
   createAccount: { ar: 'إنشاء حساب', en: 'Create account' },
   noAccount: { ar: 'معندكش حساب؟', en: 'No account?' },
   haveAccount: { ar: 'عندك حساب؟', en: 'Have an account?' },
@@ -288,6 +293,11 @@ const dict = {
     ar: 'هيتمسح حساب "{email}" نهائياً. الأولاد والبيانات اللي ضافها هتفضل موجودة. متأكد؟',
     en: 'The account "{email}" will be deleted for good. Children and data they added stay. Sure?',
   },
+  sharedAccount: { ar: 'حساب مشترك مع مشروع تاني', en: 'Shared with another app' },
+  sharedAccountHelp: {
+    ar: 'الحساب ده مستخدم كمان في مشروع تاني على نفس Supabase. تقدر تضيفه لفصل أو تشيله منه، بس مينفعش تمسحه أو تغيّر إيميله أو الباسورد من هنا.',
+    en: 'This account is also used by another app in the same Supabase project. You can add it to or remove it from classes, but not delete it or change its email or password here.',
+  },
   addToClass: { ar: '+ ضيف لفصل', en: '+ Add to class' },
   removeFromClass: { ar: 'شيل من الفصل', en: 'Remove from class' },
   you: { ar: 'إنت', en: 'You' },
@@ -302,8 +312,8 @@ const dict = {
   auditUserUpdated: { ar: 'تعديل حساب', en: 'Account edited' },
   auditUserDeleted: { ar: 'حذف حساب', en: 'Account deleted' },
   functionMissing: {
-    ar: 'لازم تنشر الـ Edge Function اللي اسمها admin-users الأول (التفاصيل في README).',
-    en: 'Deploy the admin-users Edge Function first (see README).',
+    ar: 'لازم تنشر الـ Edge Function اللي اسمها khedma-admin-users الأول (التفاصيل في README).',
+    en: 'Deploy the khedma-admin-users Edge Function first (see README).',
   },
 } satisfies Record<string, Record<Lang, string>>
 

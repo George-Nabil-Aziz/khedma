@@ -1,9 +1,9 @@
-// Supabase Edge Function: admin-users
+// Supabase Edge Function: khedma-admin-users
 // Lets an admin create, edit and delete accounts. Runs on Supabase's servers, so the
 // service-role key (SUPABASE_SERVICE_ROLE_KEY, provided automatically) never reaches the browser.
 //
 // Deploy: Supabase Dashboard → Edge Functions → Deploy a new function → Via Editor,
-// name it exactly "admin-users", paste this file, Deploy.
+// name it exactly "khedma-admin-users", paste this file, Deploy.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
@@ -41,6 +41,14 @@ Deno.serve(async req => {
       .from('audit_log')
       .insert({ user_id: caller.user!.id, user_email: caller.user!.email, action, table_name: 'users', record_id: id, new_data: data })
 
+  // Accounts are shared with bishoy-saber-notes in this Supabase project. Never delete such an
+  // account or change its email / password from here — that would break the other app.
+  const isShared = async (id: string) => {
+    const { data, error } = await admin.schema('khedma_2027').rpc('is_shared_account', { p_user: id })
+    return error ? true : data === true // unsure → treat as shared, i.e. refuse
+  }
+  const SHARED = 'This account is also used by another app in this project — it cannot be deleted or have its email / password changed here.'
+
   switch (body.action) {
     case 'create': {
       if (!body.email || !body.password) return json({ error: 'Email and password are required' }, 400)
@@ -49,8 +57,10 @@ Deno.serve(async req => {
         password: body.password,
         email_confirm: true,
         app_metadata: body.admin ? { role: 'admin' } : {},
+        user_metadata: { app: 'khedma_2027' }, // puts it on Khedma's list of accounts
       })
       if (error) return json({ error: error.message }, 400)
+      await admin.schema('khedma_2027').from('app_users').upsert({ user_id: data.user.id })
       await audit('user_create', data.user.id, { email: data.user.email, admin: !!body.admin })
       return json({ id: data.user.id })
     }
@@ -58,6 +68,7 @@ Deno.serve(async req => {
     case 'update': {
       if (!body.id) return json({ error: 'id is required' }, 400)
       if (body.id === caller.user!.id && body.admin === false) return json({ error: 'You cannot remove your own admin role' }, 400)
+      if ((body.email || body.password) && (await isShared(body.id))) return json({ error: SHARED }, 403)
       const changes: Record<string, unknown> = {}
       if (body.email) changes.email = body.email.trim()
       if (body.password) changes.password = body.password
@@ -72,6 +83,7 @@ Deno.serve(async req => {
     case 'delete': {
       if (!body.id) return json({ error: 'id is required' }, 400)
       if (body.id === caller.user!.id) return json({ error: 'You cannot delete your own account' }, 400)
+      if (await isShared(body.id)) return json({ error: SHARED }, 403)
       const { error } = await admin.auth.admin.deleteUser(body.id)
       if (error) return json({ error: error.message }, 400)
       await audit('user_delete', body.id, {})

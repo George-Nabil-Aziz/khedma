@@ -6,14 +6,14 @@ import { PasswordInput } from '../components/PasswordInput'
 import { sync, useStore } from '../lib/store'
 import { CloudOffIcon, PencilIcon, PlusIcon, ShieldIcon, SyncIcon, TrashIcon, XIcon } from '../components/Icons'
 
-type User = { id: string; email: string; display_name: string | null; created_at: string; last_sign_in_at: string | null; is_admin: boolean; class_ids: string[] }
+type User = { id: string; email: string; display_name: string | null; created_at: string; last_sign_in_at: string | null; is_admin: boolean; shared: boolean; class_ids: string[] }
 
 const input =
   'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800'
 
-/** Account changes go through the admin-users Edge Function — the browser never holds the service key. */
+/** Account changes go through the khedma-admin-users Edge Function — the browser never holds the service key. */
 async function callAdmin(body: Record<string, unknown>): Promise<string | null> {
-  const { error } = await supabase.functions.invoke('admin-users', { body })
+  const { error } = await supabase.functions.invoke('khedma-admin-users', { body })
   if (!error) return null
   if (error instanceof FunctionsHttpError) {
     try {
@@ -121,6 +121,11 @@ export function UsersPage({ myId }: { myId: string }) {
                     </span>
                   )}
                   {u.id === myId && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold dark:bg-slate-800">{t('you')}</span>}
+                  {u.shared && (
+                    <span title={t('sharedAccountHelp')} className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">
+                      {t('sharedAccount')}
+                    </span>
+                  )}
                   <span className="ms-auto text-xs text-slate-500">
                     {t('lastSignIn')}: {u.last_sign_in_at ? time.format(new Date(u.last_sign_in_at)) : t('neverSignedIn')}
                   </span>
@@ -133,7 +138,7 @@ export function UsersPage({ myId }: { myId: string }) {
                   >
                     <PencilIcon />
                   </button>
-                  {u.id !== myId && (
+                  {u.id !== myId && !u.shared && (
                     <button
                       onClick={() => window.confirm(t('deleteUserConfirm').replace('{email}', u.email)) && run(() => callAdmin({ action: 'delete', id: u.id }))}
                       disabled={!online}
@@ -303,20 +308,21 @@ function EditUser({
 
   return (
     <form onSubmit={submit} className="grid gap-2 rounded-lg bg-slate-50 p-3 sm:grid-cols-[1fr_1fr_auto] dark:bg-slate-800/50">
-      <input type="email" required dir="ltr" placeholder="name@example.com" className={input} value={email} onChange={e => setEmail(e.target.value)} disabled={busy} aria-label={t('email')} />
+      <input type="email" required dir="ltr" placeholder="name@example.com" className={input} value={email} onChange={e => setEmail(e.target.value)} disabled={busy || user.shared} aria-label={t('email')} />
       <PasswordInput
         minLength={8}
         autoComplete="new-password"
-        placeholder={t('passwordKeep')}
+        placeholder={user.shared ? t('sharedAccount') : t('passwordKeep')}
         className={input}
         value={password}
         onChange={e => setPassword(e.target.value)}
-        disabled={busy}
+        disabled={busy || user.shared}
       />
       <label className="flex items-center gap-2 text-sm font-semibold">
         <input type="checkbox" className="size-4 accent-indigo-600" checked={admin} onChange={e => setAdmin(e.target.checked)} disabled={busy || isMe} />
         {t('admin')}
       </label>
+      {user.shared && <p className="text-xs text-amber-700 sm:col-span-3 dark:text-amber-300">{t('sharedAccountHelp')}</p>}
       <div className="flex gap-2 sm:col-span-3">
         <button disabled={busy} className="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
           {t('save')}

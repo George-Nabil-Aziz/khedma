@@ -113,7 +113,8 @@ function SignUp() {
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { emailRedirectTo: location.origin + import.meta.env.BASE_URL },
+      // app: puts the account on Khedma's own list (accounts are shared with other apps in the project)
+      options: { emailRedirectTo: location.origin + import.meta.env.BASE_URL, data: { app: 'khedma_2027' } },
     })
     if (error) {
       setError(error.message)

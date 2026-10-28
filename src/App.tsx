@@ -5,6 +5,7 @@ import { useI18n, type TKey } from './lib/i18n'
 import { useRoute } from './lib/router'
 import { startStore, useStore } from './lib/store'
 import { Layout } from './components/Layout'
+import { AccountGate } from './components/AccountGate'
 import { LoginPage } from './pages/LoginPage'
 import { ChildrenPage } from './pages/ChildrenPage'
 import { ChildFormPage } from './pages/ChildFormPage'
@@ -31,21 +32,26 @@ export default function App() {
     return () => data.subscription.unsubscribe()
   }, [])
 
-  useEffect(() => {
-    if (session) startStore()
-  }, [session])
-
   if (!ready) return <div className="h-full bg-slate-50 dark:bg-slate-950" />
   if (!session) return <LoginPage />
   // Only for showing the admin pages — the database itself checks the role before returning data.
   const admin = session.user.app_metadata?.role === 'admin'
-  return <Routes email={session.user.email ?? ''} userId={session.user.id} admin={admin} />
+  return (
+    <AccountGate userId={session.user.id} email={session.user.email ?? ''}>
+      <Routes email={session.user.email ?? ''} userId={session.user.id} admin={admin} />
+    </AccountGate>
+  )
 }
 
 function Routes({ email, userId, admin }: { email: string; userId: string; admin: boolean }) {
   const { t } = useI18n()
   const route = useRoute()
   const { classes, lastSyncAt } = useStore()
+
+  // Mounted only once AccountGate let the account in — then start loading / syncing.
+  useEffect(() => {
+    startStore()
+  }, [])
 
   const page = (title: TKey, body: ReactNode) => (
     <Layout email={email} admin={admin} title={t(title)}>

@@ -13,16 +13,17 @@ Run these once, in order, in the Supabase SQL Editor:
 5. `supabase/005_make_admin.sql` makes george.nabil.biy@gmail.com the first admin (run once). After that, admins make other admins from the **Users** page.
 6. `supabase/006_classes_and_sharing.sql` adds classes, membership and one-time share codes. Before running it, put your class name on the line marked `CLASS NAME`.
 7. `supabase/007_photos_and_profiles.sql` adds an optional photo per child, and a profile (name + photo) per servant.
+8. `supabase/008_app_users.sql` keeps Khedma's own list of accounts. Sign-in accounts are shared with other apps in this Supabase project, so only accounts that signed up from Khedma or were created by a Khedma admin can use the app or appear on the Users page.
 
 Anyone can create an account from the sign-in page, but a new account sees no children until it creates a class or joins one with a share code. Turn on **Allow new users to sign up** in Supabase only **after** running 006. The admin can also add servants from the **Users** page.
 
 ## Admin Edge Function
 
-The Users page creates, edits and deletes accounts through the `admin-users` Edge Function. The function holds the service key, so the browser never does. To deploy it:
+The Users page creates, edits and deletes accounts through the `khedma-admin-users` Edge Function (the project also has an `admin-users` function — that one belongs to bishoy-saber-notes, never touch it). The function holds the service key, so the browser never does. To deploy it:
 
 1. Supabase Dashboard → **Edge Functions** → **Deploy a new function** → **Via Editor**.
-2. Name it exactly `admin-users`.
-3. Paste `supabase/functions/admin-users/index.ts` and click **Deploy**.
+2. Name it exactly `khedma-admin-users`.
+3. Paste `supabase/functions/khedma-admin-users/index.ts` and click **Deploy**.
 
 ## Run locally
 
