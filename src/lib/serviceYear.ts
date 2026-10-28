@@ -1,6 +1,6 @@
 // A service year ends on the first Friday AFTER 6 October: 6 Oct and that Friday still belong
 // to the old year. So 2026-2027 runs from Sat 10 Oct 2026 to Fri 8 Oct 2027.
-// Same rule as khedma_2027.service_year_end() in the database.
+// Same rule as khedma.service_year_end() in the database.
 
 const pad = (n: number) => String(n).padStart(2, '0')
 export const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`

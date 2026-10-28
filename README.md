@@ -1,6 +1,6 @@
 # خدمة 2027 — Khedma 2027
 
-Children records for the class, متابعة (weekly Friday attendance and visits), and an audit log. Data lives in the `khedma_2027` schema of the **all-my-database** Supabase project. The app works offline as an installable PWA, in Arabic or English, with light and dark themes.
+Children records for the class, متابعة (weekly Friday attendance and visits), and an audit log. Data lives in the `khedma` schema of the **all-my-database** Supabase project. The app works offline as an installable PWA, in Arabic or English, with light and dark themes.
 
 ## Database setup
 
@@ -18,6 +18,7 @@ Run these once, in order, in the Supabase SQL Editor:
 10. `supabase/010_communion_days.sql`: mark a Friday as a communion day for the class.
 11. `supabase/011_class_servants.sql`: the list of servants in a class (members and admins only).
 12. `supabase/012_delete_class.sql`: admins can delete a whole class (each deleted child stays in the audit log).
+13. `supabase/013_rename_schema.sql`: renames the schema `khedma_2027` → `khedma` (files 002–012 still say `khedma_2027`; that was its name when they ran).
 
 Anyone can create an account from the sign-in page, but a new account sees no children until it creates a class or joins one with a share code. Turn on **Allow new users to sign up** in Supabase only **after** running 006. The admin can also add servants from the **Users** page.
 

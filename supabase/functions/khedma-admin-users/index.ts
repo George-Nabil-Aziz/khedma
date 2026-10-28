@@ -37,14 +37,14 @@ Deno.serve(async req => {
 
   const audit = (action: string, id: string, data: Record<string, unknown>) =>
     admin
-      .schema('khedma_2027')
+      .schema('khedma')
       .from('audit_log')
       .insert({ user_id: caller.user!.id, user_email: caller.user!.email, action, table_name: 'users', record_id: id, new_data: data })
 
   // Accounts are shared with bishoy-saber-notes in this Supabase project. Never delete such an
   // account or change its email / password from here — that would break the other app.
   const isShared = async (id: string) => {
-    const { data, error } = await admin.schema('khedma_2027').rpc('is_shared_account', { p_user: id })
+    const { data, error } = await admin.schema('khedma').rpc('is_shared_account', { p_user: id })
     return error ? true : data === true // unsure → treat as shared, i.e. refuse
   }
   const SHARED = 'This account is also used by another app in this project — it cannot be deleted or have its email / password changed here.'
@@ -60,7 +60,7 @@ Deno.serve(async req => {
         user_metadata: { app: 'khedma_2027' }, // puts it on Khedma's list of accounts
       })
       if (error) return json({ error: error.message }, 400)
-      await admin.schema('khedma_2027').from('app_users').upsert({ user_id: data.user.id })
+      await admin.schema('khedma').from('app_users').upsert({ user_id: data.user.id })
       await audit('user_create', data.user.id, { email: data.user.email, admin: !!body.admin })
       return json({ id: data.user.id })
     }

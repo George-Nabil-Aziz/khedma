@@ -7,7 +7,7 @@ import { HeaderButtons } from './Layout'
 
 /**
  * Sign-in accounts are shared with other apps in this Supabase project. Only accounts on
- * Khedma's own list (khedma_2027.app_users) may use the app; anyone else sees a message.
+ * Khedma's own list (khedma.app_users) may use the app; anyone else sees a message.
  * The answer is remembered per account so the app still opens offline.
  */
 export function AccountGate({ userId, email, children }: { userId: string; email: string; children: ReactNode }) {

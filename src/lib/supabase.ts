@@ -7,9 +7,9 @@ if (!url || !key) {
   throw new Error('Missing VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY — copy .env.example to .env')
 }
 
-// Every query goes to the khedma_2027 schema, never to bishoy_saber_notes or public.
+// Every query goes to the khedma schema, never to bishoy_saber_notes or public.
 export const supabase = createClient(url, key, {
-  db: { schema: 'khedma_2027' },
+  db: { schema: 'khedma' },
 })
 
 export const OWNERS = ['mother', 'father', 'child'] as const
