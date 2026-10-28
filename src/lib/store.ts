@@ -47,6 +47,10 @@ type State = {
   /** متابعة ticks made on this device and not sent yet. */
   attOutbox: AttOp[]
   attError: string | null
+  /** Fridays marked as communion days, keyed by dayKey(class, date). */
+  dayMarks: Record<string, boolean>
+  /** Communion-day marks made on this device and not sent yet. */
+  dayOutbox: DayOp[]
 }
 
 /** Two ticks per child per Friday: الحضور (attendance) and الافتقاد (visit). */
@@ -72,6 +76,8 @@ let state: State = {
   attendance: {},
   attOutbox: [],
   attError: null,
+  dayMarks: {},
+  dayOutbox: [],
 }
 
 const listeners = new Set<() => void>()
@@ -90,6 +96,8 @@ function set(patch: Partial<State>, persist = true) {
       ['lastSyncAt', state.lastSyncAt],
       ['followUp', state.attendance],
       ['attOutbox', state.attOutbox],
+      ['dayMarks', state.dayMarks],
+      ['dayOutbox', state.dayOutbox],
     ]).catch(() => {})
   }
 }
@@ -153,10 +161,16 @@ function pick(input: ChildInput): ChildInput {
 
 let started = false
 
-export async function startStore() {
+export async function startStore(userId: string) {
   if (started) return
   started = true
-  const [rows, fields, outbox, conflicts, lastSyncAt, attendance, attOutbox, classes, profile] = await Promise.all([
+  if ((await get<string>('owner').catch(() => undefined)) !== userId) {
+    await clear().catch(() => {})
+    save('class', '')
+    state = { ...state, currentClass: null }
+    await setMany([['owner', userId]]).catch(() => {})
+  }
+  const [rows, fields, outbox, conflicts, lastSyncAt, attendance, attOutbox, classes, profile, dayMarks, dayOutbox] = await Promise.all([
     get<Child[]>('rows'),
     get<CustomField[]>('fields'),
     get<Op[]>('outbox'),
@@ -166,6 +180,8 @@ export async function startStore() {
     get<AttOp[]>('attOutbox'),
     get<ClassInfo[]>('classes'),
     get<Profile>('profile'),
+    get<Record<string, boolean>>('dayMarks'),
+    get<DayOp[]>('dayOutbox'),
   ]).catch(() => [] as undefined[])
   set(
     {
@@ -177,6 +193,8 @@ export async function startStore() {
       attendance: attendance ?? {},
       attOutbox: (attOutbox ?? []).filter(o => o.kind), // drop ticks queued by an older version
       classes: classes ?? [],
+      dayMarks: dayMarks ?? {},
+      dayOutbox: dayOutbox ?? [],
       profile: profile ?? null,
       loaded: true,
     },
@@ -199,7 +217,7 @@ export async function resetStore() {
   save('class', '')
   openedDefault = false // the next user to sign in gets their own ⭐ class
   set(
-    { rows: [], fields: [], classes: [], profile: null, currentClass: null, outbox: [], conflicts: [], lastSyncAt: null, syncError: null, attendance: {}, attOutbox: [], attError: null },
+    { rows: [], fields: [], classes: [], profile: null, currentClass: null, outbox: [], conflicts: [], lastSyncAt: null, syncError: null, attendance: {}, attOutbox: [], attError: null, dayMarks: {}, dayOutbox: [] },
     false,
   )
 }
@@ -237,8 +255,10 @@ export async function changePassword(password: string): Promise<string | null> {
 // ---- فصول --------------------------------------------------------------------
 
 export function setCurrentClass(id: string | null) {
+  const changed = id !== state.currentClass
   save('class', id ?? '')
   set({ currentClass: id }, false)
+  if (changed && id) sync() // fetch the newest data of the class just opened
 }
 
 /** Custom columns of the class on screen. */
@@ -247,14 +267,18 @@ export const classFields = (s: State) => s.fields.filter(f => f.class_id === s.c
 // The ⭐ class opens by itself once per app start; after that the user's own choice sticks.
 let openedDefault = false
 
+/** Classes I can open — not the ones I left (those stay listed for a week so I can rejoin). */
+export const activeClasses = (classes: ClassInfo[]) => classes.filter(c => !c.left_at)
+
 async function pullClasses() {
   const { data, error } = await supabase.rpc('my_classes')
   if (error) throw isNetworkError(error.message) ? new Offline() : new Error(error.message)
   const classes = data as ClassInfo[]
   set({ classes })
-  const starred = classes.find(c => c.is_default)
+  const open = activeClasses(classes) // a class I left can't be opened
+  const starred = open.find(c => c.is_default)
   if (!openedDefault && starred) setCurrentClass(starred.id)
-  else if (!classes.some(c => c.id === state.currentClass)) setCurrentClass((starred ?? classes.find(c => c.is_member) ?? classes[0])?.id ?? null)
+  else if (!open.some(c => c.id === state.currentClass)) setCurrentClass((starred ?? open.find(c => c.is_member) ?? open[0])?.id ?? null)
   openedDefault = true
 }
 
@@ -308,6 +332,16 @@ export async function leaveClass(id: string): Promise<Result<null>> {
   return { ok: true, value: null }
 }
 
+/** Back into a class I left less than 7 days ago. */
+export async function rejoinClass(id: string): Promise<Result<null>> {
+  const { data, error } = await supabase.rpc('rejoin_class', { p_class: id })
+  if (error) return { ok: false, error: error.message }
+  if (data !== true) return { ok: false, error: 'too_late' }
+  setCurrentClass(id)
+  await sync()
+  return { ok: true, value: null }
+}
+
 // ---- متابعة -----------------------------------------------------------------
 
 const sameTick = (o: AttOp, child: string, date: string, kind: FollowUpKind) => o.child === child && o.date === date && o.kind === kind
@@ -327,6 +361,33 @@ export function toggleFollowUp(child: string, date: string, kind: FollowUpKind) 
   const attOutbox = state.attOutbox.filter(o => !sameTick(o, child, date, kind))
   attOutbox.push({ child, date, kind, checked, queued_at: new Date().toISOString() })
   set({ attOutbox })
+  scheduleSync()
+}
+
+// ---- يوم تناول — a Friday marked for the whole class -----------------------
+
+export type DayOp = { classId: string; date: string; communion: boolean; queued_at: string }
+
+export const dayKey = (classId: string, date: string) => `${classId}|${date}`
+
+export function isCommunion(s: State, date: string): boolean {
+  const classId = s.currentClass
+  if (!classId) return false
+  for (let i = s.dayOutbox.length - 1; i >= 0; i--) {
+    const o = s.dayOutbox[i]
+    if (o.classId === classId && o.date === date) return o.communion
+  }
+  return s.dayMarks[dayKey(classId, date)] ?? false
+}
+
+/** Mark / unmark a Friday of the class on screen as a communion day. Works offline. */
+export function toggleCommunion(date: string) {
+  const classId = state.currentClass
+  if (!classId) return
+  const communion = !isCommunion(state, date)
+  const dayOutbox = state.dayOutbox.filter(o => !(o.classId === classId && o.date === date))
+  dayOutbox.push({ classId, date, communion, queued_at: new Date().toISOString() })
+  set({ dayOutbox })
   scheduleSync()
 }
 
@@ -468,8 +529,29 @@ function isNetworkError(message: string) {
 
 class Offline extends Error {}
 
-export async function sync() {
-  if (state.syncing || !state.loaded) return
+// A sync asked for while another is running must not be dropped (e.g. right after creating or
+// opening a class): it waits for the running one, then runs once more.
+let running: Promise<void> | null = null
+let again = false
+
+export function sync(): Promise<void> {
+  if (running) {
+    again = true
+    return running
+  }
+  running = (async () => {
+    do {
+      again = false
+      await syncOnce()
+    } while (again)
+  })().finally(() => {
+    running = null
+  })
+  return running
+}
+
+async function syncOnce() {
+  if (!state.loaded) return
   if (!navigator.onLine) {
     set({ online: false }, false)
     return
@@ -492,6 +574,7 @@ export async function sync() {
     }
 
     await pushAttendance()
+    await pushDayMarks()
 
     await pullClasses()
     await pullProfile()
@@ -500,9 +583,13 @@ export async function sync() {
     const att = await fetchAll<{ child_client_id: string; date: string; kind: FollowUpKind; checked: boolean }>((from, to) =>
       supabase.from('follow_up').select('child_client_id,date,kind,checked').order('child_client_id').order('date').order('kind').range(from, to),
     )
+    const days = await fetchAll<{ class_id: string; date: string; communion: boolean }>((from, to) =>
+      supabase.from('class_day_marks').select('class_id,date,communion').order('class_id').order('date').range(from, to),
+    )
     set({
       rows: children.map(normalize),
       attendance: Object.fromEntries(att.map(a => [attKey(a.child_client_id, a.date, a.kind), a.checked])),
+      dayMarks: Object.fromEntries(days.map(d => [dayKey(d.class_id, d.date), d.communion])),
       lastSyncAt: new Date().toISOString(),
     })
   } catch (e) {
@@ -522,6 +609,22 @@ async function fetchAll<T>(page: (from: number, to: number) => PromiseLike<{ dat
     out.push(...((data ?? []) as T[]))
     if (!data || data.length < size) return out
   }
+}
+
+async function pushDayMarks() {
+  const batch = state.dayOutbox
+  if (!batch.length) return
+  const { error } = await supabase
+    .from('class_day_marks')
+    .upsert(batch.map(o => ({ class_id: o.classId, date: o.date, communion: o.communion })), { onConflict: 'class_id,date' })
+  if (error) {
+    if (isNetworkError(error.message)) throw new Offline()
+    set({ attError: error.message }, false)
+    return
+  }
+  const dayMarks = { ...state.dayMarks }
+  for (const o of batch) dayMarks[dayKey(o.classId, o.date)] = o.communion
+  set({ dayOutbox: state.dayOutbox.filter(o => !batch.includes(o)), dayMarks })
 }
 
 async function pushAttendance() {

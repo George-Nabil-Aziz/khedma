@@ -3,6 +3,7 @@ import type { CustomField, FieldType } from '../lib/supabase'
 import { useI18n, type TKey } from '../lib/i18n'
 import { addField, classFields, deleteField, renameField, useStore, viewRows } from '../lib/store'
 import { CloudOffIcon, LockIcon, PlusIcon, TrashIcon } from '../components/Icons'
+import { confirmDialog } from '../components/ConfirmDialog'
 
 const TYPES: { value: FieldType; key: TKey }[] = [
   { value: 'text', key: 'typeText' },
@@ -49,12 +50,12 @@ export function FieldsPage({ admin }: { admin: boolean }) {
     }).length
   }
 
-  function remove(f: CustomField) {
+  async function remove(f: CustomField) {
     const n = filledCount(f)
     const message = n
       ? t('deleteFieldWithData').replace('{name}', f.label).replace('{count}', String(n))
       : t('deleteFieldEmpty').replace('{name}', f.label)
-    if (window.confirm(message)) run(() => deleteField(f.key))
+    if (await confirmDialog({ title: t('deleteField'), message, confirmLabel: t('deleteField'), danger: true })) run(() => deleteField(f.key))
   }
 
   return (

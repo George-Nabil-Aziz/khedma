@@ -80,7 +80,7 @@ function Invite({ name }: { name: string }) {
     }
   }
 
-  const time = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' })
+  const time = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' })
 
   return (
     <Card title={`${t('inviteTitle')}: ${name}`} icon={<ShareIcon className="size-5" />}>

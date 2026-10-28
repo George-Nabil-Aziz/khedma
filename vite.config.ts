@@ -13,8 +13,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'logo.svg', 'apple-touch-icon-180x180.png'],
       manifest: {
-        name: 'خدمة',
-        short_name: 'خدمة',
+        name: 'فصلي',
+        short_name: 'فصلي',
         description: 'بيانات أولاد الفصل والافتقاد — Khedma',
         lang: 'ar',
         dir: 'rtl',

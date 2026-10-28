@@ -64,7 +64,7 @@ export function SyncPage() {
         <div className="flex-1">
           <div className="font-bold">{syncing ? t('syncing') : online ? t('online') : t('offline')}</div>
           <div className="text-sm text-slate-500">
-            {t('lastSync')}: {lastSyncAt ? new Date(lastSyncAt).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-GB') : t('never')}
+            {t('lastSync')}: {lastSyncAt ? new Date(lastSyncAt).toLocaleString(lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB') : t('never')}
           </div>
         </div>
         <button

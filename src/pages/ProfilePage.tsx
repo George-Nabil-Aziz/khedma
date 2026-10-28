@@ -3,7 +3,7 @@ import { useI18n } from '../lib/i18n'
 import { PasswordInput } from '../components/PasswordInput'
 import { changePassword, saveProfile, useStore } from '../lib/store'
 import { PhotoPicker } from '../components/Avatar'
-import { CloudOffIcon, LockIcon, ShieldIcon } from '../components/Icons'
+import { CloudOffIcon, LockIcon } from '../components/Icons'
 
 const input =
   'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800'
@@ -77,17 +77,6 @@ function ProfileForm({ email, admin }: { email: string; admin: boolean }) {
         <span className="text-sm font-semibold">{t('email')}</span>
         <input className={`${input} bg-slate-50 text-slate-500 dark:bg-slate-800/50`} value={email} dir="ltr" readOnly />
       </label>
-      <div className="flex flex-col gap-2">
-        <span className="text-sm font-semibold">{t('role')}</span>
-        {admin ? (
-          <div className="flex items-center gap-2 rounded-lg bg-indigo-50 px-3 py-2 font-semibold text-indigo-800 dark:bg-indigo-500/10 dark:text-indigo-200">
-            <ShieldIcon className="size-5" />
-            {t('youAreAdmin')}
-          </div>
-        ) : (
-          <div className="rounded-lg bg-slate-50 px-3 py-2 text-slate-600 dark:bg-slate-800/50 dark:text-slate-300">{t('youAreServant')}</div>
-        )}
-      </div>
       <div className="flex items-center gap-3">
         <button
           disabled={!online || busy || !changed}

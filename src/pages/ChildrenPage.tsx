@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useI18n } from '../lib/i18n'
 import { go } from '../lib/router'
-import { useStore, viewRows, type RowStatus } from '../lib/store'
+import { sync, useStore, viewRows, type RowStatus } from '../lib/store'
 import { ColumnsMenu } from '../components/ColumnsMenu'
 import { Pagination, usePageSize } from '../components/Pagination'
 import { sortRows, useColumnPrefs, useColumns, useSort, type Column } from '../lib/columns'
@@ -26,6 +26,11 @@ export function ChildrenPage() {
   }
   const [menuOpen, setMenuOpen] = useState(false)
 
+  // Opening the page fetches the newest data straight away.
+  useEffect(() => {
+    sync()
+  }, [])
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     const list = !q
@@ -48,7 +53,8 @@ export function ChildrenPage() {
   const current = Math.min(page, pages)
   const pageRows = filtered.slice((current - 1) * pageSize, current * pageSize)
 
-  const showLoading = !store.loaded || (store.syncing && !store.lastSyncAt && rows.length === 0)
+  // Empty while a sync is fetching: say "loading", not "no children".
+  const showLoading = !store.loaded || (store.syncing && rows.length === 0)
   const colSpan = prefs.visible.length + 2
 
   return (

@@ -3,7 +3,7 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 import { useI18n, type TKey } from './lib/i18n'
 import { useRoute } from './lib/router'
-import { startStore, useStore } from './lib/store'
+import { activeClasses, startStore, useStore } from './lib/store'
 import { Layout } from './components/Layout'
 import { AccountGate } from './components/AccountGate'
 import { LoginPage } from './pages/LoginPage'
@@ -46,12 +46,12 @@ export default function App() {
 function Routes({ email, userId, admin }: { email: string; userId: string; admin: boolean }) {
   const { t } = useI18n()
   const route = useRoute()
-  const { classes, lastSyncAt } = useStore()
+  const { classes, lastSyncAt, syncError } = useStore()
 
   // Mounted only once AccountGate let the account in — then start loading / syncing.
   useEffect(() => {
-    startStore()
-  }, [])
+    startStore(userId)
+  }, [userId])
 
   const page = (title: TKey, body: ReactNode) => (
     <Layout email={email} admin={admin} title={t(title)}>
@@ -67,7 +67,7 @@ function Routes({ email, userId, admin }: { email: string; userId: string; admin
   if (admin && route.name === 'audit') return page('audit', <AuditPage />)
   if (route.name === 'classes') return page('classes', <ClassesPage />)
   // No class yet: say so, and offer to create one or join a colleague's with a code.
-  if (lastSyncAt && classes.length === 0) return page('classes', <NoClass />)
+  if ((lastSyncAt || syncError) && activeClasses(classes).length === 0) return page('classes', <NoClass />)
 
   switch (route.name) {
     case 'new':

@@ -1,13 +1,10 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { load, save } from './storage'
-import { currentServiceYear } from './serviceYear'
-
-const YEAR = currentServiceYear()
 
 export type Lang = 'ar' | 'en'
 
 const dict = {
-  appName: { ar: `خدمة ${YEAR}`, en: `Khedma ${YEAR}` },
+  appName: { ar: 'فصلي', en: 'My Class' },
   children: { ar: 'الأولاد', en: 'Children' },
   addChild: { ar: 'إضافة ولد', en: 'Add child' },
   editChild: { ar: 'تعديل بيانات', en: 'Edit child' },
@@ -77,6 +74,8 @@ const dict = {
   // form
   save: { ar: 'حفظ', en: 'Save' },
   cancel: { ar: 'إلغاء', en: 'Cancel' },
+  confirm: { ar: 'تأكيد', en: 'Confirm' },
+  areYouSure: { ar: 'متأكد؟', en: 'Are you sure?' },
   required: { ar: 'مطلوب', en: 'Required' },
   invalidNationalId: { ar: 'الرقم القومي 14 رقم', en: 'National ID must be 14 digits' },
   invalidPhone: { ar: 'رقم غير صحيح', en: 'Invalid number' },
@@ -173,6 +172,10 @@ const dict = {
   attendance: { ar: 'متابعة', en: 'Follow-up' },
   rowAttendance: { ar: 'الحضور', en: 'Attendance' },
   rowVisit: { ar: 'الافتقاد', en: 'Visit' },
+  markCommunion: { ar: 'خليها يوم تناول ✝', en: 'Mark as communion day ✝' },
+  unmarkCommunion: { ar: 'شيل يوم التناول', en: 'Unmark communion day' },
+  communionDay: { ar: 'يوم تناول', en: 'Communion day' },
+  communionHint: { ar: 'دوس على تاريخ الجمعة فوق علشان تعلّمها يوم تناول ✝', en: 'Click a Friday’s date to mark it as a communion day ✝' },
   attendanceTotal: { ar: 'عدد العلامات', en: 'Ticks' },
   attendanceOrderNote: { ar: 'نفس ترتيب صفحة الأولاد', en: 'Same order as the Children page' },
   attPending: { ar: 'علامات متابعة مستنية تتبعت', en: 'Follow-up ticks waiting to be sent' },
@@ -195,7 +198,8 @@ const dict = {
   admin: { ar: 'أدمن', en: 'Admin' },
   // placeholders — examples of what to type
   phName: { ar: 'اسم الولد ثلاثي', en: 'Child’s full name' },
-  phNationalId: { ar: '14 رقم', en: '14 digits' },
+  // a made-up ID of a child born 22/11/2014: 3 (born 2000+) · 141122 · 01 (Cairo) · 2345 · 6
+  phNationalId: { ar: '3-141122-01-2345-6', en: '3-141122-01-2345-6' },
   phDeacon: { ar: 'مثال: أغنسطس', en: 'e.g. Reader' },
   phHouse: { ar: 'مثال: 12', en: 'e.g. 12' },
   phStreet: { ar: 'مثال: شارع الجمهورية', en: 'e.g. El Gomhoreya St.' },
@@ -240,7 +244,7 @@ const dict = {
   },
   generateCode: { ar: 'اطلع رقم', en: 'Get a code' },
   newCode: { ar: 'رقم تاني', en: 'Another code' },
-  codeExpires: { ar: 'بيبطل', en: 'Expires' },
+  codeExpires: { ar: 'ينتهي', en: 'Expires' },
   copy: { ar: 'نسخ', en: 'Copy' },
   copied: { ar: 'اتنسخ ✓', en: 'Copied ✓' },
   joinTitle: { ar: 'ادخل فصل برقم', en: 'Join a class with a code' },
@@ -254,6 +258,10 @@ const dict = {
   create: { ar: 'إنشاء', en: 'Create' },
   rename: { ar: 'تغيير الاسم', en: 'Rename' },
   leaveClass: { ar: 'خروج من الفصل', en: 'Leave class' },
+  youLeft: { ar: 'خرجت من الفصل ده', en: 'You left this class' },
+  rejoinUntil: { ar: 'تقدر ترجع لحد {date}', en: 'You can rejoin until {date}' },
+  rejoin: { ar: 'رجوع', en: 'Rejoin' },
+  rejoinTooLate: { ar: 'عدّى أسبوع، ومينفعش ترجع غير برقم مشاركة من زميل.', en: 'More than a week has passed — you need a share code from a colleague.' },
   leaveConfirm: {
     ar: 'هتخرج من فصل "{name}" ومش هتشوف أولاده تاني، إلا لو زميل اداك رقم جديد. متأكد؟',
     en: 'You will leave "{name}" and stop seeing its children unless a colleague invites you again. Sure?',
@@ -264,6 +272,8 @@ const dict = {
     en: 'Create a new class, or join a colleague’s class with the code they gave you.',
   },
   classes: { ar: 'الفصول', en: 'Classes' },
+  servants: { ar: 'الخدام', en: 'Servants' },
+  joinedOn: { ar: 'دخل', en: 'Joined' },
   classesHelp: {
     ar: 'كل فصولك على مدار السنين. علّم على فصل السنادي بالنجمة ⭐ علشان يفتح على طول.',
     en: 'All your classes over the years. Star ⭐ this year’s class so it opens straight away.',

@@ -4,6 +4,7 @@ import { useI18n, type TKey } from './i18n'
 import { load, save } from './storage'
 import { classFields, useStore, type ViewRow } from './store'
 import { OWNER_LABEL, OWNER_PHONES_LABEL, telLink, whatsappLink } from './phones'
+import { formatNationalId } from './nationalId'
 import { StarIcon, WhatsAppIcon } from '../components/Icons'
 
 export type SortValue = string | number | null
@@ -111,7 +112,7 @@ export function useColumns(): Column[] {
       },
       { id: 'deacon', label: t('deacon'), render: r => r.deacon, sort: r => r.deacon },
       { id: 'notes', label: t('notes'), render: r => r.notes, sort: r => r.notes },
-      { id: 'national_id', label: t('nationalId'), render: r => r.national_id && <span dir="ltr">{r.national_id}</span>, sort: r => r.national_id, nowrap: true },
+      { id: 'national_id', label: t('nationalId'), render: r => r.national_id && <span dir="ltr">{formatNationalId(r.national_id)}</span>, sort: r => r.national_id, nowrap: true },
     ]
 
     return [...builtIn, ...fields.map(f => customColumn(f, t))]

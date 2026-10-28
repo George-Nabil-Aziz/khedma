@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { useI18n } from '../lib/i18n'
 import { go } from '../lib/router'
-import { createClass, leaveClass, renameClass, setCurrentClass, setDefaultClass, useStore } from '../lib/store'
-import { currentServiceYear, nearbyServiceYears } from '../lib/serviceYear'
+import { activeClasses, createClass, leaveClass, rejoinClass, renameClass, setCurrentClass, setDefaultClass, useStore } from '../lib/store'
+import { currentServiceYear, serviceYearOptions } from '../lib/serviceYear'
 import type { ClassInfo } from '../lib/supabase'
-import { CloudOffIcon, DoorIcon, PencilIcon, PlusIcon, StarIcon, StarOutlineIcon } from '../components/Icons'
+import { confirmDialog } from '../components/ConfirmDialog'
+import { ClassServants } from '../components/ClassServants'
+import { CloudOffIcon, PencilIcon, PlusIcon, ShareIcon, StarIcon, StarOutlineIcon, TrashIcon, UsersIcon } from '../components/Icons'
 
 const input =
   'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800'
@@ -18,7 +20,8 @@ export function ClassesPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
-      <p className="text-sm text-slate-500">{t('classesHelp')}</p>
+      {/* only meaningful once there is at least one class to star */}
+      {activeClasses(classes).length > 0 && <p className="text-sm text-slate-500">{t('classesHelp')}</p>}
 
       {!online && (
         <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
@@ -28,6 +31,21 @@ export function ClassesPage() {
       )}
 
       <NewClassForm />
+
+      {/* no class yet: say so, and point to the other way in — a colleague's share code */}
+      {activeClasses(classes).length === 0 && (
+        <div className="space-y-3 rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-center dark:border-indigo-500/30 dark:bg-indigo-500/10">
+          <h2 className="font-bold">{t('noClassTitle')}</h2>
+          <p className="text-sm text-slate-600 dark:text-slate-300">{t('noClassHelp')}</p>
+          <button
+            onClick={() => go('/share')}
+            className="inline-flex items-center gap-2 rounded-lg border border-indigo-300 bg-white px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 dark:border-indigo-500/40 dark:bg-slate-900 dark:text-indigo-300"
+          >
+            <ShareIcon className="size-4" />
+            {t('joinWithCode')}
+          </button>
+        </div>
+      )}
 
       {years.map(year => (
         <section key={year} className="space-y-2">
@@ -40,7 +58,7 @@ export function ClassesPage() {
           {classes
             .filter(c => c.service_year === year)
             .map(c => (
-              <ClassCard key={c.id} c={c} />
+              c.left_at ? <LeftClassCard key={c.id} c={c} /> : <ClassCard key={c.id} c={c} />
             ))}
         </section>
       ))}
@@ -77,9 +95,9 @@ function NewClassForm() {
       <div className="grid gap-2 sm:grid-cols-[1fr_9rem_auto]">
         <input className={input} placeholder={t('phClassName')} value={name} onChange={e => setName(e.target.value)} disabled={!online || busy} autoFocus />
         <select className={input} value={year} onChange={e => setYear(e.target.value)} disabled={!online || busy} aria-label={t('serviceYear')} dir="ltr">
-          {nearbyServiceYears().map(y => (
-            <option key={y} value={y}>
-              {y}
+          {serviceYearOptions().map(y => (
+            <option key={y.value} value={y.value}>
+              {y.label}
             </option>
           ))}
         </select>
@@ -95,6 +113,46 @@ function NewClassForm() {
   )
 }
 
+/** A class I left in the last 7 days: greyed out, no data, just a way back in. */
+function LeftClassCard({ c }: { c: ClassInfo }) {
+  const { t, lang } = useI18n()
+  const { online } = useStore()
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const until = new Date(new Date(c.left_at!).getTime() + 7 * 24 * 60 * 60 * 1000)
+  const date = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { dateStyle: 'medium' }).format(until)
+
+  async function rejoin() {
+    setBusy(true)
+    setError('')
+    const r = await rejoinClass(c.id)
+    setBusy(false)
+    if (r.ok) go('/')
+    else setError(r.error === 'too_late' ? t('rejoinTooLate') : r.error)
+  }
+
+  return (
+    <div className="space-y-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/50">
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1 opacity-60">
+          <div className="truncate font-bold line-through decoration-slate-400">{c.name}</div>
+          <div className="text-xs text-slate-500">
+            {t('youLeft')} · {t('rejoinUntil').replace('{date}', date)}
+          </div>
+        </div>
+        <button
+          onClick={rejoin}
+          disabled={!online || busy}
+          className="rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-500/40 dark:bg-slate-900 dark:text-indigo-300"
+        >
+          {t('rejoin')}
+        </button>
+      </div>
+      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">{error}</p>}
+    </div>
+  )
+}
+
 function ClassCard({ c }: { c: ClassInfo }) {
   const { t } = useI18n()
   const { online, currentClass } = useStore()
@@ -103,6 +161,7 @@ function ClassCard({ c }: { c: ClassInfo }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const open = c.id === currentClass
+  const [showServants, setShowServants] = useState(false)
 
   async function run(action: () => Promise<{ ok: boolean; error?: string }>) {
     setBusy(true)
@@ -161,6 +220,15 @@ function ClassCard({ c }: { c: ClassInfo }) {
         {!renaming && (
           <>
             <button
+              onClick={() => setShowServants(v => !v)}
+              disabled={!online}
+              aria-expanded={showServants}
+              className={'flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-semibold disabled:opacity-50 ' + (showServants ? 'border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-500/40 dark:bg-indigo-500/10 dark:text-indigo-300' : 'border-slate-200 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800')}
+            >
+              <UsersIcon className="size-4" />
+              <span className="hidden sm:inline">{t('servants')}</span>
+            </button>
+            <button
               onClick={() => {
                 setCurrentClass(c.id)
                 go('/')
@@ -174,18 +242,22 @@ function ClassCard({ c }: { c: ClassInfo }) {
             </button>
             {c.is_member && (
               <button
-                onClick={() => window.confirm(t('leaveConfirm').replace('{name}', c.name)) && run(() => leaveClass(c.id))}
+                onClick={async () => {
+                  const ok = await confirmDialog({ title: t('leaveClass'), message: t('leaveConfirm').replace('{name}', c.name), confirmLabel: t('leaveClass'), danger: true })
+                  if (ok) run(() => leaveClass(c.id))
+                }}
                 disabled={!online || busy}
                 title={t('leaveClass')}
                 aria-label={t('leaveClass')}
-                className={`${iconBtn} text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10`}
+                className={`${iconBtn} text-red-500 hover:bg-red-50 hover:text-red-600 dark:text-red-400 dark:hover:bg-red-500/10`}
               >
-                <DoorIcon />
+                <TrashIcon />
               </button>
             )}
           </>
         )}
       </div>
+      {showServants && <ClassServants classId={c.id} />}
       {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">{error}</p>}
     </div>
   )

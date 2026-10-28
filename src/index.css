@@ -103,3 +103,10 @@ button:disabled {
 .table-grid :where(tbody tr:last-child > *) {
   border-bottom: 0;
 }
+
+@keyframes confirm-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+}

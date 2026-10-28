@@ -3,8 +3,9 @@ import { supabase } from '../lib/supabase'
 import { useI18n } from '../lib/i18n'
 import { useTheme } from '../lib/theme'
 import { go, useRoute, type Path } from '../lib/router'
-import { resetStore, setCurrentClass, useStore } from '../lib/store'
+import { activeClasses, resetStore, setCurrentClass, useStore } from '../lib/store'
 import { Avatar } from './Avatar'
+import { confirmDialog } from './ConfirmDialog'
 import {
   CalendarCheckIcon,
   HistoryIcon,
@@ -26,9 +27,9 @@ export function Layout({ email, admin, title, children }: { email: string; admin
   const [open, setOpen] = useState(false)
   const { t } = useI18n()
   const route = useRoute()
-  const { outbox, conflicts, attOutbox, attError, classes, currentClass, profile } = useStore()
+  const { outbox, conflicts, attOutbox, dayOutbox, attError, classes, currentClass, profile } = useStore()
   const issues = conflicts.length + outbox.filter(o => o.error).length + (attError ? 1 : 0)
-  const pending = outbox.length + attOutbox.length
+  const pending = outbox.length + attOutbox.length + dayOutbox.length
 
   function nav(path: Path) {
     go(path)
@@ -36,7 +37,7 @@ export function Layout({ email, admin, title, children }: { email: string; admin
   }
 
   async function signOut() {
-    if (pending && !window.confirm(t('signOutPending'))) return
+    if (pending && !(await confirmDialog({ message: t('signOutPending'), confirmLabel: t('signOut'), danger: true }))) return
     await supabase.rpc('log_event', { p_action: 'logout' }).then(
       () => {},
       () => {},
@@ -69,7 +70,7 @@ export function Layout({ email, admin, title, children }: { email: string; admin
         </div>
 
         {/* which class is on screen — ⭐ marks this year's class */}
-        {classes.length > 0 && (
+        {activeClasses(classes).length > 0 && (
           <div className="p-3">
             <label className="block">
               <span className="px-1 text-xs font-semibold text-slate-500">{t('classLabel')}</span>
@@ -78,7 +79,7 @@ export function Layout({ email, admin, title, children }: { email: string; admin
                 onChange={e => setCurrentClass(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-semibold outline-none focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-800"
               >
-                {classes.map(c => (
+                {activeClasses(classes).map(c => (
                   <option key={c.id} value={c.id}>
                     {c.is_default ? '⭐ ' : ''}
                     {c.name} ({c.service_year})
@@ -146,16 +147,12 @@ export function Layout({ email, admin, title, children }: { email: string; admin
             <Avatar photo={profile?.photo} name={profile?.display_name || email} className="size-9 text-sm" />
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{profile?.display_name || t('profile')}</span>
-              <span className="block truncate" dir="ltr">
-                {email}
+              {/* my role, right under my name */}
+              <span className={`flex items-center gap-1 ${admin ? 'font-semibold text-indigo-600 dark:text-indigo-300' : ''}`}>
+                {admin && <ShieldIcon className="size-3" />}
+                {admin ? t('admin') : t('youAreServant')}
               </span>
             </span>
-            {admin && (
-              <span className="flex shrink-0 items-center gap-1 rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-bold text-white">
-                <ShieldIcon className="size-3" />
-                {t('admin')}
-              </span>
-            )}
           </button>
           {/* phone only — on wider screens these sit in the header */}
           <div className="flex items-center gap-2 px-3 pb-2 sm:hidden">

@@ -4,6 +4,7 @@ import { useI18n, type TKey } from '../lib/i18n'
 import { go } from '../lib/router'
 import { classFields, findRow, saveChild, useStore } from '../lib/store'
 import { SIDES } from '../lib/columns'
+import { formatNationalId, nationalIdDigits } from '../lib/nationalId'
 import { PhotoPicker } from '../components/Avatar'
 import { OWNER_LABEL, OWNER_PHONES_LABEL } from '../lib/phones'
 import { ArrowBackIcon, PlusIcon, StarIcon, StarOutlineIcon, TrashIcon, WhatsAppIcon } from '../components/Icons'
@@ -39,7 +40,9 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
   const { online } = store
   const fields = classFields(store)
   const [texts, setTexts] = useState<Texts>(() =>
-    initial ? (Object.fromEntries(Object.keys(EMPTY_TEXTS).map(f => [f, initial[f as FormField] ?? ''])) as Texts) : EMPTY_TEXTS,
+    initial
+      ? ({ ...(Object.fromEntries(Object.keys(EMPTY_TEXTS).map(f => [f, initial[f as FormField] ?? ''])) as Texts), national_id: nationalIdDigits(initial.national_id) })
+      : EMPTY_TEXTS,
   )
   const [phones, setPhones] = useState<Phone[]>(() => initial?.phones ?? [])
   const [primary, setPrimary] = useState<Owner[]>(() => initial?.primary_contacts ?? [])
@@ -88,8 +91,10 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
         inputMode={opts.inputMode}
         placeholder={opts.placeholder && t(opts.placeholder)}
         className={inputClass(!!errors[f])}
-        value={texts[f]}
-        onChange={e => setText(f)(e.target.value)}
+        // The national ID is shown as 3-141122-01-2345-6 while typing, but kept as digits only.
+        value={f === 'national_id' ? formatNationalId(texts[f]) : texts[f]}
+        maxLength={f === 'national_id' ? 18 : undefined}
+        onChange={e => setText(f)(f === 'national_id' ? nationalIdDigits(e.target.value) : e.target.value)}
       />
     </Field>
   )

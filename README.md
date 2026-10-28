@@ -14,6 +14,9 @@ Run these once, in order, in the Supabase SQL Editor:
 6. `supabase/006_classes_and_sharing.sql` adds classes, membership and one-time share codes. Before running it, put your class name on the line marked `CLASS NAME`.
 7. `supabase/007_photos_and_profiles.sql` adds an optional photo per child, and a profile (name + photo) per servant.
 8. `supabase/008_app_users.sql` keeps Khedma's own list of accounts. Sign-in accounts are shared with other apps in this Supabase project, so only accounts that signed up from Khedma or were created by a Khedma admin can use the app or appear on the Users page.
+9. `supabase/009_leave_grace_week.sql`: leaving a class keeps it greyed out for 7 days with a rejoin button.
+10. `supabase/010_communion_days.sql`: mark a Friday as a communion day for the class.
+11. `supabase/011_class_servants.sql`: the list of servants in a class (members and admins only).
 
 Anyone can create an account from the sign-in page, but a new account sees no children until it creates a class or joins one with a share code. Turn on **Allow new users to sign up** in Supabase only **after** running 006. The admin can also add servants from the **Users** page.
 

@@ -27,8 +27,16 @@ export function serviceYearRange(label: string): { start: string; end: string } 
   return { start: iso(start), end: iso(yearEnd(from + 1)) }
 }
 
-/** Years to offer when creating a class: last, this and next. */
-export function nearbyServiceYears(today = new Date()): string[] {
-  const from = Number(currentServiceYear(today).slice(0, 4))
-  return [from + 1, from, from - 1].map(y => `${y}-${y + 1}`)
+const FIRST_YEAR = 2001
+const YEARS_AHEAD = 20
+
+/**
+ * Service years to pick from when creating a class, as the year they END in — picking 2027
+ * means "2026-2027". Twenty years ahead, back to 2001, newest first.
+ */
+export function serviceYearOptions(today = new Date()): { value: string; label: string }[] {
+  const end = Number(currentServiceYear(today).slice(5))
+  const out: { value: string; label: string }[] = []
+  for (let y = end + YEARS_AHEAD; y >= FIRST_YEAR; y--) out.push({ value: `${y - 1}-${y}`, label: String(y) })
+  return out
 }

@@ -3,6 +3,7 @@ import { FunctionsHttpError } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { useI18n } from '../lib/i18n'
 import { PasswordInput } from '../components/PasswordInput'
+import { confirmDialog } from '../components/ConfirmDialog'
 import { sync, useStore } from '../lib/store'
 import { CloudOffIcon, PencilIcon, PlusIcon, ShieldIcon, SyncIcon, TrashIcon, XIcon } from '../components/Icons'
 
@@ -55,12 +56,13 @@ export function UsersPage({ myId }: { myId: string }) {
   }
 
   const addToClass = (userId: string, classId: string) =>
-    run(async () => (await supabase.from('class_members').insert({ class_id: classId, user_id: userId })).error?.message ?? null)
+    // upsert: also brings back someone who had left this class
+    run(async () => (await supabase.from('class_members').upsert({ class_id: classId, user_id: userId, left_at: null })).error?.message ?? null)
   const removeFromClass = (userId: string, classId: string) =>
     run(async () => (await supabase.from('class_members').delete().eq('class_id', classId).eq('user_id', userId)).error?.message ?? null)
 
   const className = (id: string) => classes.find(c => c.id === id)?.name ?? id.slice(0, 8)
-  const time = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' })
+  const time = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' })
 
   return (
     <div className="mx-auto max-w-4xl space-y-5">
@@ -140,7 +142,10 @@ export function UsersPage({ myId }: { myId: string }) {
                   </button>
                   {u.id !== myId && !u.shared && (
                     <button
-                      onClick={() => window.confirm(t('deleteUserConfirm').replace('{email}', u.email)) && run(() => callAdmin({ action: 'delete', id: u.id }))}
+                      onClick={async () => {
+                        const ok = await confirmDialog({ title: t('deleteUser'), message: t('deleteUserConfirm').replace('{email}', u.email), confirmLabel: t('deleteUser'), danger: true })
+                        if (ok) run(() => callAdmin({ action: 'delete', id: u.id }))
+                      }}
                       disabled={!online}
                       title={t('deleteUser')}
                       aria-label={t('deleteUser')}

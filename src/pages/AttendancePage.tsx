@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useI18n } from '../lib/i18n'
 import { go } from '../lib/router'
-import { isChecked, toggleFollowUp, useStore, viewRows, type FollowUpKind } from '../lib/store'
+import { isChecked, isCommunion, toggleCommunion, toggleFollowUp, useStore, viewRows, type FollowUpKind } from '../lib/store'
 import type { TKey } from '../lib/i18n'
 import { sortRows, useColumns, useSort } from '../lib/columns'
 import { currentServiceYear, iso, serviceYearRange } from '../lib/serviceYear'
@@ -42,7 +42,7 @@ export function AttendancePage() {
 
   // Months as header groups: 4 or 5 Fridays each.
   const months = useMemo(() => {
-    const fmt = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG' : 'en-GB', { month: 'long', year: 'numeric' })
+    const fmt = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { month: 'long', year: 'numeric' })
     const out: { key: string; label: string; count: number }[] = []
     for (const d of days) {
       const last = out[out.length - 1]
@@ -94,6 +94,7 @@ export function AttendancePage() {
           {t('total')}: {rows.length}
         </span>
         <span className="text-xs text-slate-500">{t('attendanceOrderNote')}</span>
+        <span className="text-xs text-amber-700 dark:text-amber-300">{t('communionHint')}</span>
       </div>
 
       <div ref={scroller} className="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
@@ -123,11 +124,20 @@ export function AttendancePage() {
                 <th
                   key={d.date}
                   ref={d.date === currentDate ? currentCell : undefined}
-                  className={`border-b border-e border-slate-200 px-1 py-1.5 text-xs font-semibold dark:border-slate-800 ${firstOfMonth.has(d.date) ? 'border-s' : ''} ${
-                    d.date === currentDate ? 'bg-indigo-600 text-white' : ''
+                  className={`border-b border-e border-slate-200 p-0.5 text-xs font-semibold dark:border-slate-800 ${firstOfMonth.has(d.date) ? 'border-s' : ''} ${
+                    d.date === currentDate ? 'bg-indigo-600 text-white' : isCommunion(store, d.date) ? 'bg-amber-100 dark:bg-amber-500/15' : ''
                   }`}
                 >
-                  {d.day}
+                  {/* click a date to mark / unmark that Friday as a communion day for the whole class */}
+                  <button
+                    onClick={() => toggleCommunion(d.date)}
+                    title={isCommunion(store, d.date) ? t('unmarkCommunion') : t('markCommunion')}
+                    aria-pressed={isCommunion(store, d.date)}
+                    className="flex w-full flex-col items-center rounded px-1 py-0.5 hover:bg-black/5 dark:hover:bg-white/10"
+                  >
+                    {d.day}
+                    <span className={`text-[11px] leading-none ${isCommunion(store, d.date) ? 'text-amber-600 dark:text-amber-300' : 'opacity-0'}`}>✝</span>
+                  </button>
                 </th>
               ))}
             </tr>
@@ -168,7 +178,7 @@ export function AttendancePage() {
                           <td
                             key={d.date}
                             className={`${bottom} border-e border-e-slate-100 p-1 text-center dark:border-e-slate-800 ${firstOfMonth.has(d.date) ? 'border-s border-s-slate-200 dark:border-s-slate-700' : ''} ${
-                              d.date === currentDate ? 'bg-indigo-50 dark:bg-indigo-500/10' : ''
+                              d.date === currentDate ? 'bg-indigo-50 dark:bg-indigo-500/10' : isCommunion(store, d.date) ? 'bg-amber-50 dark:bg-amber-500/5' : ''
                             }`}
                           >
                             <button
