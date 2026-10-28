@@ -4,7 +4,6 @@ import { useI18n } from '../lib/i18n'
 import { useTheme } from '../lib/theme'
 import { go, useRoute, type Path } from '../lib/router'
 import { resetStore, setCurrentClass, useStore } from '../lib/store'
-import { FirstAdminBanner } from './FirstAdminBanner'
 import { Avatar } from './Avatar'
 import {
   CalendarCheckIcon,
@@ -171,9 +170,8 @@ export function Layout({ email, admin, title, children }: { email: string; admin
 
       {/* main */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <Header title={title} onMenu={() => setOpen(true)} onSignOut={signOut} />
+        <Header title={title} email={email} onMenu={() => setOpen(true)} onSignOut={signOut} />
         <main className="min-h-0 flex-1 overflow-auto p-4 lg:p-6">
-          {!admin && <FirstAdminBanner />}
           {children}
         </main>
       </div>
@@ -202,8 +200,9 @@ export function HeaderButtons() {
   )
 }
 
-function Header({ title, onMenu, onSignOut }: { title: string; onMenu: () => void; onSignOut: () => void }) {
+function Header({ title, email, onMenu, onSignOut }: { title: string; email: string; onMenu: () => void; onSignOut: () => void }) {
   const { t } = useI18n()
+  const { profile } = useStore()
 
   return (
     <header className="flex h-16 shrink-0 items-center gap-2 border-b border-slate-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-900 lg:px-6">
@@ -229,6 +228,15 @@ function Header({ title, onMenu, onSignOut }: { title: string; onMenu: () => voi
           <LogOutIcon />
         </button>
       </div>
+      {/* me — photo, or my initials; opens my profile */}
+      <button
+        onClick={() => go('/profile')}
+        title={profile?.display_name || email}
+        aria-label={t('profile')}
+        className="rounded-full focus:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/30"
+      >
+        <Avatar photo={profile?.photo} name={profile?.display_name || email} className="size-9 text-sm ring-2 ring-white dark:ring-slate-900" />
+      </button>
     </header>
   )
 }

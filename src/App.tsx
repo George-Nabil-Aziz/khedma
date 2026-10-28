@@ -56,7 +56,7 @@ function Routes({ email, userId, admin }: { email: string; userId: string; admin
   // Pages that work without a class; everything else needs one.
   if (route.name === 'share') return page('share', <SharePage />)
   if (route.name === 'sync') return page('sync', <SyncPage />)
-  if (route.name === 'profile') return page('profile', <ProfilePage email={email} />)
+  if (route.name === 'profile') return page('profile', <ProfilePage email={email} admin={admin} />)
   if (admin && route.name === 'users') return page('users', <UsersPage myId={userId} />)
   if (admin && route.name === 'audit') return page('audit', <AuditPage />)
   if (route.name === 'classes') return page('classes', <ClassesPage />)
@@ -71,7 +71,7 @@ function Routes({ email, userId, admin }: { email: string; userId: string; admin
     case 'attendance':
       return page('attendance', <AttendancePage />)
     case 'fields':
-      return page('customize', <FieldsPage />)
+      return page('customize', <FieldsPage admin={admin} />)
     default:
       return page('children', <ChildrenPage />)
   }

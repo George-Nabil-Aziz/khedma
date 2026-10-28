@@ -3,6 +3,7 @@ import { useI18n } from '../lib/i18n'
 import { go } from '../lib/router'
 import { useStore, viewRows, type RowStatus } from '../lib/store'
 import { ColumnsMenu } from '../components/ColumnsMenu'
+import { Pagination, usePageSize } from '../components/Pagination'
 import { sortRows, useColumnPrefs, useColumns, useSort, type Column } from '../lib/columns'
 import { Avatar } from '../components/Avatar'
 import { AlertIcon, ChevronDownIcon, ChevronUpIcon, CloudOffIcon, ColumnsIcon, PlusIcon, SortIcon } from '../components/Icons'
@@ -15,6 +16,14 @@ export function ChildrenPage() {
   const prefs = useColumnPrefs(columns)
   const { sort, toggle } = useSort()
   const [query, setQuery] = useState('')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = usePageSize('children')
+
+  // A new sort starts from the first page.
+  function sortBy(id: string) {
+    toggle(id)
+    setPage(1)
+  }
   const [menuOpen, setMenuOpen] = useState(false)
 
   const filtered = useMemo(() => {
@@ -34,6 +43,11 @@ export function ChildrenPage() {
     return sortRows(list, columns, sort, lang)
   }, [rows, query, columns, sort, lang])
 
+  // Back to a page that exists when the search or page size shrinks the list.
+  const pages = Math.max(1, Math.ceil(filtered.length / pageSize))
+  const current = Math.min(page, pages)
+  const pageRows = filtered.slice((current - 1) * pageSize, current * pageSize)
+
   const showLoading = !store.loaded || (store.syncing && !store.lastSyncAt && rows.length === 0)
   const colSpan = prefs.visible.length + 2
 
@@ -51,7 +65,10 @@ export function ChildrenPage() {
           className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 sm:max-w-xs dark:border-slate-700 dark:bg-slate-900"
           placeholder={t('search')}
           value={query}
-          onChange={e => setQuery(e.target.value)}
+          onChange={e => {
+            setQuery(e.target.value)
+            setPage(1)
+          }}
         />
         <span className="rounded-full bg-indigo-50 px-3 py-1 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
           {t('total')}: {filtered.length}
@@ -82,9 +99,9 @@ export function ChildrenPage() {
           <thead className="bg-slate-50 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
             <tr>
               <th className="px-3 py-3 text-start font-semibold">#</th>
-              <SortHeader id="name" label={t('name')} sort={sort} onSort={toggle} />
+              <SortHeader id="name" label={t('name')} sort={sort} onSort={sortBy} />
               {prefs.visible.map(c => (
-                <SortHeader key={c.id} id={c.id} label={c.label} sort={sort} onSort={toggle} />
+                <SortHeader key={c.id} id={c.id} label={c.label} sort={sort} onSort={sortBy} />
               ))}
             </tr>
           </thead>
@@ -102,9 +119,9 @@ export function ChildrenPage() {
                 </td>
               </tr>
             ) : (
-              filtered.map((r, i) => (
+              pageRows.map((r, i) => (
                 <tr key={r.client_id} className="align-top hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                  <td className="px-3 py-2 text-slate-400">{i + 1}</td>
+                  <td className="px-3 py-2 text-slate-400">{(current - 1) * pageSize + i + 1}</td>
                   <td className="min-w-40 px-3 py-2">
                     <button
                       onClick={() => go(`/child/${r.client_id}`)}
@@ -124,6 +141,19 @@ export function ChildrenPage() {
           </tbody>
         </table>
       </div>
+
+      {filtered.length > 0 && (
+        <Pagination
+          page={current}
+          size={pageSize}
+          total={filtered.length}
+          onPage={setPage}
+          onSize={n => {
+            setPageSize(n)
+            setPage(1)
+          }}
+        />
+      )}
     </div>
   )
 }

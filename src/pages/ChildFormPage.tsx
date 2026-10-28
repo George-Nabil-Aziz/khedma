@@ -79,13 +79,14 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
     }
   }
 
-  const text = (f: FormField, label: TKey, opts: { type?: string; ltr?: boolean; hint?: TKey; inputMode?: 'numeric' } = {}) => (
+  const text = (f: FormField, label: TKey, opts: { type?: string; ltr?: boolean; hint?: TKey; inputMode?: 'numeric'; placeholder?: TKey } = {}) => (
     <Field label={t(label)} error={errors[f]} hint={opts.hint && t(opts.hint)}>
       <input
         type={opts.type ?? 'text'}
         onClick={openPicker}
         dir={opts.ltr ? 'ltr' : undefined}
         inputMode={opts.inputMode}
+        placeholder={opts.placeholder && t(opts.placeholder)}
         className={inputClass(!!errors[f])}
         value={texts[f]}
         onChange={e => setText(f)(e.target.value)}
@@ -104,18 +105,18 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
         <div className="sm:col-span-2">
           <PhotoPicker photo={photo} name={texts.full_name} onChange={setPhoto} />
         </div>
-        <div className="sm:col-span-2">{text('full_name', 'name', { hint: 'nameHint' })}</div>
+        <div className="sm:col-span-2">{text('full_name', 'name', { hint: 'nameHint', placeholder: 'phName' })}</div>
         {text('birth_date', 'birthDate', { type: 'date', ltr: true })}
-        {text('national_id', 'nationalId', { ltr: true, inputMode: 'numeric' })}
-        {text('deacon', 'deacon')}
+        {text('national_id', 'nationalId', { ltr: true, inputMode: 'numeric', placeholder: 'phNationalId' })}
+        {text('deacon', 'deacon', { placeholder: 'phDeacon' })}
       </Section>
 
       <Section title={t('address')}>
-        {text('house_number', 'houseNumber')}
-        {text('street', 'street')}
-        {text('branch_of_street', 'branchOfStreet')}
-        {text('landmark', 'landmark')}
-        {text('floor', 'floorLabel')}
+        {text('house_number', 'houseNumber', { placeholder: 'phHouse' })}
+        {text('street', 'street', { placeholder: 'phStreet' })}
+        {text('branch_of_street', 'branchOfStreet', { placeholder: 'phBranch' })}
+        {text('landmark', 'landmark', { placeholder: 'phLandmark' })}
+        {text('floor', 'floorLabel', { placeholder: 'phFloor' })}
         <Field label={t('side')}>
           <select className={inputClass(false)} value={texts.side} onChange={e => setText('side')(e.target.value)}>
             <option value="">—</option>
@@ -127,7 +128,7 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
             {texts.side && !SIDES.some(s => s.value === texts.side) && <option value={texts.side}>{texts.side}</option>}
           </select>
         </Field>
-        {text('apartment', 'apartmentLabel')}
+        {text('apartment', 'apartmentLabel', { placeholder: 'phApartment' })}
       </Section>
 
       <Section title={t('phones')}>
@@ -156,7 +157,7 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
 
       <Section title={t('notes')}>
         <div className="sm:col-span-2">
-          <textarea rows={3} className={inputClass(false)} value={texts.notes} onChange={e => setText('notes')(e.target.value)} />
+          <textarea rows={3} placeholder={t('phNotes')} className={inputClass(false)} value={texts.notes} onChange={e => setText('notes')(e.target.value)} />
         </div>
       </Section>
 
@@ -288,6 +289,7 @@ function CustomInput({ field, value, onChange }: { field: CustomField; value: un
         type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
         onClick={openPicker}
         dir={field.type === 'text' ? undefined : 'ltr'}
+        placeholder={field.type === 'number' ? '0' : field.type === 'text' ? t('phTypeHere') : undefined}
         className={inputClass(false)}
         value={value == null ? '' : String(value)}
         onChange={e => {
@@ -328,7 +330,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 function Field({ label, error, hint, children }: { label: string; error?: string; hint?: string; children: ReactNode }) {
   return (
-    <label className="block space-y-1">
+    <label className="flex flex-col gap-2">
       <span className="text-sm font-semibold">
         {label}
         {hint && <span className="ms-2 text-xs font-normal text-slate-400">({hint})</span>}

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
-import type { FieldType } from '../lib/supabase'
+import type { CustomField, FieldType } from '../lib/supabase'
 import { useI18n, type TKey } from '../lib/i18n'
-import { addField, classFields, deleteField, renameField, useStore } from '../lib/store'
+import { addField, classFields, deleteField, renameField, useStore, viewRows } from '../lib/store'
 import { CloudOffIcon, LockIcon, PlusIcon, TrashIcon } from '../components/Icons'
 
 const TYPES: { value: FieldType; key: TKey }[] = [
@@ -13,7 +13,10 @@ const TYPES: { value: FieldType; key: TKey }[] = [
 
 const BUILT_IN: TKey[] = ['name', 'address', 'landmark', 'birthDate', 'age', 'motherMobile', 'fatherMobile', 'childMobile', 'primaryContact', 'deacon', 'notes', 'nationalId']
 
-export function FieldsPage() {
+const input =
+  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800'
+
+export function FieldsPage({ admin }: { admin: boolean }) {
   const { t } = useI18n()
   const store = useStore()
   const { online } = store
@@ -38,8 +41,21 @@ export function FieldsPage() {
     if (await run(() => addField(label.trim(), type))) setLabel('')
   }
 
-  const input =
-    'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800'
+  /** How many children of this class have something typed in the column. */
+  function filledCount(f: CustomField) {
+    return viewRows(store).filter(r => {
+      const v = r.extra?.[f.key]
+      return v != null && v !== ''
+    }).length
+  }
+
+  function remove(f: CustomField) {
+    const n = filledCount(f)
+    const message = n
+      ? t('deleteFieldWithData').replace('{name}', f.label).replace('{count}', String(n))
+      : t('deleteFieldEmpty').replace('{name}', f.label)
+    if (window.confirm(message)) run(() => deleteField(f.key))
+  }
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
@@ -53,30 +69,39 @@ export function FieldsPage() {
       )}
 
       {/* add */}
-      <form onSubmit={add} className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-        <h2 className="font-bold">{t('addField')}</h2>
-        <div className="grid gap-3 sm:grid-cols-[1fr_10rem_auto]">
-          <input className={input} placeholder={t('fieldLabel')} value={label} onChange={e => setLabel(e.target.value)} disabled={!online || busy} />
-          <select className={input} value={type} onChange={e => setType(e.target.value as FieldType)} disabled={!online || busy} aria-label={t('fieldType')}>
-            {TYPES.map(o => (
-              <option key={o.value} value={o.value}>
-                {t(o.key)}
-              </option>
-            ))}
-          </select>
-          <button
-            disabled={!online || busy || !label.trim()}
-            className="flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
-            <PlusIcon className="size-4" />
-            {t('addField')}
-          </button>
+      <form onSubmit={add} className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <h2 className="flex items-center gap-2 font-bold">
+          <PlusIcon className="size-5 text-indigo-600 dark:text-indigo-300" />
+          {t('addField')}
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-[1fr_12rem]">
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-semibold">{t('fieldLabel')}</span>
+            <input className={input} placeholder={t('phFieldLabel')} value={label} onChange={e => setLabel(e.target.value)} disabled={!online || busy} />
+          </label>
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-semibold">{t('fieldType')}</span>
+            <select className={input} value={type} onChange={e => setType(e.target.value as FieldType)} disabled={!online || busy}>
+              {TYPES.map(o => (
+                <option key={o.value} value={o.value}>
+                  {t(o.key)}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
+        <button
+          disabled={!online || busy || !label.trim()}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 sm:w-auto"
+        >
+          <PlusIcon className="size-4" />
+          {t('addField')}
+        </button>
         {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">{error}</p>}
       </form>
 
       {/* custom */}
-      <section className="space-y-2 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+      <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
         <h2 className="font-bold">{t('extraFields')}</h2>
         {fields.length === 0 ? (
           <p className="text-sm text-slate-500">{t('noCustomFields')}</p>
@@ -85,30 +110,36 @@ export function FieldsPage() {
             <div key={f.key} className="flex items-center gap-2">
               <input
                 className={input}
+                placeholder={t('phFieldLabel')}
                 defaultValue={f.label}
                 disabled={!online || busy}
+                aria-label={t('fieldLabel')}
                 onBlur={e => {
                   const v = e.target.value.trim()
                   if (v && v !== f.label) run(() => renameField(f.key, v))
                   else e.target.value = f.label
                 }}
               />
-              <span className="shrink-0 rounded bg-slate-100 px-2 py-1 text-xs font-semibold dark:bg-slate-800">
-                {t(TYPES.find(o => o.value === f.type)?.key ?? 'typeText')}
+              <span className="shrink-0 whitespace-nowrap rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs dark:bg-slate-800">
+                <span className="text-slate-500">{t('fieldType')}: </span>
+                <span className="font-semibold">{t(TYPES.find(o => o.value === f.type)?.key ?? 'typeText')}</span>
               </span>
-              <button
-                type="button"
-                disabled={!online || busy}
-                onClick={() => window.confirm(t('deleteFieldConfirm')) && run(() => deleteField(f.key))}
-                title={t('deleteField')}
-                aria-label={t('deleteField')}
-                className="grid size-9 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-500/10"
-              >
-                <TrashIcon />
-              </button>
+              {admin && (
+                <button
+                  type="button"
+                  disabled={!online || busy}
+                  onClick={() => remove(f)}
+                  title={t('deleteField')}
+                  aria-label={t('deleteField')}
+                  className="grid size-9 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-500/10"
+                >
+                  <TrashIcon />
+                </button>
+              )}
             </div>
           ))
         )}
+        {!admin && fields.length > 0 && <p className="text-xs text-slate-400">{t('deleteFieldAdminOnly')}</p>}
       </section>
 
       {/* built-in */}

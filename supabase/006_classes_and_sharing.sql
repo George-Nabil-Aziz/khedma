@@ -167,7 +167,9 @@ drop policy if exists "members delete fields" on khedma_2027.custom_fields;
 create policy "members read fields"   on khedma_2027.custom_fields for select to authenticated using (khedma_2027.is_member(class_id));
 create policy "members add fields"    on khedma_2027.custom_fields for insert to authenticated with check (khedma_2027.is_member(class_id));
 create policy "members edit fields"   on khedma_2027.custom_fields for update to authenticated using (khedma_2027.is_member(class_id)) with check (khedma_2027.is_member(class_id));
-create policy "members delete fields" on khedma_2027.custom_fields for delete to authenticated using (khedma_2027.is_member(class_id));
+-- Deleting a column erases its values from every child, so only admins can (see delete_custom_field below).
+drop policy if exists "admins delete fields" on khedma_2027.custom_fields;
+create policy "admins delete fields"  on khedma_2027.custom_fields for delete to authenticated using (khedma_2027.is_admin());
 
 -- classes: see / rename your classes; only admins delete. Created through create_class().
 alter table khedma_2027.classes enable row level security;
@@ -305,7 +307,8 @@ as $$
 $$;
 
 -- Admin: every account with its role and classes.
-create or replace function khedma_2027.admin_list_users()
+drop function if exists khedma_2027.admin_list_users();
+create function khedma_2027.admin_list_users()
 returns table (id uuid, email text, created_at timestamptz, last_sign_in_at timestamptz, is_admin boolean, class_ids uuid[])
 language plpgsql
 stable
@@ -324,6 +327,28 @@ begin
     order by u.created_at;
 end;
 $$;
+
+-- Admins only: remove a custom column AND the values typed into it, for every child of its class.
+-- Each child's change is written to the audit log by the children trigger.
+create or replace function khedma_2027.delete_custom_field(p_key text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_class uuid;
+begin
+  if not khedma_2027.is_admin() then raise exception 'admins only'; end if;
+  select class_id into v_class from khedma_2027.custom_fields where key = p_key;
+  if not found then return; end if;
+  update khedma_2027.children set extra = extra - p_key where class_id = v_class and extra ? p_key;
+  delete from khedma_2027.custom_fields where key = p_key;
+end;
+$$;
+
+revoke all on function khedma_2027.delete_custom_field(text) from public, anon;
+grant execute on function khedma_2027.delete_custom_field(text) to authenticated;
 
 revoke all on function khedma_2027.my_classes()               from public, anon;
 revoke all on function khedma_2027.set_default_class(uuid)    from public, anon;

@@ -10,11 +10,11 @@ Run these once, in order, in the Supabase SQL Editor:
 2. `supabase/003_phones_and_custom_fields.sql` adds multiple phones per person with a WhatsApp flag, the main contact, and custom columns.
 3. `supabase/004_audit_admin_follow_up.sql` adds the audit log, the admin role, and the متابعة table (الحضور + الافتقاد).
 4. `supabase/keepalive.sql` adds the `ping()` function used by the GitHub Action.
-5. Create your own account (Authentication → Users → Add user, with Auto Confirm checked) and sign in to the app. While there is no admin yet, the app shows a **"Make me admin"** banner; the first person to press it becomes the admin.
+5. `supabase/005_make_admin.sql` makes george.nabil.biy@gmail.com the first admin (run once). After that, admins make other admins from the **Users** page.
 6. `supabase/006_classes_and_sharing.sql` adds classes, membership and one-time share codes. Before running it, put your class name on the line marked `CLASS NAME`.
 7. `supabase/007_photos_and_profiles.sql` adds an optional photo per child, and a profile (name + photo) per servant.
 
-Sign-ups are disabled. The admin adds servants from the **Users** page.
+Anyone can create an account from the sign-in page, but a new account sees no children until it creates a class or joins one with a share code. Turn on **Allow new users to sign up** in Supabase only **after** running 006. The admin can also add servants from the **Users** page.
 
 ## Admin Edge Function
 

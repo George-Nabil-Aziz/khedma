@@ -75,7 +75,7 @@ function NewClassForm() {
         {t('newClass')}
       </h2>
       <div className="grid gap-2 sm:grid-cols-[1fr_9rem_auto]">
-        <input className={input} placeholder={t('className')} value={name} onChange={e => setName(e.target.value)} disabled={!online || busy} autoFocus />
+        <input className={input} placeholder={t('phClassName')} value={name} onChange={e => setName(e.target.value)} disabled={!online || busy} autoFocus />
         <select className={input} value={year} onChange={e => setYear(e.target.value)} disabled={!online || busy} aria-label={t('serviceYear')} dir="ltr">
           {nearbyServiceYears().map(y => (
             <option key={y} value={y}>
@@ -142,7 +142,7 @@ function ClassCard({ c }: { c: ClassInfo }) {
               if (await run(() => renameClass(c.id, name.trim()))) setRenaming(false)
             }}
           >
-            <input className={input} value={name} onChange={e => setName(e.target.value)} disabled={busy} autoFocus aria-label={t('className')} />
+            <input className={input} placeholder={t('phClassName')} value={name} onChange={e => setName(e.target.value)} disabled={busy} autoFocus aria-label={t('className')} />
             <button disabled={busy || !name.trim()} className="rounded-lg bg-indigo-600 px-3 text-sm font-semibold text-white disabled:opacity-50">
               {t('save')}
             </button>

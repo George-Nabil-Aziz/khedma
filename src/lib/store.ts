@@ -452,11 +452,11 @@ export async function renameField(key: string, label: string): Promise<string | 
   return null
 }
 
-/** Removes the column definition. The values already typed stay inside `extra`, hidden. */
+/** Admins only: removes the column AND the values typed into it, for every child of the class. */
 export async function deleteField(key: string): Promise<string | null> {
-  const { error } = await supabase.from('custom_fields').delete().eq('key', key)
+  const { error } = await supabase.rpc('delete_custom_field', { p_key: key })
   if (error) return error.message
-  await pullFields().catch(() => {})
+  await sync()
   return null
 }
 

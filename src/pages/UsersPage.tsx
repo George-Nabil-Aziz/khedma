@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { FunctionsHttpError } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { useI18n } from '../lib/i18n'
+import { PasswordInput } from '../components/PasswordInput'
 import { sync, useStore } from '../lib/store'
 import { CloudOffIcon, PencilIcon, PlusIcon, ShieldIcon, SyncIcon, TrashIcon, XIcon } from '../components/Icons'
 
@@ -192,51 +193,82 @@ function CreateUser({ disabled, onCreate }: { disabled: boolean; onCreate: (b: {
   const { t } = useI18n()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [repeat, setRepeat] = useState('')
   const [admin, setAdmin] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
 
   async function submit(e: FormEvent) {
     e.preventDefault()
+    setError('')
+    if (password.length < 8) return setError(t('passwordTooShort'))
+    if (password !== repeat) return setError(t('passwordMismatch'))
     setBusy(true)
     if (await onCreate({ email, password, admin })) {
       setEmail('')
       setPassword('')
+      setRepeat('')
       setAdmin(false)
     }
     setBusy(false)
   }
 
+  const field = (label: string, control: ReactNode) => (
+    <label className="flex flex-col gap-2">
+      <span className="text-sm font-semibold">{label}</span>
+      {control}
+    </label>
+  )
+
   return (
-    <form onSubmit={submit} className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+    <form onSubmit={submit} className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
       <h2 className="flex items-center gap-2 font-bold">
         <PlusIcon className="size-5 text-indigo-600 dark:text-indigo-300" />
         {t('addUser')}
       </h2>
-      <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto_auto]">
-        <input type="email" required dir="ltr" autoComplete="off" placeholder={t('email')} className={input} value={email} onChange={e => setEmail(e.target.value)} disabled={disabled || busy} />
-        <input
-          type="password"
-          required
-          minLength={8}
-          dir="ltr"
-          autoComplete="new-password"
-          placeholder={t('passwordLabel')}
-          className={input}
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          disabled={disabled || busy}
-        />
-        <label className="flex items-center gap-2 text-sm font-semibold">
-          <input type="checkbox" className="size-4 accent-indigo-600" checked={admin} onChange={e => setAdmin(e.target.checked)} disabled={disabled || busy} />
-          {t('admin')}
-        </label>
-        <button
-          disabled={disabled || busy}
-          className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
-        >
-          {t('create')}
-        </button>
+      {field(
+        t('email'),
+        <input type="email" required dir="ltr" autoComplete="off" placeholder="name@example.com" className={input} value={email} onChange={e => setEmail(e.target.value)} disabled={disabled || busy} />,
+      )}
+      <div className="grid gap-4 sm:grid-cols-2">
+        {field(
+          t('passwordLabel'),
+          <PasswordInput
+            required
+            minLength={8}
+            autoComplete="new-password"
+            placeholder={t('passwordTooShort')}
+            className={input}
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            disabled={disabled || busy}
+          />,
+        )}
+        {field(
+          t('confirmPassword'),
+          <PasswordInput
+            required
+            autoComplete="new-password"
+            placeholder={t('phConfirmPassword')}
+            className={input}
+            value={repeat}
+            onChange={e => setRepeat(e.target.value)}
+            disabled={disabled || busy}
+          />,
+        )}
       </div>
+      <label className="flex items-center gap-2 text-sm font-semibold">
+        <input type="checkbox" className="size-4 accent-indigo-600" checked={admin} onChange={e => setAdmin(e.target.checked)} disabled={disabled || busy} />
+        {t('makeAdmin')}
+      </label>
+      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">{error}</p>}
+      <button
+        disabled={disabled || busy}
+        className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 sm:w-auto"
+      >
+        <PlusIcon className="size-4" />
+        {t('addUser')}
+      </button>
     </form>
   )
 }
@@ -271,11 +303,9 @@ function EditUser({
 
   return (
     <form onSubmit={submit} className="grid gap-2 rounded-lg bg-slate-50 p-3 sm:grid-cols-[1fr_1fr_auto] dark:bg-slate-800/50">
-      <input type="email" required dir="ltr" className={input} value={email} onChange={e => setEmail(e.target.value)} disabled={busy} aria-label={t('email')} />
-      <input
-        type="password"
+      <input type="email" required dir="ltr" placeholder="name@example.com" className={input} value={email} onChange={e => setEmail(e.target.value)} disabled={busy} aria-label={t('email')} />
+      <PasswordInput
         minLength={8}
-        dir="ltr"
         autoComplete="new-password"
         placeholder={t('passwordKeep')}
         className={input}
