@@ -1,0 +1,127 @@
+import { useState, type FormEvent } from 'react'
+import type { FieldType } from '../lib/supabase'
+import { useI18n, type TKey } from '../lib/i18n'
+import { addField, deleteField, renameField, useStore } from '../lib/store'
+import { CloudOffIcon, LockIcon, PlusIcon, TrashIcon } from '../components/Icons'
+
+const TYPES: { value: FieldType; key: TKey }[] = [
+  { value: 'text', key: 'typeText' },
+  { value: 'number', key: 'typeNumber' },
+  { value: 'date', key: 'typeDate' },
+  { value: 'boolean', key: 'typeBoolean' },
+]
+
+const BUILT_IN: TKey[] = ['name', 'address', 'landmark', 'birthDate', 'age', 'motherMobile', 'fatherMobile', 'childMobile', 'primaryContact', 'deacon', 'notes', 'nationalId']
+
+export function FieldsPage() {
+  const { t } = useI18n()
+  const { fields, online } = useStore()
+  const [label, setLabel] = useState('')
+  const [type, setType] = useState<FieldType>('text')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  async function run(action: () => Promise<string | null>) {
+    setBusy(true)
+    setError('')
+    const err = await action()
+    if (err) setError(err)
+    setBusy(false)
+    return !err
+  }
+
+  async function add(e: FormEvent) {
+    e.preventDefault()
+    if (!label.trim()) return
+    if (await run(() => addField(label.trim(), type))) setLabel('')
+  }
+
+  const input =
+    'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800'
+
+  return (
+    <div className="mx-auto max-w-2xl space-y-5">
+      <p className="text-sm text-slate-500">{t('customFieldsHelp')}</p>
+
+      {!online && (
+        <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+          <CloudOffIcon className="size-4 shrink-0" />
+          {t('onlineOnly')}
+        </div>
+      )}
+
+      {/* add */}
+      <form onSubmit={add} className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <h2 className="font-bold">{t('addField')}</h2>
+        <div className="grid gap-3 sm:grid-cols-[1fr_10rem_auto]">
+          <input className={input} placeholder={t('fieldLabel')} value={label} onChange={e => setLabel(e.target.value)} disabled={!online || busy} />
+          <select className={input} value={type} onChange={e => setType(e.target.value as FieldType)} disabled={!online || busy} aria-label={t('fieldType')}>
+            {TYPES.map(o => (
+              <option key={o.value} value={o.value}>
+                {t(o.key)}
+              </option>
+            ))}
+          </select>
+          <button
+            disabled={!online || busy || !label.trim()}
+            className="flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+          >
+            <PlusIcon className="size-4" />
+            {t('addField')}
+          </button>
+        </div>
+        {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">{error}</p>}
+      </form>
+
+      {/* custom */}
+      <section className="space-y-2 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <h2 className="font-bold">{t('extraFields')}</h2>
+        {fields.length === 0 ? (
+          <p className="text-sm text-slate-500">{t('noCustomFields')}</p>
+        ) : (
+          fields.map(f => (
+            <div key={f.key} className="flex items-center gap-2">
+              <input
+                className={input}
+                defaultValue={f.label}
+                disabled={!online || busy}
+                onBlur={e => {
+                  const v = e.target.value.trim()
+                  if (v && v !== f.label) run(() => renameField(f.key, v))
+                  else e.target.value = f.label
+                }}
+              />
+              <span className="shrink-0 rounded bg-slate-100 px-2 py-1 text-xs font-semibold dark:bg-slate-800">
+                {t(TYPES.find(o => o.value === f.type)?.key ?? 'typeText')}
+              </span>
+              <button
+                type="button"
+                disabled={!online || busy}
+                onClick={() => window.confirm(t('deleteFieldConfirm')) && run(() => deleteField(f.key))}
+                title={t('deleteField')}
+                aria-label={t('deleteField')}
+                className="grid size-9 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-500/10"
+              >
+                <TrashIcon />
+              </button>
+            </div>
+          ))
+        )}
+      </section>
+
+      {/* built-in */}
+      <section className="space-y-2 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <h2 className="font-bold">{t('builtInColumns')}</h2>
+        <p className="text-sm text-slate-500">{t('builtInHelp')}</p>
+        <div className="flex flex-wrap gap-2">
+          {BUILT_IN.map(k => (
+            <span key={k} className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-sm dark:bg-slate-800">
+              <LockIcon className="size-3.5 text-slate-400" />
+              {t(k)}
+            </span>
+          ))}
+        </div>
+      </section>
+    </div>
+  )
+}

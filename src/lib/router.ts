@@ -1,0 +1,39 @@
+import { useSyncExternalStore } from 'react'
+
+// Hash routes (#/sync, #/child/<id>) work on any static host and inside the installed PWA.
+export type Route =
+  | { name: 'list' }
+  | { name: 'new' }
+  | { name: 'edit'; id: string }
+  | { name: 'sync' }
+  | { name: 'fields' }
+  | { name: 'attendance' }
+  | { name: 'audit' }
+
+const STATIC = ['new', 'sync', 'fields', 'attendance', 'audit'] as const
+
+export type Path = '/' | `/${(typeof STATIC)[number]}` | `/child/${string}`
+
+function parse(hash: string): Route {
+  const path = hash.replace(/^#\/?/, '')
+  const fixed = STATIC.find(s => s === path)
+  if (fixed) return { name: fixed }
+  const m = path.match(/^child\/([\w-]+)$/)
+  if (m) return { name: 'edit', id: m[1] }
+  return { name: 'list' }
+}
+
+export function useRoute(): Route {
+  const hash = useSyncExternalStore(
+    l => {
+      window.addEventListener('hashchange', l)
+      return () => window.removeEventListener('hashchange', l)
+    },
+    () => location.hash,
+  )
+  return parse(hash)
+}
+
+export function go(path: Path) {
+  location.hash = path
+}

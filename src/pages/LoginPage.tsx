@@ -1,12 +1,10 @@
 import { useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { useI18n } from '../lib/i18n'
-import { useTheme } from '../lib/theme'
-import { MoonIcon, SunIcon } from '../components/Icons'
+import { HeaderButtons } from '../components/Layout'
 
 export function LoginPage() {
-  const { t, lang, setLang } = useI18n()
-  const { theme, toggle } = useTheme()
+  const { t } = useI18n()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -18,6 +16,11 @@ export function LoginPage() {
     setError('')
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) setError(error.message)
+    else
+      supabase.rpc('log_event', { p_action: 'login' }).then(
+        () => {},
+        () => {},
+      )
     setBusy(false)
   }
 
@@ -27,19 +30,7 @@ export function LoginPage() {
   return (
     <div className="flex h-full flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="flex justify-end gap-2 p-4">
-        <button
-          className="h-9 rounded-lg border border-slate-200 px-3 text-sm font-semibold dark:border-slate-700"
-          onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}
-        >
-          {lang === 'ar' ? 'English' : 'عربي'}
-        </button>
-        <button
-          className="grid size-9 place-items-center rounded-lg border border-slate-200 dark:border-slate-700"
-          onClick={toggle}
-          aria-label={t('toggleTheme')}
-        >
-          {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
-        </button>
+        <HeaderButtons />
       </div>
 
       <div className="grid flex-1 place-items-center px-4">
@@ -48,7 +39,7 @@ export function LoginPage() {
           className="w-full max-w-sm space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
         >
           <div className="text-center">
-            <div className="mx-auto mb-3 grid size-12 place-items-center rounded-xl bg-indigo-600 text-lg font-bold text-white">27</div>
+            <img src="/logo.svg" alt="" className="mx-auto mb-3 size-16 drop-shadow" />
             <h1 className="text-xl font-bold">{t('appName')}</h1>
           </div>
           <label className="block space-y-1">

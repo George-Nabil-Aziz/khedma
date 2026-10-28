@@ -1,0 +1,228 @@
+import { useMemo, useState, type ReactNode } from 'react'
+import { OWNERS, type CustomField, type Owner } from './supabase'
+import { useI18n, type TKey } from './i18n'
+import { load, save } from './storage'
+import { useStore, type ViewRow } from './store'
+import { OWNER_LABEL, OWNER_PHONES_LABEL, telLink, whatsappLink } from './phones'
+import { StarIcon, WhatsAppIcon } from '../components/Icons'
+
+export type SortValue = string | number | null
+
+export type Column = {
+  id: string
+  label: string
+  render: (r: ViewRow) => ReactNode
+  sort: (r: ViewRow) => SortValue
+  ltr?: boolean
+  nowrap?: boolean
+}
+
+// Values of the "ي/ش/وسط" column in the Excel sheet.
+export const SIDES = [
+  { value: 'ي', key: 'right' },
+  { value: 'ش', key: 'left' },
+  { value: 'وسط', key: 'middle' },
+] as const satisfies readonly { value: string; key: TKey }[]
+
+export function ageOf(birthDate: string | null): number | null {
+  if (!birthDate) return null
+  const b = new Date(birthDate)
+  if (isNaN(b.getTime())) return null
+  const now = new Date()
+  let age = now.getFullYear() - b.getFullYear()
+  if (now.getMonth() < b.getMonth() || (now.getMonth() === b.getMonth() && now.getDate() < b.getDate())) age--
+  return age
+}
+
+/** Every column except the name, which is always shown first. */
+export function useColumns(): Column[] {
+  const { t, lang } = useI18n()
+  const { fields } = useStore()
+
+  return useMemo(() => {
+    const sep = lang === 'ar' ? '، ' : ', '
+
+    function address(r: ViewRow) {
+      const sideKey = SIDES.find(s => s.value === r.side?.trim())?.key
+      return [
+        r.house_number && `${t('house')} ${r.house_number}`,
+        r.street,
+        r.branch_of_street && `${t('branchOf')} ${r.branch_of_street}`,
+        r.floor && `${t('floor')} ${r.floor}`,
+        sideKey ? t(sideKey) : r.side,
+        r.apartment && `${t('apartment')} ${r.apartment}`,
+      ]
+        .filter(Boolean)
+        .join(sep)
+    }
+
+    const phoneColumn = (owner: Owner): Column => ({
+      id: `phones_${owner}`,
+      label: t(OWNER_PHONES_LABEL[owner]),
+      nowrap: true,
+      sort: r => r.phones.find(p => p.owner === owner)?.number ?? null,
+      render: r => {
+        const list = r.phones.filter(p => p.owner === owner)
+        if (!list.length) return null
+        return (
+          <div className="space-y-1">
+            {list.map((p, i) => (
+              <div key={i} className="flex items-center gap-1.5">
+                {r.primary_contact === owner && i === 0 && (
+                  <span title={t('primaryContact')} className="text-amber-500">
+                    <StarIcon className="size-3.5" />
+                  </span>
+                )}
+                <a dir="ltr" href={telLink(p.number)} className="hover:text-indigo-600 hover:underline dark:hover:text-indigo-300">
+                  {p.number}
+                </a>
+                {p.whatsapp && (
+                  <a href={whatsappLink(p.number)} target="_blank" rel="noreferrer" title="WhatsApp" className="text-emerald-500 hover:text-emerald-600">
+                    <WhatsAppIcon className="size-4" />
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        )
+      },
+    })
+
+    const builtIn: Column[] = [
+      { id: 'address', label: t('address'), render: address, sort: r => address(r) || null },
+      { id: 'landmark', label: t('landmark'), render: r => r.landmark, sort: r => r.landmark },
+      { id: 'birth_date', label: t('birthDate'), render: r => r.birth_date && <span dir="ltr">{r.birth_date}</span>, sort: r => r.birth_date, nowrap: true },
+      {
+        id: 'age',
+        label: t('age'),
+        render: r => ageOf(r.birth_date),
+        // newest birth date = youngest, so sort on age itself
+        sort: r => ageOf(r.birth_date),
+        nowrap: true,
+      },
+      ...OWNERS.map(phoneColumn),
+      {
+        id: 'primary_contact',
+        label: t('primaryContact'),
+        render: r => r.primary_contact && t(OWNER_LABEL[r.primary_contact]),
+        sort: r => (r.primary_contact ? t(OWNER_LABEL[r.primary_contact]) : null),
+        nowrap: true,
+      },
+      { id: 'deacon', label: t('deacon'), render: r => r.deacon, sort: r => r.deacon },
+      { id: 'notes', label: t('notes'), render: r => r.notes, sort: r => r.notes },
+      { id: 'national_id', label: t('nationalId'), render: r => r.national_id && <span dir="ltr">{r.national_id}</span>, sort: r => r.national_id, nowrap: true },
+    ]
+
+    return [...builtIn, ...fields.map(f => customColumn(f, t))]
+  }, [t, lang, fields])
+}
+
+function customColumn(f: CustomField, t: (k: TKey) => string): Column {
+  const id = `x:${f.key}`
+  const get = (r: ViewRow) => r.extra?.[f.key] ?? null
+  switch (f.type) {
+    case 'boolean':
+      return { id, label: f.label, nowrap: true, render: r => (get(r) == null ? null : get(r) ? t('yes') : t('no')), sort: r => (get(r) == null ? null : get(r) ? 1 : 0) }
+    case 'number':
+      return { id, label: f.label, nowrap: true, render: r => get(r) as ReactNode, sort: r => (get(r) == null || get(r) === '' ? null : Number(get(r))) }
+    case 'date':
+      return { id, label: f.label, nowrap: true, render: r => get(r) != null && <span dir="ltr">{String(get(r))}</span>, sort: r => (get(r) as string) ?? null }
+    default:
+      return { id, label: f.label, render: r => get(r) as ReactNode, sort: r => (get(r) as string) || null }
+  }
+}
+
+// ---- per-device preferences --------------------------------------------------
+
+type Prefs = { order: string[]; hidden: string[] }
+
+const DEFAULT_HIDDEN = ['age', 'primary_contact']
+
+function readPrefs(): Prefs | null {
+  try {
+    const p = JSON.parse(load('columns') ?? 'null')
+    return p && Array.isArray(p.order) && Array.isArray(p.hidden) ? p : null
+  } catch {
+    return null
+  }
+}
+
+/** Column order + visibility, saved on this device. New custom columns appear at the end, visible. */
+export function useColumnPrefs(all: Column[]) {
+  const [prefs, setPrefs] = useState<Prefs | null>(readPrefs)
+
+  const ordered = useMemo(() => {
+    const byId = new Map(all.map(c => [c.id, c]))
+    const order = (prefs?.order ?? []).filter(id => byId.has(id))
+    for (const c of all) if (!order.includes(c.id)) order.push(c.id)
+    const hidden = new Set(prefs?.hidden ?? DEFAULT_HIDDEN)
+    return order.map(id => ({ column: byId.get(id)!, visible: !hidden.has(id) }))
+  }, [all, prefs])
+
+  function update(next: Prefs | null) {
+    setPrefs(next)
+    if (next) save('columns', JSON.stringify(next))
+    else save('columns', '')
+  }
+
+  const current = (): Prefs => ({ order: ordered.map(o => o.column.id), hidden: ordered.filter(o => !o.visible).map(o => o.column.id) })
+
+  return {
+    ordered,
+    visible: ordered.filter(o => o.visible).map(o => o.column),
+    isDefault: prefs === null,
+    toggle(id: string) {
+      const p = current()
+      update({ ...p, hidden: p.hidden.includes(id) ? p.hidden.filter(h => h !== id) : [...p.hidden, id] })
+    },
+    move(id: string, by: -1 | 1) {
+      const p = current()
+      const i = p.order.indexOf(id)
+      const j = i + by
+      if (i < 0 || j < 0 || j >= p.order.length) return
+      ;[p.order[i], p.order[j]] = [p.order[j], p.order[i]]
+      update(p)
+    },
+    reset: () => update(null),
+  }
+}
+
+// ---- sorting -------------------------------------------------------------------
+
+export type Sort = { id: string; dir: 'asc' | 'desc' }
+
+export function useSort() {
+  const [sort, setSort] = useState<Sort>(() => {
+    try {
+      const s = JSON.parse(load('sort') ?? 'null')
+      if (s && typeof s.id === 'string' && (s.dir === 'asc' || s.dir === 'desc')) return s
+    } catch {
+      /* ignore */
+    }
+    return { id: 'name', dir: 'asc' }
+  })
+
+  /** First click sorts ascending, the next click on the same column flips it. */
+  function toggle(id: string) {
+    const next: Sort = sort.id === id ? { id, dir: sort.dir === 'asc' ? 'desc' : 'asc' } : { id, dir: 'asc' }
+    setSort(next)
+    save('sort', JSON.stringify(next))
+  }
+
+  return { sort, toggle }
+}
+
+/** The order the children page shows — الافتقاد uses the same one. */
+export function sortRows(rows: ViewRow[], columns: Column[], sort: Sort, lang: string) {
+  const col = columns.find(c => c.id === sort.id)
+  const key = col ? col.sort : (r: ViewRow) => r.full_name
+  return [...rows].sort((a, b) => compare(key(a), key(b), sort.dir, lang) || a.full_name.localeCompare(b.full_name, lang))
+}
+
+/** Empty values always go last, whichever direction. */
+export function compare(a: SortValue, b: SortValue, dir: 'asc' | 'desc', lang: string) {
+  if (a == null || a === '') return b == null || b === '' ? 0 : 1
+  if (b == null || b === '') return -1
+  const r = typeof a === 'number' && typeof b === 'number' ? a - b : String(a).localeCompare(String(b), lang, { numeric: true })
+  return dir === 'asc' ? r : -r
+}
