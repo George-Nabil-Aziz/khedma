@@ -123,7 +123,7 @@ export function AttendancePage() {
                 <th
                   key={d.date}
                   ref={d.date === currentDate ? currentCell : undefined}
-                  className={`border-b border-slate-200 px-1 py-1.5 text-xs font-semibold dark:border-slate-800 ${firstOfMonth.has(d.date) ? 'border-s' : ''} ${
+                  className={`border-b border-e border-slate-200 px-1 py-1.5 text-xs font-semibold dark:border-slate-800 ${firstOfMonth.has(d.date) ? 'border-s' : ''} ${
                     d.date === currentDate ? 'bg-indigo-600 text-white' : ''
                   }`}
                 >
@@ -167,7 +167,7 @@ export function AttendancePage() {
                         return (
                           <td
                             key={d.date}
-                            className={`${bottom} p-1 text-center ${firstOfMonth.has(d.date) ? 'border-s border-s-slate-200 dark:border-s-slate-700' : ''} ${
+                            className={`${bottom} border-e border-e-slate-100 p-1 text-center dark:border-e-slate-800 ${firstOfMonth.has(d.date) ? 'border-s border-s-slate-200 dark:border-s-slate-700' : ''} ${
                               d.date === currentDate ? 'bg-indigo-50 dark:bg-indigo-500/10' : ''
                             }`}
                           >

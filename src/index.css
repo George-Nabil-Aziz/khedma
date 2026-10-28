@@ -5,6 +5,49 @@
 
 @theme {
   --font-sans: "Cairo Variable", ui-sans-serif, system-ui, sans-serif;
+
+  /*
+   * Khedma palette, taken from the logo's violet. The whole app uses Tailwind's `indigo-*`
+   * (brand) and `slate-*` (neutrals) names, so redefining them here restyles every page.
+   */
+
+  /* brand: a warm royal violet */
+  --color-indigo-50: #f4f2ff;
+  --color-indigo-100: #ebe7ff;
+  --color-indigo-200: #d8d0ff;
+  --color-indigo-300: #bbaeff;
+  --color-indigo-400: #9a85fc;
+  --color-indigo-500: #7c5cf6;
+  --color-indigo-600: #6a42e8;
+  --color-indigo-700: #5a33cc;
+  --color-indigo-800: #4a2ba5;
+  --color-indigo-900: #3d2783;
+  --color-indigo-950: #251659;
+
+  /* neutrals with a faint violet tint, so greys sit well next to the brand */
+  --color-slate-50: #f7f6fb;
+  --color-slate-100: #efedf6;
+  --color-slate-200: #e2dfee;
+  --color-slate-300: #cbc6de;
+  --color-slate-400: #9d97b6;
+  --color-slate-500: #716b8e;
+  --color-slate-600: #565172;
+  --color-slate-700: #3e3958;
+  --color-slate-800: #2a2641;
+  --color-slate-900: #1b1830;
+  --color-slate-950: #110f21;
+}
+
+/* A soft wash of the brand colour behind every page. */
+body {
+  background:
+    radial-gradient(1200px 600px at 100% -10%, color-mix(in oklab, var(--color-indigo-200) 35%, transparent), transparent),
+    var(--color-slate-50);
+}
+.dark body {
+  background:
+    radial-gradient(1200px 600px at 100% -10%, color-mix(in oklab, var(--color-indigo-900) 45%, transparent), transparent),
+    var(--color-slate-950);
 }
 
 html,
@@ -33,4 +76,30 @@ input[type='date'] {
 
 button:disabled {
   cursor: not-allowed;
+}
+
+/*
+ * Table grid: a thin line between every cell, across and down. The outer edge is left to the
+ * rounded card around the table, so the frame is never drawn twice.
+ */
+.table-grid {
+  border-collapse: collapse;
+}
+.table-grid :where(th, td) {
+  border: 1px solid var(--color-slate-200);
+}
+.dark .table-grid :where(th, td) {
+  border-color: var(--color-slate-700);
+}
+.table-grid :where(tr > :first-child) {
+  border-inline-start: 0;
+}
+.table-grid :where(tr > :last-child) {
+  border-inline-end: 0;
+}
+.table-grid :where(thead tr:first-child > *) {
+  border-top: 0;
+}
+.table-grid :where(tbody tr:last-child > *) {
+  border-bottom: 0;
 }

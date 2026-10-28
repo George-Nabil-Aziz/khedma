@@ -53,7 +53,7 @@ export function Layout({ email, admin, title, children }: { email: string; admin
     }`
 
   return (
-    <div className="flex h-full bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="flex h-full text-slate-900 dark:text-slate-100">
       {/* mobile backdrop */}
       {open && <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setOpen(false)} />}
 
@@ -205,7 +205,7 @@ function Header({ title, email, onMenu, onSignOut }: { title: string; email: str
   const { profile } = useStore()
 
   return (
-    <header className="flex h-16 shrink-0 items-center gap-2 border-b border-slate-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-900 lg:px-6">
+    <header className="flex h-16 shrink-0 items-center gap-2 border-b border-slate-200 bg-white/80 px-4 backdrop-blur dark:border-slate-800 dark:bg-slate-900/80 lg:px-6">
       <button
         className="grid size-9 place-items-center rounded-lg border border-slate-200 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800 lg:hidden"
         onClick={onMenu}

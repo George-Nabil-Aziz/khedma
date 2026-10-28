@@ -31,7 +31,7 @@ export function AccountGate({ userId, email, children }: { userId: string; email
   }, [key])
 
   if (allowed) return <>{children}</>
-  if (allowed === null) return <div className="h-full bg-slate-50 dark:bg-slate-950" />
+  if (allowed === null) return <div className="h-full" />
 
   async function signOut() {
     await resetStore()
@@ -39,7 +39,7 @@ export function AccountGate({ userId, email, children }: { userId: string; email
   }
 
   return (
-    <div className="flex h-full flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="flex h-full flex-col text-slate-900 dark:text-slate-100">
       <div className="flex justify-end gap-2 p-4">
         <HeaderButtons />
       </div>

@@ -32,7 +32,7 @@ export default function App() {
     return () => data.subscription.unsubscribe()
   }, [])
 
-  if (!ready) return <div className="h-full bg-slate-50 dark:bg-slate-950" />
+  if (!ready) return <div className="h-full" />
   if (!session) return <LoginPage />
   // Only for showing the admin pages — the database itself checks the role before returning data.
   const admin = session.user.app_metadata?.role === 'admin'

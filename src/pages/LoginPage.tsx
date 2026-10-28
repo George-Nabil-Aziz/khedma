@@ -13,7 +13,7 @@ export function LoginPage() {
   const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn')
 
   return (
-    <div className="flex h-full flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="flex h-full flex-col text-slate-900 dark:text-slate-100">
       <div className="flex justify-end gap-2 p-4">
         <HeaderButtons />
       </div>

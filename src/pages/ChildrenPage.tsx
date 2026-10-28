@@ -95,7 +95,7 @@ export function ChildrenPage() {
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <table className="w-full text-sm">
+        <table className="table-grid w-full text-sm">
           <thead className="bg-slate-50 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
             <tr>
               <th className="px-3 py-3 text-start font-semibold">#</th>
@@ -105,7 +105,7 @@ export function ChildrenPage() {
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+          <tbody>
             {showLoading ? (
               <tr>
                 <td colSpan={colSpan} className="px-3 py-10 text-center text-slate-500">
@@ -127,7 +127,7 @@ export function ChildrenPage() {
                       onClick={() => go(`/child/${r.client_id}`)}
                       className="flex items-center gap-2 text-start font-semibold text-indigo-700 hover:underline dark:text-indigo-300"
                     >
-                      <Avatar photo={r.photo} name={r.full_name} />
+                      {r.photo && <Avatar photo={r.photo} name={r.full_name} />}
                       {r.full_name}
                       <StatusBadge status={r.status} />
                     </button>

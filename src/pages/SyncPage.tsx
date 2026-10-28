@@ -121,7 +121,7 @@ function ConflictCard({ c }: { c: Conflict }) {
       <p className="text-sm text-slate-500">{c.server ? t('conflictHelp') : t('deletedOnServer')}</p>
       {c.server && (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="table-grid w-full text-sm">
             <thead className="text-slate-500">
               <tr>
                 <th className="py-1 text-start font-semibold">{t('field')}</th>

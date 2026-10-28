@@ -322,7 +322,7 @@ const inputClass = (invalid: boolean) =>
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <fieldset className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-      <legend className="px-2 text-sm font-bold text-indigo-700 dark:text-indigo-300">{title}</legend>
+      <legend className="rounded-full bg-linear-to-l from-indigo-600 to-indigo-500 px-4 py-1 text-sm font-bold text-white shadow-md shadow-indigo-500/25 dark:from-indigo-500 dark:to-indigo-400">{title}</legend>
       <div className="grid gap-4 sm:grid-cols-2">{children}</div>
     </fieldset>
   )
