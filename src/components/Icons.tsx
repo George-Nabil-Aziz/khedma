@@ -79,3 +79,27 @@ export const HistoryIcon = ({ className = 'size-5' }: P) => (
 export const ShieldIcon = ({ className = 'size-3.5' }: P) => (
   <svg {...base} className={className}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /></svg>
 )
+export const ShareIcon = ({ className = 'size-5' }: P) => (
+  <svg {...base} className={className}><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="m8.59 13.51 6.83 3.98M15.41 6.51l-6.82 3.98" /></svg>
+)
+export const UserCogIcon = ({ className = 'size-5' }: P) => (
+  <svg {...base} className={className}><circle cx="9" cy="7" r="4" /><path d="M3 21v-2a4 4 0 0 1 4-4h4" /><circle cx="18" cy="17" r="2.5" /><path d="M18 13v1.5M18 19.5V21M14.5 17H16M20 17h1.5M15.5 14.5l1 1M19.5 18.5l1 1M15.5 19.5l1-1M19.5 15.5l1-1" /></svg>
+)
+export const CopyIcon = ({ className = 'size-4' }: P) => (
+  <svg {...base} className={className}><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+)
+export const DoorIcon = ({ className = 'size-4' }: P) => (
+  <svg {...base} className={`${className} rtl:-scale-x-100`}><path d="M13 4h3a2 2 0 0 1 2 2v14M2 20h3M13 20h9M10 12v.01M13 4.56v16.88a.5.5 0 0 1-.68.47L5 19V5.92a1 1 0 0 1 .66-.94l6.68-2.42a.5.5 0 0 1 .66.47Z" /></svg>
+)
+export const PencilIcon = ({ className = 'size-4' }: P) => (
+  <svg {...base} className={className}><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></svg>
+)
+export const SchoolIcon = ({ className = 'size-5' }: P) => (
+  <svg {...base} className={className}><path d="M14 22v-4a2 2 0 1 0-4 0v4M18 10l4 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8l4-2M18 5v17M4 6l8-4 8 4M6 5v17" /><circle cx="12" cy="9" r="2" /></svg>
+)
+export const CameraIcon = ({ className = 'size-4' }: P) => (
+  <svg {...base} className={className}><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z" /><circle cx="12" cy="13" r="3" /></svg>
+)
+export const GripIcon = ({ className = 'size-4' }: P) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className={className}><circle cx="9" cy="5" r="1.6" /><circle cx="15" cy="5" r="1.6" /><circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" /><circle cx="9" cy="19" r="1.6" /><circle cx="15" cy="19" r="1.6" /></svg>
+)

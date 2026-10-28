@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { load, save } from './storage'
-import { serviceYear } from './serviceYear'
+import { currentServiceYear } from './serviceYear'
 
-const YEAR = serviceYear().label
+const YEAR = currentServiceYear()
 
 export type Lang = 'ar' | 'en'
 
@@ -106,8 +106,7 @@ const dict = {
   showHideColumns: { ar: 'إظهار / إخفاء الأعمدة', en: 'Show / hide columns' },
   alwaysShown: { ar: 'ثابت دايماً', en: 'Always shown' },
   resetDefault: { ar: 'الافتراضي', en: 'Default' },
-  moveUp: { ar: 'لفوق', en: 'Move up' },
-  moveDown: { ar: 'لتحت', en: 'Move down' },
+  dragToReorder: { ar: 'اسحب من ⠿ علشان ترتّب', en: 'Drag ⠿ to reorder' },
   close: { ar: 'إغلاق', en: 'Close' },
   sortBy: { ar: 'ترتيب حسب', en: 'Sort by' },
   age: { ar: 'السن', en: 'Age' },
@@ -148,11 +147,13 @@ const dict = {
     ar: 'دي ثابتة في الداتابيز. تقدر تخفيها أو ترتّبها من زرار "الأعمدة" في صفحة الأولاد.',
     en: 'These are fixed in the database. Hide or reorder them from the "Columns" button on the Children page.',
   },
-  // الافتقاد
-  attendance: { ar: 'الافتقاد', en: 'Follow-up' },
+  // متابعة
+  attendance: { ar: 'متابعة', en: 'Follow-up' },
+  rowAttendance: { ar: 'الحضور', en: 'Attendance' },
+  rowVisit: { ar: 'الافتقاد', en: 'Visit' },
   attendanceTotal: { ar: 'عدد العلامات', en: 'Ticks' },
   attendanceOrderNote: { ar: 'نفس ترتيب صفحة الأولاد', en: 'Same order as the Children page' },
-  attPending: { ar: 'علامات افتقاد مستنية تتبعت', en: 'Follow-up ticks waiting to be sent' },
+  attPending: { ar: 'علامات متابعة مستنية تتبعت', en: 'Follow-up ticks waiting to be sent' },
   refresh: { ar: 'تحديث', en: 'Refresh' },
   // audit
   audit: { ar: 'سجل التعديلات', en: 'Audit log' },
@@ -170,6 +171,104 @@ const dict = {
   auditEmpty: { ar: 'لسه مفيش حاجة في السجل', en: 'Nothing logged yet' },
   loadMore: { ar: 'عرض أكتر', en: 'Load more' },
   admin: { ar: 'أدمن', en: 'Admin' },
+  // photos & profile
+  photo: { ar: 'الصورة', en: 'Photo' },
+  addPhoto: { ar: 'إضافة صورة', en: 'Add photo' },
+  changePhoto: { ar: 'تغيير الصورة', en: 'Change photo' },
+  removePhoto: { ar: 'شيل الصورة', en: 'Remove photo' },
+  photoFailed: { ar: 'مقدرناش نقرا الصورة دي. جرّب صورة تانية.', en: 'Could not read that image. Try another one.' },
+  photoChanged: { ar: 'اتغيّرت الصورة', en: 'Photo changed' },
+  profile: { ar: 'الملف الشخصي', en: 'Profile' },
+  displayName: { ar: 'اسمك', en: 'Your name' },
+  displayNameHint: { ar: 'ده اللي هيظهر لزمايلك', en: 'This is what colleagues see' },
+  saved: { ar: 'اتحفظ ✓', en: 'Saved ✓' },
+  changePassword: { ar: 'تغيير كلمة المرور', en: 'Change password' },
+  newPassword: { ar: 'كلمة المرور الجديدة', en: 'New password' },
+  confirmPassword: { ar: 'اكتبها تاني', en: 'Repeat it' },
+  passwordMismatch: { ar: 'الاتنين مش زي بعض', en: 'They do not match' },
+  passwordTooShort: { ar: '8 حروف على الأقل', en: 'At least 8 characters' },
+  passwordChanged: { ar: 'اتغيّرت كلمة المرور ✓', en: 'Password changed ✓' },
+  noAdminYet: { ar: 'مفيش أدمن في النظام لسه. أول واحد يدوس هنا هيبقى الأدمن.', en: 'There is no admin yet. The first person to press this becomes the admin.' },
+  makeMeAdmin: { ar: 'خليني أدمن', en: 'Make me admin' },
+  // classes & sharing
+  classLabel: { ar: 'الفصل', en: 'Class' },
+  share: { ar: 'مشاركة', en: 'Share' },
+  inviteTitle: { ar: 'ادعُ زميل للفصل ده', en: 'Invite a colleague to this class' },
+  inviteHelp: {
+    ar: 'اطلع رقم وابعته لزميلك. الرقم بيشتغل مرة واحدة بس، ولمدة 15 دقيقة.',
+    en: 'Get a code and send it to your colleague. It works once, for 15 minutes.',
+  },
+  generateCode: { ar: 'اطلع رقم', en: 'Get a code' },
+  newCode: { ar: 'رقم تاني', en: 'Another code' },
+  codeExpires: { ar: 'بيبطل', en: 'Expires' },
+  copy: { ar: 'نسخ', en: 'Copy' },
+  copied: { ar: 'اتنسخ ✓', en: 'Copied ✓' },
+  joinTitle: { ar: 'ادخل فصل برقم', en: 'Join a class with a code' },
+  joinHelp: { ar: 'اكتب الرقم اللي زميلك اداهولك.', en: 'Type the code your colleague gave you.' },
+  join: { ar: 'دخول', en: 'Join' },
+  codeInvalid: { ar: 'الرقم غلط، أو انتهى، أو اتستخدم قبل كده', en: 'Wrong, expired or already used code' },
+  codeTooMany: { ar: 'محاولات غلط كتير. استنى ساعة وحاول تاني.', en: 'Too many wrong attempts. Try again in an hour.' },
+  newClass: { ar: 'فصل جديد', en: 'New class' },
+  newClassHelp: { ar: 'هتبقى فيه لوحدك لحد ما تدّي رقم لزمايلك.', en: 'Only you will be in it until you invite colleagues.' },
+  className: { ar: 'اسم الفصل', en: 'Class name' },
+  create: { ar: 'إنشاء', en: 'Create' },
+  rename: { ar: 'تغيير الاسم', en: 'Rename' },
+  leaveClass: { ar: 'خروج من الفصل', en: 'Leave class' },
+  leaveConfirm: {
+    ar: 'هتخرج من فصل "{name}" ومش هتشوف أولاده تاني، إلا لو زميل اداك رقم جديد. متأكد؟',
+    en: 'You will leave "{name}" and stop seeing its children unless a colleague invites you again. Sure?',
+  },
+  noClassTitle: { ar: 'معندكش فصل لسه', en: 'You don’t have a class yet' },
+  noClassHelp: {
+    ar: 'اعمل فصل جديد، أو خد رقم مشاركة من زميلك وادخل بيه فصله.',
+    en: 'Create a new class, or join a colleague’s class with the code they gave you.',
+  },
+  classes: { ar: 'الفصول', en: 'Classes' },
+  classesHelp: {
+    ar: 'كل فصولك على مدار السنين. علّم على فصل السنادي بالنجمة ⭐ علشان يفتح على طول.',
+    en: 'All your classes over the years. Star ⭐ this year’s class so it opens straight away.',
+  },
+  serviceYear: { ar: 'السنة', en: 'Year' },
+  currentYear: { ar: 'السنة دي', en: 'This year' },
+  thisYearClass: { ar: 'فصل السنادي', en: 'This year’s class' },
+  markThisYear: { ar: 'خليه فصل السنادي', en: 'Make this year’s class' },
+  unmarkThisYear: { ar: 'شيل النجمة', en: 'Remove star' },
+  openClass: { ar: 'فتح', en: 'Open' },
+  openNow: { ar: 'مفتوح دلوقتي', en: 'Open now' },
+  notMember: { ar: 'مش عضو (أدمن)', en: 'Not a member (admin)' },
+  createClass: { ar: 'إنشاء فصل', en: 'Create a class' },
+  joinWithCode: { ar: 'مشاركة: ادخل برقم من زميل', en: 'Share: join with a colleague’s code' },
+  needsOnline: { ar: 'محتاج نت', en: 'Needs a connection' },
+  // users (admin)
+  users: { ar: 'المستخدمين', en: 'Users' },
+  addUser: { ar: 'إضافة مستخدم', en: 'Add user' },
+  passwordLabel: { ar: 'كلمة المرور', en: 'Password' },
+  passwordKeep: { ar: 'سيبها فاضية لو مش عايز تغيّرها', en: 'Leave empty to keep it' },
+  lastSignIn: { ar: 'آخر دخول', en: 'Last sign-in' },
+  neverSignedIn: { ar: 'لسه مدخلش', en: 'Never' },
+  editUser: { ar: 'تعديل', en: 'Edit' },
+  deleteUser: { ar: 'حذف المستخدم', en: 'Delete user' },
+  deleteUserConfirm: {
+    ar: 'هيتمسح حساب "{email}" نهائياً. الأولاد والبيانات اللي ضافها هتفضل موجودة. متأكد؟',
+    en: 'The account "{email}" will be deleted for good. Children and data they added stay. Sure?',
+  },
+  addToClass: { ar: '+ ضيف لفصل', en: '+ Add to class' },
+  removeFromClass: { ar: 'شيل من الفصل', en: 'Remove from class' },
+  you: { ar: 'إنت', en: 'You' },
+  usersHelp: {
+    ar: 'أي مستخدم في فصل يشوف كل أولاد الفصل ده. ضيف خادم لفصل زميله علشان يشوف بياناته.',
+    en: 'A user in a class sees all its children. Add a servant to a colleague’s class so they can see that data.',
+  },
+  auditClasses: { ar: 'الفصول', en: 'Classes' },
+  auditJoined: { ar: 'دخل الفصل', en: 'Joined' },
+  auditLeft: { ar: 'خرج من الفصل', en: 'Left' },
+  auditUserCreated: { ar: 'حساب جديد', en: 'Account created' },
+  auditUserUpdated: { ar: 'تعديل حساب', en: 'Account edited' },
+  auditUserDeleted: { ar: 'حذف حساب', en: 'Account deleted' },
+  functionMissing: {
+    ar: 'لازم تنشر الـ Edge Function اللي اسمها admin-users الأول (التفاصيل في README).',
+    en: 'Deploy the admin-users Edge Function first (see README).',
+  },
 } satisfies Record<string, Record<Lang, string>>
 
 export type TKey = keyof typeof dict

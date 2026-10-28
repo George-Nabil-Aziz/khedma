@@ -1,5 +1,6 @@
 -- Run once in Supabase SQL Editor (project: all-my-database), AFTER 002 and 003.
--- Adds: an audit log of every change, an admin role, and the الافتقاد (attendance) table.
+-- Adds: an audit log of every change, an admin role, and the متابعة table
+-- (two ticks per child per Friday: الحضور and الافتقاد).
 
 -- =====================================================================
 -- 1) Admin role
@@ -13,33 +14,35 @@ stable
 as $$ select coalesce(auth.jwt() -> 'app_metadata' ->> 'role' = 'admin', false) $$;
 
 -- =====================================================================
--- 2) الافتقاد — one row per child per Friday
+-- 2) متابعة — per child, per Friday, per kind:
+--    kind = 'attendance' (الحضور) or 'visit' (الافتقاد)
 -- =====================================================================
-create table if not exists khedma_2027.attendance (
+create table if not exists khedma_2027.follow_up (
   child_client_id uuid not null references khedma_2027.children (client_id) on delete cascade,
   date            date not null,
-  present         boolean not null default true,
+  kind            text not null check (kind in ('attendance', 'visit')),
+  checked         boolean not null default true,
   updated_at      timestamptz not null default now(),
-  primary key (child_client_id, date)
+  primary key (child_client_id, date, kind)
 );
 
-alter table khedma_2027.attendance enable row level security;
-revoke all on khedma_2027.attendance from anon;
+alter table khedma_2027.follow_up enable row level security;
+revoke all on khedma_2027.follow_up from anon;
 
-drop policy if exists "servants can read attendance" on khedma_2027.attendance;
-drop policy if exists "servants can add attendance" on khedma_2027.attendance;
-drop policy if exists "servants can edit attendance" on khedma_2027.attendance;
+drop policy if exists "servants can read follow_up" on khedma_2027.follow_up;
+drop policy if exists "servants can add follow_up" on khedma_2027.follow_up;
+drop policy if exists "servants can edit follow_up" on khedma_2027.follow_up;
 
-create policy "servants can read attendance"
-  on khedma_2027.attendance for select to authenticated using (true);
-create policy "servants can add attendance"
-  on khedma_2027.attendance for insert to authenticated with check (true);
-create policy "servants can edit attendance"
-  on khedma_2027.attendance for update to authenticated using (true) with check (true);
+create policy "servants can read follow_up"
+  on khedma_2027.follow_up for select to authenticated using (true);
+create policy "servants can add follow_up"
+  on khedma_2027.follow_up for insert to authenticated with check (true);
+create policy "servants can edit follow_up"
+  on khedma_2027.follow_up for update to authenticated using (true) with check (true);
 
-drop trigger if exists attendance_touch_updated_at on khedma_2027.attendance;
-create trigger attendance_touch_updated_at
-  before update on khedma_2027.attendance
+drop trigger if exists follow_up_touch_updated_at on khedma_2027.follow_up;
+create trigger follow_up_touch_updated_at
+  before update on khedma_2027.follow_up
   for each row execute function khedma_2027.touch_updated_at();
 
 -- =====================================================================
@@ -96,7 +99,7 @@ begin
 
   v_row := coalesce(v_new, v_old);
   v_id := case tg_table_name
-    when 'attendance'    then (v_row ->> 'child_client_id') || '@' || (v_row ->> 'date')
+    when 'follow_up'     then (v_row ->> 'child_client_id') || '@' || (v_row ->> 'date') || '@' || (v_row ->> 'kind')
     when 'custom_fields' then v_row ->> 'key'
     else v_row ->> 'client_id'
   end;
@@ -118,9 +121,9 @@ create trigger audit_custom_fields
   after insert or update or delete on khedma_2027.custom_fields
   for each row execute function khedma_2027.audit_trigger();
 
-drop trigger if exists audit_attendance on khedma_2027.attendance;
-create trigger audit_attendance
-  after insert or update or delete on khedma_2027.attendance
+drop trigger if exists audit_follow_up on khedma_2027.follow_up;
+create trigger audit_follow_up
+  after insert or update or delete on khedma_2027.follow_up
   for each row execute function khedma_2027.audit_trigger();
 
 -- Sign-in / sign-out events, called by the app.
@@ -141,3 +144,43 @@ $$;
 
 revoke all on function khedma_2027.log_event(text) from public, anon;
 grant execute on function khedma_2027.log_event(text) to authenticated;
+
+-- =====================================================================
+-- 4) First admin, from inside the app
+--    While there is no admin at all, any signed-in user can press "make me admin" once.
+--    After that this does nothing — more admins are made from the Users page.
+--    Safe because sign-ups are disabled: only accounts you created can sign in.
+-- =====================================================================
+create or replace function khedma_2027.has_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$ select exists (select 1 from auth.users where raw_app_meta_data ->> 'role' = 'admin') $$;
+
+create or replace function khedma_2027.claim_first_admin()
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if auth.uid() is null then raise exception 'not signed in'; end if;
+  perform pg_advisory_xact_lock(hashtext('khedma_2027.claim_first_admin')); -- two people pressing at once
+  if khedma_2027.has_admin() then return false; end if;
+
+  update auth.users
+  set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb) || '{"role": "admin"}'::jsonb
+  where id = auth.uid();
+
+  insert into khedma_2027.audit_log (user_id, user_email, action, table_name, record_id, new_data)
+  values (auth.uid(), auth.jwt() ->> 'email', 'user_update', 'users', auth.uid()::text, jsonb_build_object('admin', true, 'first_admin', true));
+  return true;
+end;
+$$;
+
+revoke all on function khedma_2027.has_admin() from public, anon;
+revoke all on function khedma_2027.claim_first_admin() from public, anon;
+grant execute on function khedma_2027.has_admin() to authenticated;
+grant execute on function khedma_2027.claim_first_admin() to authenticated;

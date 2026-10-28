@@ -1,19 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useI18n } from '../lib/i18n'
 import { go } from '../lib/router'
-import { sync, useStore, viewRows, type RowStatus } from '../lib/store'
+import { useStore, viewRows, type RowStatus } from '../lib/store'
+import { ColumnsMenu } from '../components/ColumnsMenu'
 import { sortRows, useColumnPrefs, useColumns, useSort, type Column } from '../lib/columns'
-import {
-  AlertIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-  CloudOffIcon,
-  ColumnsIcon,
-  LockIcon,
-  SortIcon,
-  SyncIcon,
-  XIcon,
-} from '../components/Icons'
+import { Avatar } from '../components/Avatar'
+import { AlertIcon, ChevronDownIcon, ChevronUpIcon, CloudOffIcon, ColumnsIcon, PlusIcon, SortIcon } from '../components/Icons'
 
 export function ChildrenPage() {
   const { t, lang } = useI18n()
@@ -65,6 +57,13 @@ export function ChildrenPage() {
           {t('total')}: {filtered.length}
         </span>
         <div className="ms-auto flex items-center gap-2">
+          <button
+            onClick={() => go('/new')}
+            className="flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
+          >
+            <PlusIcon className="size-4" />
+            {t('addChild')}
+          </button>
           <div className="relative">
             <button
               onClick={() => setMenuOpen(o => !o)}
@@ -75,14 +74,6 @@ export function ChildrenPage() {
             </button>
             {menuOpen && <ColumnsMenu prefs={prefs} onClose={() => setMenuOpen(false)} />}
           </div>
-          <button
-            onClick={sync}
-            disabled={!store.online}
-            className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
-          >
-            <SyncIcon className={`size-4 ${store.syncing ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">{t('syncNow')}</span>
-          </button>
         </div>
       </div>
 
@@ -119,6 +110,7 @@ export function ChildrenPage() {
                       onClick={() => go(`/child/${r.client_id}`)}
                       className="flex items-center gap-2 text-start font-semibold text-indigo-700 hover:underline dark:text-indigo-300"
                     >
+                      <Avatar photo={r.photo} name={r.full_name} />
                       {r.full_name}
                       <StatusBadge status={r.status} />
                     </button>
@@ -155,61 +147,6 @@ function SortHeader({ id, label, sort, onSort }: { id: string; label: string; so
         {active ? sort.dir === 'asc' ? <ChevronUpIcon className="size-3.5" /> : <ChevronDownIcon className="size-3.5" /> : <SortIcon className="size-3.5 opacity-30" />}
       </button>
     </th>
-  )
-}
-
-function ColumnsMenu({ prefs, onClose }: { prefs: ReturnType<typeof useColumnPrefs>; onClose: () => void }) {
-  const { t } = useI18n()
-  const iconBtn = 'grid size-7 place-items-center rounded hover:bg-slate-100 disabled:opacity-30 dark:hover:bg-slate-800'
-
-  return (
-    <>
-      <div className="fixed inset-0 z-30" onClick={onClose} />
-      <div className="absolute inset-e-0 top-full z-40 mt-2 w-72 rounded-xl border border-slate-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-        <div className="mb-2 flex items-center justify-between">
-          <span className="text-sm font-bold">{t('showHideColumns')}</span>
-          <button onClick={onClose} className={iconBtn} aria-label={t('close')}>
-            <XIcon />
-          </button>
-        </div>
-
-        <div className="max-h-[60vh] space-y-0.5 overflow-y-auto">
-          <div className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-400">
-            <LockIcon className="size-4" />
-            <span className="flex-1 font-semibold text-slate-700 dark:text-slate-200">{t('name')}</span>
-            <span className="text-xs">{t('alwaysShown')}</span>
-          </div>
-          {prefs.ordered.map(({ column, visible }, i) => (
-            <div key={column.id} className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-slate-50 dark:hover:bg-slate-800/60">
-              <label className="flex flex-1 items-center gap-2 text-sm">
-                <input type="checkbox" checked={visible} onChange={() => prefs.toggle(column.id)} className="size-4 accent-indigo-600" />
-                <span className={visible ? '' : 'text-slate-400'}>{column.label}</span>
-              </label>
-              <button className={iconBtn} disabled={i === 0} onClick={() => prefs.move(column.id, -1)} aria-label={t('moveUp')} title={t('moveUp')}>
-                <ChevronUpIcon />
-              </button>
-              <button
-                className={iconBtn}
-                disabled={i === prefs.ordered.length - 1}
-                onClick={() => prefs.move(column.id, 1)}
-                aria-label={t('moveDown')}
-                title={t('moveDown')}
-              >
-                <ChevronDownIcon />
-              </button>
-            </div>
-          ))}
-        </div>
-
-        <button
-          onClick={prefs.reset}
-          disabled={prefs.isDefault}
-          className="mt-3 w-full rounded-lg border border-slate-200 py-2 text-sm font-semibold hover:bg-slate-100 disabled:opacity-40 dark:border-slate-700 dark:hover:bg-slate-800"
-        >
-          {t('resetDefault')}
-        </button>
-      </div>
-    </>
   )
 }
 

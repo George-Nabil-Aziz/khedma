@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { OWNERS, type CustomField, type Owner } from './supabase'
 import { useI18n, type TKey } from './i18n'
 import { load, save } from './storage'
-import { useStore, type ViewRow } from './store'
+import { classFields, useStore, type ViewRow } from './store'
 import { OWNER_LABEL, OWNER_PHONES_LABEL, telLink, whatsappLink } from './phones'
 import { StarIcon, WhatsAppIcon } from '../components/Icons'
 
@@ -37,7 +37,8 @@ export function ageOf(birthDate: string | null): number | null {
 /** Every column except the name, which is always shown first. */
 export function useColumns(): Column[] {
   const { t, lang } = useI18n()
-  const { fields } = useStore()
+  const store = useStore()
+  const fields = useMemo(() => classFields(store), [store])
 
   return useMemo(() => {
     const sep = lang === 'ar' ? '، ' : ', '
@@ -68,7 +69,7 @@ export function useColumns(): Column[] {
           <div className="space-y-1">
             {list.map((p, i) => (
               <div key={i} className="flex items-center gap-1.5">
-                {r.primary_contact === owner && i === 0 && (
+                {r.primary_contacts.includes(owner) && i === 0 && (
                   <span title={t('primaryContact')} className="text-amber-500">
                     <StarIcon className="size-3.5" />
                   </span>
@@ -102,10 +103,10 @@ export function useColumns(): Column[] {
       },
       ...OWNERS.map(phoneColumn),
       {
-        id: 'primary_contact',
+        id: 'primary_contacts',
         label: t('primaryContact'),
-        render: r => r.primary_contact && t(OWNER_LABEL[r.primary_contact]),
-        sort: r => (r.primary_contact ? t(OWNER_LABEL[r.primary_contact]) : null),
+        render: r => r.primary_contacts.map(o => t(OWNER_LABEL[o])).join(sep),
+        sort: r => r.primary_contacts.map(o => t(OWNER_LABEL[o])).join(sep) || null,
         nowrap: true,
       },
       { id: 'deacon', label: t('deacon'), render: r => r.deacon, sort: r => r.deacon },
@@ -136,7 +137,7 @@ function customColumn(f: CustomField, t: (k: TKey) => string): Column {
 
 type Prefs = { order: string[]; hidden: string[] }
 
-const DEFAULT_HIDDEN = ['age', 'primary_contact']
+const DEFAULT_HIDDEN = ['age', 'primary_contacts']
 
 function readPrefs(): Prefs | null {
   try {
@@ -175,12 +176,14 @@ export function useColumnPrefs(all: Column[]) {
       const p = current()
       update({ ...p, hidden: p.hidden.includes(id) ? p.hidden.filter(h => h !== id) : [...p.hidden, id] })
     },
-    move(id: string, by: -1 | 1) {
+    /** Drop column `id` where `overId` is (drag and drop). */
+    reorder(id: string, overId: string) {
       const p = current()
-      const i = p.order.indexOf(id)
-      const j = i + by
-      if (i < 0 || j < 0 || j >= p.order.length) return
-      ;[p.order[i], p.order[j]] = [p.order[j], p.order[i]]
+      const from = p.order.indexOf(id)
+      const to = p.order.indexOf(overId)
+      if (from < 0 || to < 0 || from === to) return
+      const [moved] = p.order.splice(from, 1)
+      p.order.splice(to, 0, moved)
       update(p)
     },
     reset: () => update(null),

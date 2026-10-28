@@ -3,7 +3,7 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 import { useI18n, type TKey } from './lib/i18n'
 import { useRoute } from './lib/router'
-import { startStore } from './lib/store'
+import { startStore, useStore } from './lib/store'
 import { Layout } from './components/Layout'
 import { LoginPage } from './pages/LoginPage'
 import { ChildrenPage } from './pages/ChildrenPage'
@@ -12,6 +12,10 @@ import { SyncPage } from './pages/SyncPage'
 import { FieldsPage } from './pages/FieldsPage'
 import { AttendancePage } from './pages/AttendancePage'
 import { AuditPage } from './pages/AuditPage'
+import { NoClass, SharePage } from './pages/SharePage'
+import { ClassesPage } from './pages/ClassesPage'
+import { UsersPage } from './pages/UsersPage'
+import { ProfilePage } from './pages/ProfilePage'
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -35,18 +39,29 @@ export default function App() {
   if (!session) return <LoginPage />
   // Only for showing the admin pages — the database itself checks the role before returning data.
   const admin = session.user.app_metadata?.role === 'admin'
-  return <Routes email={session.user.email ?? ''} admin={admin} />
+  return <Routes email={session.user.email ?? ''} userId={session.user.id} admin={admin} />
 }
 
-function Routes({ email, admin }: { email: string; admin: boolean }) {
+function Routes({ email, userId, admin }: { email: string; userId: string; admin: boolean }) {
   const { t } = useI18n()
   const route = useRoute()
+  const { classes, lastSyncAt } = useStore()
 
   const page = (title: TKey, body: ReactNode) => (
     <Layout email={email} admin={admin} title={t(title)}>
       {body}
     </Layout>
   )
+
+  // Pages that work without a class; everything else needs one.
+  if (route.name === 'share') return page('share', <SharePage />)
+  if (route.name === 'sync') return page('sync', <SyncPage />)
+  if (route.name === 'profile') return page('profile', <ProfilePage email={email} />)
+  if (admin && route.name === 'users') return page('users', <UsersPage myId={userId} />)
+  if (admin && route.name === 'audit') return page('audit', <AuditPage />)
+  if (route.name === 'classes') return page('classes', <ClassesPage />)
+  // No class yet: say so, and offer to create one or join a colleague's with a code.
+  if (lastSyncAt && classes.length === 0) return page('classes', <NoClass />)
 
   switch (route.name) {
     case 'new':
@@ -57,10 +72,6 @@ function Routes({ email, admin }: { email: string; admin: boolean }) {
       return page('attendance', <AttendancePage />)
     case 'fields':
       return page('customize', <FieldsPage />)
-    case 'sync':
-      return page('sync', <SyncPage />)
-    case 'audit':
-      return admin ? page('audit', <AuditPage />) : page('children', <ChildrenPage />)
     default:
       return page('children', <ChildrenPage />)
   }

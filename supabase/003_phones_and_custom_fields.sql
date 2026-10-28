@@ -1,11 +1,12 @@
 -- Run once in Supabase SQL Editor (project: all-my-database), AFTER 002_offline_sync.sql.
--- Adds: several phone numbers per person with a WhatsApp flag, a "main contact" flag,
+-- Adds: several phone numbers per person with a WhatsApp flag, "main contact" flags
+-- (mother / father / child — one or more),
 -- and columns you can add yourself from the app. Nothing is deleted.
 
 -- 1) New columns on children
 alter table khedma_2027.children
   add column if not exists phones jsonb not null default '[]'::jsonb,
-  add column if not exists primary_contact text check (primary_contact in ('mother', 'father', 'child')),
+  add column if not exists primary_contacts text[] not null default '{}' check (primary_contacts <@ array['mother', 'father', 'child']),
   add column if not exists extra jsonb not null default '{}'::jsonb;
 
 -- 2) Copy the old mobile columns into phones.

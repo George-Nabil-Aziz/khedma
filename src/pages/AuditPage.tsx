@@ -9,7 +9,7 @@ type Entry = {
   id: number
   at: string
   user_email: string | null
-  action: 'insert' | 'update' | 'delete' | 'login' | 'logout'
+  action: 'insert' | 'update' | 'delete' | 'login' | 'logout' | 'user_create' | 'user_update' | 'user_delete'
   table_name: string | null
   record_id: string | null
   old_data: Record<string, unknown> | null
@@ -33,8 +33,10 @@ const FIELD_LABEL: Record<string, TKey> = {
   notes: 'notes',
   national_id: 'nationalId',
   phones: 'phones',
-  primary_contact: 'primaryContact',
-  present: 'attendance',
+  primary_contacts: 'primaryContact',
+  photo: 'photo',
+  display_name: 'displayName',
+  checked: 'attendance',
   label: 'fieldLabel',
   type: 'fieldType',
   mother_mobile: 'motherMobile',
@@ -45,14 +47,16 @@ const FIELD_LABEL: Record<string, TKey> = {
 const FILTERS = [
   { id: 'all', key: 'auditAll' },
   { id: 'children', key: 'children' },
-  { id: 'attendance', key: 'attendance' },
+  { id: 'follow_up', key: 'attendance' },
   { id: 'custom_fields', key: 'customize' },
+  { id: 'classes', key: 'auditClasses' },
+  { id: 'users', key: 'users' },
   { id: 'auth', key: 'auditLogins' },
 ] as const satisfies readonly { id: string; key: TKey }[]
 
 export function AuditPage() {
   const { t, lang } = useI18n()
-  const { online, rows, fields } = useStore()
+  const { online, rows, fields, classes } = useStore()
   const [entries, setEntries] = useState<Entry[]>([])
   const [filter, setFilter] = useState<(typeof FILTERS)[number]['id']>('all')
   const [loading, setLoading] = useState(false)
@@ -66,6 +70,7 @@ export function AuditPage() {
       let q = supabase.from('audit_log').select('*').order('id', { ascending: false }).limit(PAGE)
       if (before) q = q.lt('id', before)
       if (filter === 'auth') q = q.in('action', ['login', 'logout'])
+      else if (filter === 'classes') q = q.in('table_name', ['classes', 'class_members'])
       else if (filter !== 'all') q = q.eq('table_name', filter)
       const { data, error } = await q
       if (error) setError(error.message)
@@ -93,7 +98,7 @@ export function AuditPage() {
       const list = v as Phone[]
       return list.length ? list.map(p => `${t(OWNER_LABEL[p.owner])}: ${p.number}${p.whatsapp ? ' ✆' : ''}`).join(' · ') : '—'
     }
-    if (k === 'primary_contact') return t(OWNER_LABEL[v as Phone['owner']])
+    if (k === 'primary_contacts') return (v as Phone['owner'][]).map(o => t(OWNER_LABEL[o])).join(' · ') || '—'
     if (typeof v === 'boolean') return v ? '✓' : '✗'
     if (typeof v === 'object') return JSON.stringify(v)
     return String(v)
@@ -104,7 +109,9 @@ export function AuditPage() {
     if (e.action !== 'update' || !e.changed_fields) return []
     const out: { label: string; from: string; to: string }[] = []
     for (const k of e.changed_fields) {
-      if (k === 'extra') {
+      // The image itself is not logged — only that it changed.
+      if (k === 'photo') out.push({ label: t('photo'), from: '—', to: t('photoChanged') })
+      else if (k === 'extra') {
         const a = (e.old_data?.extra ?? {}) as Record<string, unknown>
         const b = (e.new_data?.extra ?? {}) as Record<string, unknown>
         for (const x of new Set([...Object.keys(a), ...Object.keys(b)]))
@@ -119,23 +126,37 @@ export function AuditPage() {
   function target(e: Entry): string {
     const row = e.new_data ?? e.old_data
     if (e.table_name === 'children') return String(row?.full_name ?? nameOf.get(e.record_id ?? '') ?? '')
-    if (e.table_name === 'attendance') {
+    if (e.table_name === 'follow_up') {
       const child = String(row?.child_client_id ?? '')
-      return `${nameOf.get(child) ?? child.slice(0, 8)} — ${row?.date}`
+      const kind = row?.kind === 'visit' ? t('rowVisit') : t('rowAttendance')
+      return `${nameOf.get(child) ?? child.slice(0, 8)} — ${kind} — ${row?.date}`
     }
     if (e.table_name === 'custom_fields') return String(row?.label ?? e.record_id ?? '')
+    if (e.table_name === 'classes') return `${t('classLabel')}: ${row?.name ?? ''}`
+    if (e.table_name === 'class_members') {
+      const cls = classes.find(c => c.id === row?.class_id)?.name ?? String(row?.class_id ?? '').slice(0, 8)
+      return `${t('classLabel')}: ${cls}`
+    }
+    if (e.table_name === 'users') return String(row?.email ?? e.record_id ?? '')
     return ''
   }
 
   function verb(e: Entry): { text: string; tone: string } {
     if (e.action === 'login') return { text: t('auditLogin'), tone: 'bg-sky-100 text-sky-800 dark:bg-sky-500/15 dark:text-sky-300' }
     if (e.action === 'logout') return { text: t('auditLogout'), tone: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' }
-    if (e.table_name === 'attendance') {
-      const on = (e.new_data?.present ?? false) as boolean
+    if (e.table_name === 'follow_up') {
+      const on = (e.new_data?.checked ?? false) as boolean
       return on
         ? { text: t('auditTicked'), tone: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300' }
         : { text: t('auditUnticked'), tone: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300' }
     }
+    if (e.table_name === 'class_members')
+      return e.action === 'insert'
+        ? { text: t('auditJoined'), tone: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300' }
+        : { text: t('auditLeft'), tone: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300' }
+    if (e.action === 'user_create') return { text: t('auditUserCreated'), tone: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300' }
+    if (e.action === 'user_update') return { text: t('auditUserUpdated'), tone: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-500/15 dark:text-indigo-300' }
+    if (e.action === 'user_delete') return { text: t('auditUserDeleted'), tone: 'bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300' }
     if (e.action === 'insert') return { text: t('auditAdded'), tone: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300' }
     if (e.action === 'delete') return { text: t('auditDeleted'), tone: 'bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300' }
     return { text: t('auditEdited'), tone: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-500/15 dark:text-indigo-300' }

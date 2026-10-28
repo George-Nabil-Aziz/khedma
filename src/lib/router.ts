@@ -9,8 +9,12 @@ export type Route =
   | { name: 'fields' }
   | { name: 'attendance' }
   | { name: 'audit' }
+  | { name: 'share' }
+  | { name: 'users' }
+  | { name: 'classes' }
+  | { name: 'profile' }
 
-const STATIC = ['new', 'sync', 'fields', 'attendance', 'audit'] as const
+const STATIC = ['new', 'sync', 'fields', 'attendance', 'audit', 'share', 'users', 'classes', 'profile'] as const
 
 export type Path = '/' | `/${(typeof STATIC)[number]}` | `/child/${string}`
 

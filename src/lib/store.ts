@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { clear, get, setMany } from 'idb-keyval'
-import { CORE_FIELDS, TEXT_FIELDS, supabase, type Child, type ChildInput, type CustomField, type FieldType } from './supabase'
+import { CORE_FIELDS, TEXT_FIELDS, supabase, type Child, type ChildInput, type ClassInfo, type CustomField, type FieldType, type Profile } from './supabase'
+import { load, save } from './storage'
 
 /*
  * Offline-first store.
@@ -14,7 +15,7 @@ import { CORE_FIELDS, TEXT_FIELDS, supabase, type Child, type ChildInput, type C
 
 export type Flat = Record<string, unknown>
 
-export type InsertOp = { kind: 'insert'; client_id: string; data: ChildInput; queued_at: string; error?: string }
+export type InsertOp = { kind: 'insert'; client_id: string; class_id: string; data: ChildInput; queued_at: string; error?: string }
 export type UpdateOp = { kind: 'update'; client_id: string; base: Child; changes: Flat; queued_at: string; error?: string }
 export type Op = InsertOp | UpdateOp
 
@@ -29,6 +30,11 @@ export type Conflict = {
 type State = {
   rows: Child[]
   fields: CustomField[]
+  classes: ClassInfo[]
+  /** My name and photo (shown in the sidebar). */
+  profile: Profile | null
+  /** The class shown on screen (chosen per device). */
+  currentClass: string | null
   outbox: Op[]
   conflicts: Conflict[]
   lastSyncAt: string | null
@@ -36,20 +42,26 @@ type State = {
   online: boolean
   loaded: boolean
   syncError: string | null
-  /** الافتقاد from the server, keyed by attKey(child, date). */
+  /** متابعة ticks from the server, keyed by attKey(child, date, kind). */
   attendance: Record<string, boolean>
-  /** الافتقاد ticks made on this device and not sent yet. */
+  /** متابعة ticks made on this device and not sent yet. */
   attOutbox: AttOp[]
   attError: string | null
 }
 
-export type AttOp = { child: string; date: string; present: boolean; queued_at: string }
+/** Two ticks per child per Friday: الحضور (attendance) and الافتقاد (visit). */
+export type FollowUpKind = 'attendance' | 'visit'
 
-export const attKey = (child: string, date: string) => `${child}|${date}`
+export type AttOp = { child: string; date: string; kind: FollowUpKind; checked: boolean; queued_at: string }
+
+export const attKey = (child: string, date: string, kind: FollowUpKind) => `${child}|${date}|${kind}`
 
 let state: State = {
   rows: [],
   fields: [],
+  classes: [],
+  profile: null,
+  currentClass: load('class') || null,
   outbox: [],
   conflicts: [],
   lastSyncAt: null,
@@ -71,10 +83,12 @@ function set(patch: Partial<State>, persist = true) {
     setMany([
       ['rows', state.rows],
       ['fields', state.fields],
+      ['classes', state.classes],
+      ['profile', state.profile],
       ['outbox', state.outbox],
       ['conflicts', state.conflicts],
       ['lastSyncAt', state.lastSyncAt],
-      ['attendance', state.attendance],
+      ['followUp', state.attendance],
       ['attOutbox', state.attOutbox],
     ]).catch(() => {})
   }
@@ -96,7 +110,7 @@ export const X = 'x:'
 
 /** Fills defaults so rows cached by an older version (or before the SQL migration) still work. */
 function normalize<T extends ChildInput>(row: T): T {
-  return { ...row, phones: Array.isArray(row.phones) ? row.phones : [], primary_contact: row.primary_contact ?? null, extra: row.extra ?? {} }
+  return { ...row, phones: Array.isArray(row.phones) ? row.phones : [], primary_contacts: Array.isArray(row.primary_contacts) ? row.primary_contacts : [], photo: row.photo ?? null, extra: row.extra ?? {} }
 }
 
 function toFlat(c: ChildInput): Flat {
@@ -130,7 +144,7 @@ function applyFlat<T extends ChildInput>(row: T, changes: Flat): T {
 }
 
 function pick(input: ChildInput): ChildInput {
-  const out = { full_name: input.full_name, phones: input.phones ?? [], primary_contact: input.primary_contact ?? null, extra: input.extra ?? {} } as ChildInput
+  const out = { full_name: input.full_name, phones: input.phones ?? [], primary_contacts: input.primary_contacts ?? [], photo: input.photo ?? null, extra: input.extra ?? {} } as ChildInput
   for (const f of TEXT_FIELDS) out[f] = input[f] ?? null
   return out
 }
@@ -142,14 +156,16 @@ let started = false
 export async function startStore() {
   if (started) return
   started = true
-  const [rows, fields, outbox, conflicts, lastSyncAt, attendance, attOutbox] = await Promise.all([
+  const [rows, fields, outbox, conflicts, lastSyncAt, attendance, attOutbox, classes, profile] = await Promise.all([
     get<Child[]>('rows'),
     get<CustomField[]>('fields'),
     get<Op[]>('outbox'),
     get<Conflict[]>('conflicts'),
     get<string>('lastSyncAt'),
-    get<Record<string, boolean>>('attendance'),
+    get<Record<string, boolean>>('followUp'),
     get<AttOp[]>('attOutbox'),
+    get<ClassInfo[]>('classes'),
+    get<Profile>('profile'),
   ]).catch(() => [] as undefined[])
   set(
     {
@@ -159,7 +175,9 @@ export async function startStore() {
       conflicts: conflicts ?? [],
       lastSyncAt: lastSyncAt ?? null,
       attendance: attendance ?? {},
-      attOutbox: attOutbox ?? [],
+      attOutbox: (attOutbox ?? []).filter(o => o.kind), // drop ticks queued by an older version
+      classes: classes ?? [],
+      profile: profile ?? null,
       loaded: true,
     },
     false,
@@ -178,25 +196,136 @@ export async function startStore() {
 /** Wipes every local copy of the children data (used on sign-out). */
 export async function resetStore() {
   await clear().catch(() => {})
-  set({ rows: [], fields: [], outbox: [], conflicts: [], lastSyncAt: null, syncError: null, attendance: {}, attOutbox: [], attError: null }, false)
+  save('class', '')
+  openedDefault = false // the next user to sign in gets their own ⭐ class
+  set(
+    { rows: [], fields: [], classes: [], profile: null, currentClass: null, outbox: [], conflicts: [], lastSyncAt: null, syncError: null, attendance: {}, attOutbox: [], attError: null },
+    false,
+  )
 }
 
-// ---- الافتقاد ----------------------------------------------------------------
+// ---- my profile -------------------------------------------------------------
+
+async function myId() {
+  const { data } = await supabase.auth.getSession()
+  return data.session?.user.id ?? null
+}
+
+async function pullProfile() {
+  const id = await myId()
+  if (!id) return
+  const { data, error } = await supabase.from('profiles').select('display_name,photo').eq('user_id', id).maybeSingle()
+  if (error) throw isNetworkError(error.message) ? new Offline() : new Error(error.message)
+  set({ profile: (data as Profile | null) ?? { display_name: null, photo: null } })
+}
+
+/** Name and photo; needs a connection. */
+export async function saveProfile(profile: Profile): Promise<string | null> {
+  const id = await myId()
+  if (!id) return 'not signed in'
+  const { error } = await supabase.from('profiles').upsert({ user_id: id, ...profile })
+  if (error) return error.message
+  set({ profile })
+  return null
+}
+
+export async function changePassword(password: string): Promise<string | null> {
+  const { error } = await supabase.auth.updateUser({ password })
+  return error?.message ?? null
+}
+
+// ---- فصول --------------------------------------------------------------------
+
+export function setCurrentClass(id: string | null) {
+  save('class', id ?? '')
+  set({ currentClass: id }, false)
+}
+
+/** Custom columns of the class on screen. */
+export const classFields = (s: State) => s.fields.filter(f => f.class_id === s.currentClass)
+
+// The ⭐ class opens by itself once per app start; after that the user's own choice sticks.
+let openedDefault = false
+
+async function pullClasses() {
+  const { data, error } = await supabase.rpc('my_classes')
+  if (error) throw isNetworkError(error.message) ? new Offline() : new Error(error.message)
+  const classes = data as ClassInfo[]
+  set({ classes })
+  const starred = classes.find(c => c.is_default)
+  if (!openedDefault && starred) setCurrentClass(starred.id)
+  else if (!classes.some(c => c.id === state.currentClass)) setCurrentClass((starred ?? classes.find(c => c.is_member) ?? classes[0])?.id ?? null)
+  openedDefault = true
+}
+
+type Result<T> = { ok: true; value: T } | { ok: false; error: string }
+
+export async function createClass(name: string, year: string): Promise<Result<string>> {
+  const { data, error } = await supabase.rpc('create_class', { p_name: name, p_year: year })
+  if (error) return { ok: false, error: error.message }
+  setCurrentClass(data as string)
+  await sync()
+  return { ok: true, value: data as string }
+}
+
+export async function renameClass(id: string, name: string): Promise<Result<null>> {
+  const { error } = await supabase.from('classes').update({ name }).eq('id', id)
+  if (error) return { ok: false, error: error.message }
+  await sync()
+  return { ok: true, value: null }
+}
+
+/** ⭐ this year's class (opens automatically), or null to clear. */
+export async function setDefaultClass(id: string | null): Promise<Result<null>> {
+  const { error } = await supabase.rpc('set_default_class', { p_class: id })
+  if (error) return { ok: false, error: error.message }
+  await sync()
+  return { ok: true, value: null }
+}
+
+/** A one-time 6-digit code for the class on screen, valid 15 minutes. */
+export async function createInvite(): Promise<Result<{ code: string; expires_at: string }>> {
+  const { data, error } = await supabase.rpc('create_invite', { p_class: state.currentClass })
+  if (error) return { ok: false, error: error.message }
+  return { ok: true, value: (data as { code: string; expires_at: string }[])[0] }
+}
+
+export async function joinClass(code: string): Promise<Result<string>> {
+  const { data, error } = await supabase.rpc('join_class', { p_code: code })
+  if (error) return { ok: false, error: error.message }
+  const r = data as { class_id?: string; error?: 'invalid' | 'too_many' }
+  if (!r.class_id) return { ok: false, error: r.error ?? 'invalid' }
+  setCurrentClass(r.class_id)
+  await sync()
+  return { ok: true, value: r.class_id }
+}
+
+export async function leaveClass(id: string): Promise<Result<null>> {
+  const { error } = await supabase.rpc('leave_class', { p_class: id })
+  if (error) return { ok: false, error: error.message }
+  if (state.currentClass === id) setCurrentClass(null)
+  await sync()
+  return { ok: true, value: null }
+}
+
+// ---- متابعة -----------------------------------------------------------------
+
+const sameTick = (o: AttOp, child: string, date: string, kind: FollowUpKind) => o.child === child && o.date === date && o.kind === kind
 
 /** Server value with this device's unsent ticks on top. */
-export function isPresent(s: State, child: string, date: string): boolean {
+export function isChecked(s: State, child: string, date: string, kind: FollowUpKind): boolean {
   for (let i = s.attOutbox.length - 1; i >= 0; i--) {
     const o = s.attOutbox[i]
-    if (o.child === child && o.date === date) return o.present
+    if (sameTick(o, child, date, kind)) return o.checked
   }
-  return s.attendance[attKey(child, date)] ?? false
+  return s.attendance[attKey(child, date, kind)] ?? false
 }
 
-/** Tick / untick a child for a Friday. Works offline; the last tick wins. */
-export function toggleAttendance(child: string, date: string) {
-  const present = !isPresent(state, child, date)
-  const attOutbox = state.attOutbox.filter(o => !(o.child === child && o.date === date))
-  attOutbox.push({ child, date, present, queued_at: new Date().toISOString() })
+/** Tick / untick الحضور or الافتقاد for a child on a Friday. Works offline; the last tick wins. */
+export function toggleFollowUp(child: string, date: string, kind: FollowUpKind) {
+  const checked = !isChecked(state, child, date, kind)
+  const attOutbox = state.attOutbox.filter(o => !sameTick(o, child, date, kind))
+  attOutbox.push({ child, date, kind, checked, queued_at: new Date().toISOString() })
   set({ attOutbox })
   scheduleSync()
 }
@@ -219,7 +348,15 @@ export function viewRows(s: State): ViewRow[] {
   for (const op of s.outbox) {
     const status: RowStatus = op.error ? 'error' : 'pending'
     if (op.kind === 'insert') {
-      byId.set(op.client_id, { ...normalize(op.data), id: 0, client_id: op.client_id, created_at: op.queued_at, updated_at: op.queued_at, status })
+      byId.set(op.client_id, {
+        ...normalize(op.data),
+        id: 0,
+        client_id: op.client_id,
+        class_id: op.class_id,
+        created_at: op.queued_at,
+        updated_at: op.queued_at,
+        status,
+      })
     } else {
       const row = byId.get(op.client_id) ?? { ...normalize(op.base), status }
       byId.set(op.client_id, { ...applyFlat(row, op.changes), status })
@@ -229,7 +366,7 @@ export function viewRows(s: State): ViewRow[] {
     const row = byId.get(c.client_id)
     if (row) row.status = 'conflict'
   }
-  return [...byId.values()]
+  return [...byId.values()].filter(r => r.class_id === s.currentClass)
 }
 
 export function findRow(s: State, clientId: string) {
@@ -245,7 +382,8 @@ export function saveChild(clientId: string | null, input: ChildInput) {
   let outbox = [...state.outbox]
 
   if (!clientId) {
-    outbox.push({ kind: 'insert', client_id: crypto.randomUUID(), data, queued_at: now })
+    if (!state.currentClass) return
+    outbox.push({ kind: 'insert', client_id: crypto.randomUUID(), class_id: state.currentClass, data, queued_at: now })
   } else {
     const i = outbox.findIndex(o => o.client_id === clientId)
     const existing = outbox[i]
@@ -293,7 +431,7 @@ export function resolveConflict(clientId: string, keep: 'mine' | 'server') {
 // ---- custom columns (need a connection) ------------------------------------
 
 async function pullFields() {
-  const { data, error } = await supabase.from('custom_fields').select('key,label,type,position').order('position').order('created_at')
+  const { data, error } = await supabase.from('custom_fields').select('key,label,type,position,class_id').order('position').order('created_at')
   if (error) throw isNetworkError(error.message) ? new Offline() : new Error(error.message)
   set({ fields: data as CustomField[] })
 }
@@ -301,7 +439,7 @@ async function pullFields() {
 export async function addField(label: string, type: FieldType): Promise<string | null> {
   const key = 'f_' + crypto.randomUUID().slice(0, 8)
   const position = Math.max(0, ...state.fields.map(f => f.position)) + 1
-  const { error } = await supabase.from('custom_fields').insert({ key, label, type, position })
+  const { error } = await supabase.from('custom_fields').insert({ key, label, type, position, class_id: state.currentClass })
   if (error) return error.message
   await pullFields().catch(() => {})
   return null
@@ -355,14 +493,16 @@ export async function sync() {
 
     await pushAttendance()
 
+    await pullClasses()
+    await pullProfile()
     await pullFields()
     const children = await fetchAll<Child>((from, to) => supabase.from('children').select('*').order('id').range(from, to))
-    const att = await fetchAll<{ child_client_id: string; date: string; present: boolean }>((from, to) =>
-      supabase.from('attendance').select('child_client_id,date,present').order('child_client_id').order('date').range(from, to),
+    const att = await fetchAll<{ child_client_id: string; date: string; kind: FollowUpKind; checked: boolean }>((from, to) =>
+      supabase.from('follow_up').select('child_client_id,date,kind,checked').order('child_client_id').order('date').order('kind').range(from, to),
     )
     set({
       rows: children.map(normalize),
-      attendance: Object.fromEntries(att.map(a => [attKey(a.child_client_id, a.date), a.present])),
+      attendance: Object.fromEntries(att.map(a => [attKey(a.child_client_id, a.date, a.kind), a.checked])),
       lastSyncAt: new Date().toISOString(),
     })
   } catch (e) {
@@ -389,8 +529,8 @@ async function pushAttendance() {
   const batch = state.attOutbox.filter(o => !state.outbox.some(op => op.kind === 'insert' && op.client_id === o.child))
   if (!batch.length) return
   const { error } = await supabase
-    .from('attendance')
-    .upsert(batch.map(o => ({ child_client_id: o.child, date: o.date, present: o.present })), { onConflict: 'child_client_id,date' })
+    .from('follow_up')
+    .upsert(batch.map(o => ({ child_client_id: o.child, date: o.date, kind: o.kind, checked: o.checked })), { onConflict: 'child_client_id,date,kind' })
   if (error) {
     if (isNetworkError(error.message)) throw new Offline()
     set({ attError: error.message }, false)
@@ -398,7 +538,7 @@ async function pushAttendance() {
   }
   // Only drop what was sent — ticks made during the request stay queued.
   const attendance = { ...state.attendance }
-  for (const o of batch) attendance[attKey(o.child, o.date)] = o.present
+  for (const o of batch) attendance[attKey(o.child, o.date, o.kind)] = o.checked
   set({ attOutbox: state.attOutbox.filter(o => !batch.includes(o)), attendance, attError: null })
 }
 
@@ -407,7 +547,7 @@ type PushResult = 'done' | { conflict: Conflict } | { error: string }
 async function pushInsert(op: InsertOp): Promise<PushResult> {
   // Upsert on client_id: if a previous attempt already reached the server, this just rewrites
   // the same child (with its latest local data) instead of adding it twice.
-  const { error } = await supabase.from('children').upsert({ ...pick(op.data), client_id: op.client_id }, { onConflict: 'client_id' })
+  const { error } = await supabase.from('children').upsert({ ...pick(op.data), client_id: op.client_id, class_id: op.class_id }, { onConflict: 'client_id' })
   if (!error) return 'done'
   if (isNetworkError(error.message)) throw new Offline()
   return { error: error.message }

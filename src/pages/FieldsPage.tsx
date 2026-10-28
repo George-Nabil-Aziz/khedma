@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import type { FieldType } from '../lib/supabase'
 import { useI18n, type TKey } from '../lib/i18n'
-import { addField, deleteField, renameField, useStore } from '../lib/store'
+import { addField, classFields, deleteField, renameField, useStore } from '../lib/store'
 import { CloudOffIcon, LockIcon, PlusIcon, TrashIcon } from '../components/Icons'
 
 const TYPES: { value: FieldType; key: TKey }[] = [
@@ -15,7 +15,9 @@ const BUILT_IN: TKey[] = ['name', 'address', 'landmark', 'birthDate', 'age', 'mo
 
 export function FieldsPage() {
   const { t } = useI18n()
-  const { fields, online } = useStore()
+  const store = useStore()
+  const { online } = store
+  const fields = classFields(store)
   const [label, setLabel] = useState('')
   const [type, setType] = useState<FieldType>('text')
   const [busy, setBusy] = useState(false)

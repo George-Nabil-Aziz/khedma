@@ -34,22 +34,32 @@ export const TEXT_FIELDS = [
 export type TextField = (typeof TEXT_FIELDS)[number]
 
 // Every built-in column the app can change (custom columns live inside `extra`).
-export const CORE_FIELDS = ['full_name', ...TEXT_FIELDS, 'phones', 'primary_contact'] as const
+export const CORE_FIELDS = ['full_name', ...TEXT_FIELDS, 'phones', 'primary_contacts', 'photo'] as const
 export type CoreField = (typeof CORE_FIELDS)[number]
 
 export type ChildInput = {
   full_name: string
   phones: Phone[]
-  primary_contact: Owner | null
+  /** Who the family is usually reached through — one or more of mother / father / child. */
+  primary_contacts: Owner[]
+  /** Small JPEG thumbnail as a data: URL, or null. */
+  photo: string | null
   extra: Record<string, unknown>
 } & { [K in TextField]: string | null }
 
 export type Child = ChildInput & {
   id: number
   client_id: string
+  class_id: string
   created_at: string
   updated_at: string
 }
 
 export type FieldType = 'text' | 'number' | 'date' | 'boolean'
-export type CustomField = { key: string; label: string; type: FieldType; position: number }
+export type CustomField = { key: string; label: string; type: FieldType; position: number; class_id: string }
+
+/** A فصل. Every child belongs to one; servants see only the classes they are members of. */
+export type ClassInfo = { id: string; name: string; service_year: string; is_default: boolean; is_member: boolean }
+
+/** A servant's own profile: the name and photo shown in the sidebar. */
+export type Profile = { display_name: string | null; photo: string | null }

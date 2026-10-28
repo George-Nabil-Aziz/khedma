@@ -2,8 +2,9 @@ import { useState, type FormEvent, type MouseEvent, type ReactNode } from 'react
 import { OWNERS, TEXT_FIELDS, type ChildInput, type CustomField, type Owner, type Phone, type TextField } from '../lib/supabase'
 import { useI18n, type TKey } from '../lib/i18n'
 import { go } from '../lib/router'
-import { findRow, saveChild, useStore } from '../lib/store'
+import { classFields, findRow, saveChild, useStore } from '../lib/store'
 import { SIDES } from '../lib/columns'
+import { PhotoPicker } from '../components/Avatar'
 import { OWNER_LABEL, OWNER_PHONES_LABEL } from '../lib/phones'
 import { ArrowBackIcon, PlusIcon, StarIcon, StarOutlineIcon, TrashIcon, WhatsAppIcon } from '../components/Icons'
 
@@ -34,13 +35,16 @@ export function ChildFormPage({ clientId }: { clientId: string | null }) {
 
 function ChildForm({ clientId, initial }: { clientId: string | null; initial: ChildInput | null }) {
   const { t } = useI18n()
-  const { online, fields } = useStore()
+  const store = useStore()
+  const { online } = store
+  const fields = classFields(store)
   const [texts, setTexts] = useState<Texts>(() =>
     initial ? (Object.fromEntries(Object.keys(EMPTY_TEXTS).map(f => [f, initial[f as FormField] ?? ''])) as Texts) : EMPTY_TEXTS,
   )
   const [phones, setPhones] = useState<Phone[]>(() => initial?.phones ?? [])
-  const [primary, setPrimary] = useState<Owner | null>(() => initial?.primary_contact ?? null)
+  const [primary, setPrimary] = useState<Owner[]>(() => initial?.primary_contacts ?? [])
   const [extra, setExtra] = useState<Record<string, unknown>>(() => initial?.extra ?? {})
+  const [photo, setPhoto] = useState<string | null>(() => initial?.photo ?? null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [savedOffline, setSavedOffline] = useState(false)
 
@@ -63,8 +67,9 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
     const input = {
       ...(Object.fromEntries(Object.entries(texts).map(([f, v]) => [f, v.trim() || null])) as Record<FormField, string | null>),
       phones: phones.map(p => ({ ...p, number: p.number.trim() })).filter(p => p.number),
-      primary_contact: primary,
+      primary_contacts: OWNERS.filter(o => primary.includes(o)),
       extra,
+      photo,
     } as ChildInput
     saveChild(clientId, input)
     if (online) go('/')
@@ -96,6 +101,9 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
       </button>
 
       <Section title={t('basicInfo')}>
+        <div className="sm:col-span-2">
+          <PhotoPicker photo={photo} name={texts.full_name} onChange={setPhoto} />
+        </div>
         <div className="sm:col-span-2">{text('full_name', 'name', { hint: 'nameHint' })}</div>
         {text('birth_date', 'birthDate', { type: 'date', ltr: true })}
         {text('national_id', 'nationalId', { ltr: true, inputMode: 'numeric' })}
@@ -130,8 +138,8 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
               owner={owner}
               phones={phones}
               setPhones={setPhones}
-              primary={primary === owner}
-              onPrimary={() => setPrimary(p => (p === owner ? null : owner))}
+              primary={primary.includes(owner)}
+              onPrimary={() => setPrimary(p => (p.includes(owner) ? p.filter(o => o !== owner) : [...p, owner]))}
               errors={errors}
             />
           ))}

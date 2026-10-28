@@ -20,7 +20,8 @@ const FIELD_LABEL: Record<CoreField, TKey> = {
   notes: 'notes',
   national_id: 'nationalId',
   phones: 'phones',
-  primary_contact: 'primaryContact',
+  primary_contacts: 'primaryContact',
+  photo: 'photo',
 }
 
 /** Label and display text for a field key of the sync "flat" view (built-in or "x:<custom>"). */
@@ -35,11 +36,12 @@ function useFieldText() {
 
   const value = (key: string, v: unknown): string => {
     if (v == null || v === '') return '—'
+    if (key === 'photo') return '🖼️'
     if (key === 'phones') {
       const list = v as Phone[]
       return list.length ? list.map(p => `${t(OWNER_LABEL[p.owner])}: ${p.number}${p.whatsapp ? ' (WhatsApp)' : ''}`).join(lang === 'ar' ? '، ' : ', ') : '—'
     }
-    if (key === 'primary_contact') return t(OWNER_LABEL[v as Phone['owner']])
+    if (key === 'primary_contacts') return (v as Phone['owner'][]).map(o => t(OWNER_LABEL[o])).join(lang === 'ar' ? '، ' : ', ') || '—'
     if (typeof v === 'boolean') return v ? t('yes') : t('no')
     return String(v)
   }
