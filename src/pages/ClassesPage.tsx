@@ -20,9 +20,6 @@ export function ClassesPage({ admin }: { admin: boolean }) {
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
-      {/* only meaningful once there is at least one class to star */}
-      {activeClasses(classes).length > 0 && <p className="text-sm text-slate-500">{t('classesHelp')}</p>}
-
       {!online && (
         <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
           <CloudOffIcon className="size-4 shrink-0" />
@@ -62,6 +59,9 @@ export function ClassesPage({ admin }: { admin: boolean }) {
             ))}
         </section>
       ))}
+
+      {/* at the very bottom, and only once there is at least one class to star */}
+      {activeClasses(classes).length > 0 && <p className="text-center text-sm text-slate-500">{t('classesHelp')}</p>}
     </div>
   )
 }
