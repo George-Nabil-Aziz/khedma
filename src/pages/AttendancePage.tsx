@@ -3,10 +3,10 @@ import { useI18n } from '../lib/i18n'
 import { go } from '../lib/router'
 import { isPresent, toggleAttendance, useStore, viewRows } from '../lib/store'
 import { sortRows, useColumns, useSort } from '../lib/columns'
+import { serviceYear } from '../lib/serviceYear'
 
-// The service year: every Friday from 6 Oct 2026 to 6 Oct 2027.
-const FROM = '2026-10-06'
-const TO = '2027-10-06'
+// Every Friday of the current service year (6 October → 6 October next year).
+const { start: FROM, end: TO } = serviceYear()
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 

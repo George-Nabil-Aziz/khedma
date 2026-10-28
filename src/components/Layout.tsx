@@ -61,7 +61,7 @@ export function Layout({ email, admin, title, children }: { email: string; admin
         }`}
       >
         <div className="flex h-16 items-center gap-3 border-b border-slate-200 px-5 dark:border-slate-800">
-          <img src="/logo.svg" alt="" className="size-9" />
+          <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="" className="size-9" />
           <span className="text-lg font-bold">{t('appName')}</span>
         </div>
 

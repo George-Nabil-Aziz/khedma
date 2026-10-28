@@ -1,10 +1,13 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { load, save } from './storage'
+import { serviceYear } from './serviceYear'
+
+const YEAR = serviceYear().label
 
 export type Lang = 'ar' | 'en'
 
 const dict = {
-  appName: { ar: 'خدمة 2027', en: 'Khedma 2027' },
+  appName: { ar: `خدمة ${YEAR}`, en: `Khedma ${YEAR}` },
   children: { ar: 'الأولاد', en: 'Children' },
   addChild: { ar: 'إضافة ولد', en: 'Add child' },
   editChild: { ar: 'تعديل بيانات', en: 'Edit child' },

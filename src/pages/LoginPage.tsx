@@ -39,7 +39,7 @@ export function LoginPage() {
           className="w-full max-w-sm space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
         >
           <div className="text-center">
-            <img src="/logo.svg" alt="" className="mx-auto mb-3 size-16 drop-shadow" />
+            <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="" className="mx-auto mb-3 size-16 drop-shadow" />
             <h1 className="text-xl font-bold">{t('appName')}</h1>
           </div>
           <label className="block space-y-1">
