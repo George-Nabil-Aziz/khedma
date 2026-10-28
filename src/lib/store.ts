@@ -332,6 +332,15 @@ export async function leaveClass(id: string): Promise<Result<null>> {
   return { ok: true, value: null }
 }
 
+/** Admins only: delete a whole class and everything in it. */
+export async function deleteClass(id: string): Promise<Result<null>> {
+  const { error } = await supabase.rpc('delete_class', { p_class: id })
+  if (error) return { ok: false, error: error.message }
+  if (state.currentClass === id) setCurrentClass(null)
+  await sync()
+  return { ok: true, value: null }
+}
+
 /** Back into a class I left less than 7 days ago. */
 export async function rejoinClass(id: string): Promise<Result<null>> {
   const { data, error } = await supabase.rpc('rejoin_class', { p_class: id })

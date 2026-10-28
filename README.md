@@ -17,6 +17,7 @@ Run these once, in order, in the Supabase SQL Editor:
 9. `supabase/009_leave_grace_week.sql`: leaving a class keeps it greyed out for 7 days with a rejoin button.
 10. `supabase/010_communion_days.sql`: mark a Friday as a communion day for the class.
 11. `supabase/011_class_servants.sql`: the list of servants in a class (members and admins only).
+12. `supabase/012_delete_class.sql`: admins can delete a whole class (each deleted child stays in the audit log).
 
 Anyone can create an account from the sign-in page, but a new account sees no children until it creates a class or joins one with a share code. Turn on **Allow new users to sign up** in Supabase only **after** running 006. The admin can also add servants from the **Users** page.
 

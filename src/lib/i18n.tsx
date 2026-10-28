@@ -76,6 +76,12 @@ const dict = {
   cancel: { ar: 'إلغاء', en: 'Cancel' },
   confirm: { ar: 'تأكيد', en: 'Confirm' },
   areYouSure: { ar: 'متأكد؟', en: 'Are you sure?' },
+  typeToConfirm: { ar: 'علشان تأكد، اكتب:', en: 'To confirm, type:' },
+  deleteClass: { ar: 'حذف الفصل', en: 'Delete class' },
+  deleteClassConfirm: {
+    ar: '⚠️ هيتمسح فصل "{name}" كله نهائياً، ومعاه {count} ولد ببياناتهم وصورهم ومتابعتهم. خلي بالك منهم كويس قبل ما تكمّل:',
+    en: '⚠️ The whole class "{name}" will be deleted for good, with {count} children and their data, photos and follow-up. Look them over carefully first:',
+  },
   required: { ar: 'مطلوب', en: 'Required' },
   invalidNationalId: { ar: 'الرقم القومي 14 رقم', en: 'National ID must be 14 digits' },
   invalidPhone: { ar: 'رقم غير صحيح', en: 'Invalid number' },
@@ -273,6 +279,9 @@ const dict = {
   },
   classes: { ar: 'الفصول', en: 'Classes' },
   servants: { ar: 'الخدام', en: 'Servants' },
+  noServants: { ar: 'مفيش خدام في الفصل ده', en: 'No servants in this class' },
+  addServantToClass: { ar: '+ ضيف خادم للفصل', en: '+ Add a servant to this class' },
+  removeServantConfirm: { ar: 'هتشيل "{name}" من فصل "{class}"، ومش هيشوف أولاده تاني. متأكد؟', en: 'Remove "{name}" from "{class}"? They will stop seeing its children.' },
   joinedOn: { ar: 'دخل', en: 'Joined' },
   classesHelp: {
     ar: 'كل فصولك على مدار السنين. علّم على فصل السنادي بالنجمة ⭐ علشان يفتح على طول.',

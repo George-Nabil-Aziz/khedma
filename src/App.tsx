@@ -65,7 +65,7 @@ function Routes({ email, userId, admin }: { email: string; userId: string; admin
   if (route.name === 'profile') return page('profile', <ProfilePage email={email} admin={admin} />)
   if (admin && route.name === 'users') return page('users', <UsersPage myId={userId} />)
   if (admin && route.name === 'audit') return page('audit', <AuditPage />)
-  if (route.name === 'classes') return page('classes', <ClassesPage />)
+  if (route.name === 'classes') return page('classes', <ClassesPage admin={admin} />)
   // No class yet: say so, and offer to create one or join a colleague's with a code.
   if ((lastSyncAt || syncError) && activeClasses(classes).length === 0) return page('classes', <NoClass />)
 

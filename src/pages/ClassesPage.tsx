@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useI18n } from '../lib/i18n'
 import { go } from '../lib/router'
-import { activeClasses, createClass, leaveClass, rejoinClass, renameClass, setCurrentClass, setDefaultClass, useStore } from '../lib/store'
+import { activeClasses, createClass, deleteClass, leaveClass, rejoinClass, renameClass, setCurrentClass, setDefaultClass, useStore } from '../lib/store'
 import { currentServiceYear, serviceYearOptions } from '../lib/serviceYear'
 import type { ClassInfo } from '../lib/supabase'
 import { confirmDialog } from '../components/ConfirmDialog'
@@ -12,7 +12,7 @@ const input =
   'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800'
 
 /** All my classes over the years, grouped by service year, newest first. */
-export function ClassesPage() {
+export function ClassesPage({ admin }: { admin: boolean }) {
   const { t } = useI18n()
   const { online, classes } = useStore()
 
@@ -58,7 +58,7 @@ export function ClassesPage() {
           {classes
             .filter(c => c.service_year === year)
             .map(c => (
-              c.left_at ? <LeftClassCard key={c.id} c={c} /> : <ClassCard key={c.id} c={c} />
+              c.left_at ? <LeftClassCard key={c.id} c={c} /> : <ClassCard key={c.id} c={c} admin={admin} />
             ))}
         </section>
       ))}
@@ -92,15 +92,26 @@ function NewClassForm() {
         <PlusIcon className="size-5 text-indigo-600 dark:text-indigo-300" />
         {t('newClass')}
       </h2>
-      <div className="grid gap-2 sm:grid-cols-[1fr_9rem_auto]">
+      <div className="grid gap-2 sm:grid-cols-[1fr_10rem_auto]">
         <input className={input} placeholder={t('phClassName')} value={name} onChange={e => setName(e.target.value)} disabled={!online || busy} autoFocus />
-        <select className={input} value={year} onChange={e => setYear(e.target.value)} disabled={!online || busy} aria-label={t('serviceYear')} dir="ltr">
-          {serviceYearOptions().map(y => (
-            <option key={y.value} value={y.value}>
-              {y.label}
-            </option>
-          ))}
-        </select>
+        {/* The list shows single years (2027); once picked, the box shows the whole service year
+            (2026-2027). The select's own text is hidden and the full year is drawn over it. */}
+        <div className="relative" dir="ltr">
+          <select
+            className={`${input} text-transparent`}
+            value={year}
+            onChange={e => setYear(e.target.value)}
+            disabled={!online || busy}
+            aria-label={`${t('serviceYear')}: ${year}`}
+          >
+            {serviceYearOptions().map(y => (
+              <option key={y.value} value={y.value} className="text-slate-900 dark:text-slate-100">
+                {y.label}
+              </option>
+            ))}
+          </select>
+          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-semibold">{year}</span>
+        </div>
         <button
           disabled={!online || busy || !name.trim()}
           className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
@@ -153,9 +164,10 @@ function LeftClassCard({ c }: { c: ClassInfo }) {
   )
 }
 
-function ClassCard({ c }: { c: ClassInfo }) {
+function ClassCard({ c, admin }: { c: ClassInfo; admin: boolean }) {
   const { t } = useI18n()
-  const { online, currentClass } = useStore()
+  const store = useStore()
+  const { online, currentClass } = store
   const [renaming, setRenaming] = useState(false)
   const [name, setName] = useState(c.name)
   const [busy, setBusy] = useState(false)
@@ -170,6 +182,26 @@ function ClassCard({ c }: { c: ClassInfo }) {
     if (!r.ok) setError(r.error ?? '')
     setBusy(false)
     return r.ok
+  }
+
+  async function leave() {
+    const ok = await confirmDialog({ title: t('leaveClass'), message: t('leaveConfirm').replace('{name}', c.name), confirmLabel: t('leaveClass'), danger: true })
+    if (ok) run(() => leaveClass(c.id))
+  }
+
+  /** Admin: delete the class, after showing exactly which children go with it. */
+  async function removeClass() {
+    // the admin's local copy holds the children of every class
+    const children = store.rows.filter(r => r.class_id === c.id).map(r => r.full_name).sort((a, b) => a.localeCompare(b, 'ar'))
+    const ok = await confirmDialog({
+      title: t('deleteClass'),
+      message: t('deleteClassConfirm').replace('{name}', c.name).replace('{count}', String(children.length)),
+      details: children,
+      confirmLabel: t('deleteClass'),
+      danger: true,
+      requireText: c.name,
+    })
+    if (ok) run(() => deleteClass(c.id))
   }
 
   const iconBtn = 'grid size-9 place-items-center rounded-lg hover:bg-slate-100 disabled:opacity-40 dark:hover:bg-slate-800'
@@ -240,15 +272,13 @@ function ClassCard({ c }: { c: ClassInfo }) {
             <button onClick={() => setRenaming(true)} disabled={!online} title={t('rename')} aria-label={t('rename')} className={`${iconBtn} text-slate-500`}>
               <PencilIcon />
             </button>
-            {c.is_member && (
+            {/* the trash can: an admin deletes the whole class, a servant leaves it */}
+            {(admin || c.is_member) && (
               <button
-                onClick={async () => {
-                  const ok = await confirmDialog({ title: t('leaveClass'), message: t('leaveConfirm').replace('{name}', c.name), confirmLabel: t('leaveClass'), danger: true })
-                  if (ok) run(() => leaveClass(c.id))
-                }}
+                onClick={admin ? removeClass : leave}
                 disabled={!online || busy}
-                title={t('leaveClass')}
-                aria-label={t('leaveClass')}
+                title={admin ? t('deleteClass') : t('leaveClass')}
+                aria-label={admin ? t('deleteClass') : t('leaveClass')}
                 className={`${iconBtn} text-red-500 hover:bg-red-50 hover:text-red-600 dark:text-red-400 dark:hover:bg-red-500/10`}
               >
                 <TrashIcon />
@@ -257,7 +287,7 @@ function ClassCard({ c }: { c: ClassInfo }) {
           </>
         )}
       </div>
-      {showServants && <ClassServants classId={c.id} />}
+      {showServants && <ClassServants classId={c.id} className={c.name} admin={admin} />}
       {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">{error}</p>}
     </div>
   )
