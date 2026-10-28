@@ -209,7 +209,7 @@ function ClassCard({ c, admin }: { c: ClassInfo; admin: boolean }) {
   return (
     <div
       className={`space-y-2 rounded-xl border bg-white p-3 dark:bg-slate-900 ${
-        open ? 'border-indigo-400 ring-2 ring-indigo-500/20 dark:border-indigo-500/60' : 'border-slate-200 dark:border-slate-800'
+        c.is_default ? 'border-amber-400 ring-2 ring-amber-400/20 dark:border-amber-500/60' : 'border-slate-200 dark:border-slate-800'
       }`}
     >
       <div className="flex items-center gap-2">
@@ -241,8 +241,9 @@ function ClassCard({ c, admin }: { c: ClassInfo; admin: boolean }) {
         ) : (
           <div className="min-w-0 flex-1">
             <div className="truncate font-bold">{c.name}</div>
-            <div className="text-xs text-slate-500">
-              {c.is_default && <span className="text-amber-600 dark:text-amber-400">{t('thisYearClass')} · </span>}
+            {/* status words, with a dot only between two of them */}
+            <div className="flex flex-wrap gap-x-1.5 text-xs text-slate-500 [&>*+*]:before:me-1.5 [&>*+*]:before:content-['·']">
+              {c.is_default && <span className="text-amber-600 dark:text-amber-400">{t('thisYearClass')}</span>}
               {open && <span className="text-indigo-600 dark:text-indigo-300">{t('openNow')}</span>}
               {!c.is_member && <span>{t('notMember')}</span>}
             </div>

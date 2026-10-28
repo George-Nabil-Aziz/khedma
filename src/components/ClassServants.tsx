@@ -4,7 +4,8 @@ import { useI18n } from '../lib/i18n'
 import { sync } from '../lib/store'
 import { Avatar } from './Avatar'
 import { confirmDialog } from './ConfirmDialog'
-import { XIcon } from './Icons'
+import { PlusIcon, XIcon } from './Icons'
+import { go } from '../lib/router'
 
 // Roles are not shown here — only who "you" are.
 type Servant = { user_id: string; email: string; display_name: string | null; photo: string | null; joined_at: string }
@@ -104,20 +105,34 @@ export function ClassServants({ classId, className, admin }: { classId: string; 
         {list.length === 0 && <li className="px-3 py-2 text-sm text-slate-500">{t('noServants')}</li>}
       </ul>
 
-      {admin && notInClass.length > 0 && (
-        <select
-          value=""
-          disabled={busy}
-          onChange={e => e.target.value && add(e.target.value)}
-          className="w-full rounded-lg border border-dashed border-indigo-300 bg-white px-3 py-2 text-sm font-semibold text-indigo-700 outline-none focus:border-indigo-500 dark:border-indigo-500/40 dark:bg-slate-900 dark:text-indigo-300"
-        >
-          <option value="">{t('addServantToClass')}</option>
-          {notInClass.map(a => (
-            <option key={a.id} value={a.id}>
-              {a.display_name ? `${a.display_name} — ${a.email}` : a.email}
-            </option>
-          ))}
-        </select>
+      {/* admin: add someone. Always shown, so it is clear when everyone is already in. */}
+      {admin && (
+        <div className="flex flex-wrap items-center gap-2">
+          {notInClass.length > 0 ? (
+            <select
+              value=""
+              disabled={busy}
+              onChange={e => e.target.value && add(e.target.value)}
+              className="min-w-0 flex-1 rounded-lg border border-dashed border-indigo-300 bg-white px-3 py-2 text-sm font-semibold text-indigo-700 outline-none focus:border-indigo-500 dark:border-indigo-500/40 dark:bg-slate-900 dark:text-indigo-300"
+            >
+              <option value="">{t('addServantToClass')}</option>
+              {notInClass.map(a => (
+                <option key={a.id} value={a.id}>
+                  {a.display_name ? `${a.display_name} — ${a.email}` : a.email}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span className="flex-1 text-sm text-slate-500">{t('everyoneInClass')}</span>
+          )}
+          <button
+            onClick={() => go('/users')}
+            className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+          >
+            <PlusIcon className="size-4" />
+            {t('addUser')}
+          </button>
+        </div>
       )}
 
       {error && <ErrorText>{error}</ErrorText>}

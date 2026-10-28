@@ -281,6 +281,7 @@ const dict = {
   servants: { ar: 'الخدام', en: 'Servants' },
   noServants: { ar: 'مفيش خدام في الفصل ده', en: 'No servants in this class' },
   addServantToClass: { ar: '+ ضيف خادم للفصل', en: '+ Add a servant to this class' },
+  everyoneInClass: { ar: 'كل الحسابات موجودة في الفصل ده. علشان تضيف حد جديد، اعمله حساب الأول.', en: 'Every account is already in this class. To add someone new, create their account first.' },
   removeServantConfirm: { ar: 'هتشيل "{name}" من فصل "{class}"، ومش هيشوف أولاده تاني. متأكد؟', en: 'Remove "{name}" from "{class}"? They will stop seeing its children.' },
   joinedOn: { ar: 'دخل', en: 'Joined' },
   classesHelp: {
