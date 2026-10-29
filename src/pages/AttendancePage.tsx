@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useI18n } from '../lib/i18n'
 import { go } from '../lib/router'
-import { DAY_KINDS, isChecked, isDay, toggleDay, toggleFollowUp, useStore, viewRows, type DayKind, type FollowUpKind } from '../lib/store'
+import { DAY_KINDS, childrenLoading, isChecked, isDay, toggleDay, toggleFollowUp, useStore, viewRows, type DayKind, type FollowUpKind } from '../lib/store'
 import type { TKey } from '../lib/i18n'
 import { sortRows, useColumns, useSort } from '../lib/columns'
 import { NoChildren } from '../components/NoChildren'
+import { Loading } from '../components/Loading'
 import { currentServiceYear, iso, serviceYearRange } from '../lib/serviceYear'
 
 // Two rows per child, each with its own colour so they are easy to tell apart.
@@ -101,9 +102,11 @@ export function AttendancePage() {
   const stickyName = 'sticky inset-s-0 z-10 w-44 min-w-44 max-w-44 bg-white dark:bg-slate-900'
   const stickyKind = 'sticky inset-s-44 z-10 w-24 min-w-24 bg-white dark:bg-slate-900'
 
-  // A class with no children yet: say so, instead of an empty grid (same rule as the Children page).
-  const noChildren = store.loaded && !store.syncing && viewRows(store).length === 0
-  if (noChildren) return <NoChildren />
+  // First "loading", then either the grid or — for a class with no children yet — a card saying so.
+  // Never an empty grid (same rule as the Children page).
+  const count = viewRows(store).length
+  if (childrenLoading(store, count)) return <Loading />
+  if (count === 0) return <NoChildren />
 
   return (
     <div className="space-y-4">
@@ -182,7 +185,7 @@ export function AttendancePage() {
             {rows.length === 0 ? (
               <tr>
                 <td colSpan={days.length + 3} className="px-3 py-10 text-center text-slate-500">
-                  {viewRows(store).length ? t('noResults') : t('loading')}
+                  {t('noResults')}
                 </td>
               </tr>
             ) : (

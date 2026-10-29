@@ -43,6 +43,8 @@ type State = {
   online: boolean
   loaded: boolean
   syncError: string | null
+  /** A class was just opened and its first sync has not finished yet. */
+  classLoading: boolean
   /** متابعة ticks from the server, keyed by attKey(child, date, kind). */
   attendance: Record<string, boolean>
   /** متابعة ticks made on this device and not sent yet. */
@@ -76,6 +78,7 @@ let state: State = {
   online: navigator.onLine,
   loaded: false,
   syncError: null,
+  classLoading: false,
   attendance: {},
   attOutbox: [],
   attError: null,
@@ -229,7 +232,7 @@ export async function resetStore() {
   save('lastActive', '') // the idle sign-out clock (idle.ts) starts again at the next sign-in
   openedDefault = false // the next user to sign in gets their own ⭐ class
   set(
-    { rows: [], fields: [], classes: [], profile: null, currentClass: null, outbox: [], conflicts: [], lastSyncAt: null, syncError: null, attendance: {}, attOutbox: [], attError: null, dayMarks: {}, dayOutbox: [], yearEndWeeks: setWeeks(0) },
+    { rows: [], fields: [], classes: [], profile: null, currentClass: null, outbox: [], conflicts: [], lastSyncAt: null, syncError: null, classLoading: false, attendance: {}, attOutbox: [], attError: null, dayMarks: {}, dayOutbox: [], yearEndWeeks: setWeeks(0) },
     false,
   )
 }
@@ -294,7 +297,7 @@ export async function saveYearEndWeeks(weeks: number): Promise<string | null> {
 export function setCurrentClass(id: string | null) {
   const changed = id !== state.currentClass
   save('class', id ?? '')
-  set({ currentClass: id }, false)
+  set({ currentClass: id, classLoading: changed && !!id }, false)
   if (changed && id) sync() // fetch the newest data of the class just opened
 }
 
@@ -483,6 +486,17 @@ export function viewRows(s: State): ViewRow[] {
   return [...byId.values()].filter(r => r.class_id === s.currentClass)
 }
 
+/**
+ * True while the children of the class on screen may still be on their way: nothing is shown
+ * yet, and either nothing was ever synced or the class was just opened and its first sync is
+ * still running. Not the sync every minute — an empty class would flash "loading" each time.
+ * Offline there is nothing to wait for.
+ */
+export function childrenLoading(s: State, count: number): boolean {
+  // a sync that failed (shown on the Sync page) must not leave "loading" up for good
+  return !s.loaded || (count === 0 && s.online && !s.syncError && (!s.lastSyncAt || s.classLoading))
+}
+
 export function findRow(s: State, clientId: string) {
   return viewRows(s).find(r => r.client_id === clientId)
 }
@@ -655,7 +669,7 @@ async function syncOnce() {
   } catch (e) {
     if (!(e instanceof Offline)) set({ syncError: (e as Error).message }, false)
   } finally {
-    set({ syncing: false }, false)
+    set({ syncing: false, classLoading: false }, false)
   }
 }
 

@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useI18n } from '../lib/i18n'
 import { go } from '../lib/router'
-import { sync, useStore, viewRows, type RowStatus } from '../lib/store'
+import { childrenLoading, sync, useStore, viewRows, type RowStatus } from '../lib/store'
 import { ColumnsMenu } from '../components/ColumnsMenu'
 import { Pagination, usePageSize } from '../components/Pagination'
 import { sortRows, useColumnPrefs, useColumns, useSort, type Column } from '../lib/columns'
 import { Avatar } from '../components/Avatar'
 import { NoChildren } from '../components/NoChildren'
+import { Loading } from '../components/Loading'
 import { AlertIcon, ChevronDownIcon, ChevronUpIcon, CloudOffIcon, ColumnsIcon, PlusIcon, SortIcon, StarIcon } from '../components/Icons'
 
 export function ChildrenPage() {
@@ -55,8 +56,6 @@ export function ChildrenPage() {
   const current = Math.min(page, pages)
   const pageRows = filtered.slice((current - 1) * pageSize, current * pageSize)
 
-  // Empty while a sync is fetching: say "loading", not "no children".
-  const showLoading = !store.loaded || (store.syncing && rows.length === 0)
   const colSpan = prefs.visible.length + 2
 
   const top = (
@@ -81,12 +80,14 @@ export function ChildrenPage() {
     </>
   )
 
-  // A class with no children yet: say so, instead of an empty table.
-  if (!showLoading && rows.length === 0)
+  // First "loading", then either the table or — for a class with no children yet — a card
+  // saying so with a way to add one. Never an empty table.
+  const loading = childrenLoading(store, rows.length)
+  if (loading || rows.length === 0)
     return (
       <div className="space-y-4">
         {top}
-        <NoChildren />
+        {loading ? <Loading /> : <NoChildren />}
       </div>
     )
 
@@ -140,13 +141,7 @@ export function ChildrenPage() {
             </tr>
           </thead>
           <tbody>
-            {showLoading ? (
-              <tr>
-                <td colSpan={colSpan} className="px-3 py-10 text-center text-slate-500">
-                  {t('loading')}
-                </td>
-              </tr>
-            ) : filtered.length === 0 ? (
+            {filtered.length === 0 ? (
               <tr>
                 <td colSpan={colSpan} className="px-3 py-10 text-center text-slate-500">
                   {t('noResults')}
