@@ -1,7 +1,8 @@
+import type { ReactNode } from 'react'
 import { useI18n } from '../lib/i18n'
 import { go } from '../lib/router'
 import { findRow, useStore } from '../lib/store'
-import { useColumns } from '../lib/columns'
+import { formatAddress, useColumns } from '../lib/columns'
 import { Avatar } from '../components/Avatar'
 import { AlertIcon, ArrowBackIcon, PencilIcon } from '../components/Icons'
 
@@ -10,7 +11,7 @@ import { AlertIcon, ArrowBackIcon, PencilIcon } from '../components/Icons'
  * (empty ones as —, so missing data shows), with a button to the edit form.
  */
 export function ChildViewPage({ clientId }: { clientId: string }) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const store = useStore()
   const columns = useColumns()
   const child = findRow(store, clientId)
@@ -51,15 +52,26 @@ export function ChildViewPage({ clientId }: { clientId: string }) {
       </section>
 
       <dl className="grid gap-x-6 gap-y-4 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2 dark:border-slate-800 dark:bg-slate-900">
-        {columns.map(c => {
-          const value = c.render(child)
-          const empty = value == null || value === '' || value === false
-          return (
-            <div key={c.id} className="min-w-0 border-b border-slate-100 pb-3 last:border-0 dark:border-slate-800">
-              <dt className="text-xs font-semibold text-slate-500">{c.label}</dt>
-              <dd className="mt-1 break-words font-semibold">{empty ? <span className="text-slate-300 dark:text-slate-600">—</span> : value}</dd>
-            </div>
-          )
+        {columns.flatMap(c => {
+          const item = (key: string, label: ReactNode, value: ReactNode) => {
+            const empty = value == null || value === '' || value === false
+            return (
+              <div key={key} className="min-w-0 border-b border-slate-100 pb-3 last:border-0 dark:border-slate-800">
+                <dt className="text-xs font-semibold text-slate-500">{label}</dt>
+                <dd className="mt-1 break-words font-semibold">{empty ? <span className="text-slate-300 dark:text-slate-600">—</span> : value}</dd>
+              </div>
+            )
+          }
+          // a child with two homes: the usual one (named, e.g. بيت بابا وماما) and the other right after it
+          if (c.id === 'address' && child.other_address) {
+            const other = child.other_address
+            const named = (name: string | null | undefined, fallback: string) => (name?.trim() ? `${fallback} — ${name.trim()}` : fallback)
+            return [
+              item('address', named(child.address_label, c.label), c.render(child)),
+              item('other_address', named(other.label, t('otherAddress')), formatAddress(other, t, lang)),
+            ]
+          }
+          return [item(c.id, c.label, c.render(child))]
         })}
       </dl>
     </div>

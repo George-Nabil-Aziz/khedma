@@ -31,11 +31,20 @@ export const TEXT_FIELDS = [
   'notes',
   'national_id',
   'category', // الحالة: normal / hidden / brothers — see CATEGORIES
+  'address_label', // whose home the usual address is — only used when there is an other_address
 ] as const
 export type TextField = (typeof TEXT_FIELDS)[number]
 
+/** The parts of an address, the same for the usual home and the other one. */
+export const ADDRESS_FIELDS = ['house_number', 'street', 'branch_of_street', 'landmark', 'floor', 'side', 'apartment'] as const
+export type AddressField = (typeof ADDRESS_FIELDS)[number]
+export type Address = { [K in AddressField]?: string | null }
+
+/** A second home the child also lives in, e.g. the grandparents'. `label`: whose home it is. */
+export type OtherAddress = Address & { label?: string | null }
+
 // Every built-in column the app can change (custom columns live inside `extra`).
-export const CORE_FIELDS = ['full_name', ...TEXT_FIELDS, 'phones', 'primary_contacts', 'photo'] as const
+export const CORE_FIELDS = ['full_name', ...TEXT_FIELDS, 'phones', 'primary_contacts', 'photo', 'other_address'] as const
 export type CoreField = (typeof CORE_FIELDS)[number]
 
 export type ChildInput = {
@@ -45,6 +54,8 @@ export type ChildInput = {
   primary_contacts: Owner[]
   /** Small JPEG thumbnail as a data: URL, or null. */
   photo: string | null
+  /** Another home the child also lives in, or null. */
+  other_address: OtherAddress | null
   extra: Record<string, unknown>
 } & { [K in TextField]: string | null }
 

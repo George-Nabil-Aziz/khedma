@@ -186,6 +186,14 @@ const dict = {
   attendanceOrderNote: { ar: 'نفس ترتيب صفحة الأولاد', en: 'Same order as the Children page' },
   attPending: { ar: 'علامات متابعة مستنية تتبعت', en: 'Follow-up ticks waiting to be sent' },
   refresh: { ar: 'تحديث', en: 'Refresh' },
+  // a second home
+  hasOtherAddress: { ar: 'عايش في بيت تاني كمان', en: 'Also lives in another home' },
+  addressLabel: { ar: 'بيت مين؟', en: 'Whose home?' },
+  phMainAddressLabel: { ar: 'مثال: بيت بابا وماما', en: 'e.g. parents’ home' },
+  phOtherAddressLabel: { ar: 'مثال: بيت الجد', en: 'e.g. grandparents’ home' },
+  otherAddress: { ar: 'البيت التاني', en: 'Other home' },
+  removeOtherAddress: { ar: 'شيل البيت التاني', en: 'Remove the other home' },
+  removeOtherAddressConfirm: { ar: 'بيانات البيت التاني هتتمسح. تكمّل؟', en: 'The other home’s details will be cleared. Continue?' },
   // الحالة of a child
   category: { ar: 'الحالة', en: 'Status' },
   catNormal: { ar: 'عادي', en: 'Normal' },
@@ -235,6 +243,8 @@ const dict = {
   onlyGoing: { ar: 'الرايحين بس', en: 'Going only' },
   paidAll: { ar: 'دفع كله', en: 'Paid in full' },
   leftToPay: { ar: 'باقي عليه', en: 'Still owes' },
+  paidSoFar: { ar: 'دفع', en: 'Paid' },
+  outOf: { ar: 'من', en: 'of' },
   notPaid: { ar: 'مدفعش', en: 'Not paid' },
   amount: { ar: 'المبلغ', en: 'Amount' },
   addPayment: { ar: 'دفع', en: 'Pay' },

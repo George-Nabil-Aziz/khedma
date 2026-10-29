@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { supabase, type Phone } from '../lib/supabase'
+import { supabase, type OtherAddress, type Phone } from '../lib/supabase'
+import { otherAddressText } from '../lib/columns'
 import { useI18n, type TKey } from '../lib/i18n'
 import { useStore } from '../lib/store'
 import { OWNER_LABEL } from '../lib/phones'
@@ -41,6 +42,8 @@ const FIELD_LABEL: Record<string, TKey> = {
   phones: 'phones',
   primary_contacts: 'primaryContact',
   photo: 'photo',
+  address_label: 'addressLabel',
+  other_address: 'otherAddress',
   display_name: 'displayName',
   checked: 'attendance',
   label: 'fieldLabel',
@@ -106,6 +109,7 @@ export function AuditPage() {
       return list.length ? list.map(p => `${t(OWNER_LABEL[p.owner])}: ${p.number}${p.whatsapp ? ' ✆' : ''}`).join(' · ') : '—'
     }
     if (k === 'primary_contacts') return (v as Phone['owner'][]).map(o => t(OWNER_LABEL[o])).join(' · ') || '—'
+    if (k === 'other_address') return otherAddressText(v as OtherAddress, t, lang) || '—'
     if (typeof v === 'boolean') return v ? '✓' : '✗'
     if (typeof v === 'object') return JSON.stringify(v)
     return String(v)

@@ -457,6 +457,18 @@ function ChildRow({ trip, childId, name, brothers, onError }: { trip: Trip; chil
               {t('brothers')}
             </button>
             {status === 'paid' && <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">✅ {t('paidAll')}</span>}
+            {/* how much so far, out of what this child owes */}
+            {b!.paid > 0 && (
+              <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+                {t('paidSoFar')}: <span dir="ltr">{money(b!.paid)}</span>
+                {b!.due > 0 && (
+                  <span className="font-normal opacity-70">
+                    {' '}
+                    {t('outOf')} <span dir="ltr">{money(b!.due)}</span>
+                  </span>
+                )}
+              </span>
+            )}
             {status === 'partial' && (
               <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">
                 {t('leftToPay')}: {money(b!.left)}

@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { OWNERS, TEXT_FIELDS, type ChildInput, type CustomField, type Owner, type Phone, type TextField } from '../lib/supabase'
+import { OWNERS, TEXT_FIELDS, type ChildInput, type CustomField, type OtherAddress, type Owner, type Phone, type TextField } from '../lib/supabase'
 import { useI18n, type TKey } from '../lib/i18n'
 import { openPicker } from '../lib/picker'
 import { go } from '../lib/router'
@@ -8,6 +8,7 @@ import { CATEGORIES, SIDES } from '../lib/columns'
 import { formatNationalId, nationalIdDigits } from '../lib/nationalId'
 import { NO, YES, formatDeacon, parseDeacon } from '../lib/deacon'
 import { PhotoPicker } from '../components/Avatar'
+import { confirmDialog } from '../components/ConfirmDialog'
 import { OWNER_LABEL, OWNER_PHONES_LABEL } from '../lib/phones'
 import { ArrowBackIcon, PlusIcon, StarIcon, StarOutlineIcon, TrashIcon, WhatsAppIcon } from '../components/Icons'
 
@@ -50,6 +51,8 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
   const [primary, setPrimary] = useState<Owner[]>(() => initial?.primary_contacts ?? [])
   const [extra, setExtra] = useState<Record<string, unknown>>(() => initial?.extra ?? {})
   const [photo, setPhoto] = useState<string | null>(() => initial?.photo ?? null)
+  // a second home: null = lives in one home only
+  const [other, setOther] = useState<OtherAddress | null>(() => initial?.other_address ?? null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [savedOffline, setSavedOffline] = useState(false)
 
@@ -75,7 +78,10 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
       primary_contacts: OWNERS.filter(o => primary.includes(o)),
       extra,
       photo,
+      other_address: other && cleanAddress(other),
     } as ChildInput
+    // whose home the usual address is only means something next to a second one
+    if (!other) input.address_label = null
     saveChild(clientId, input)
     if (online) go(back)
     else {
@@ -123,6 +129,21 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
       </Section>
 
       <Section title={t('address')}>
+        {/* ticking it names this home and opens a second address below */}
+        <label className="flex items-center gap-2 text-sm font-semibold sm:col-span-2">
+          <input
+            type="checkbox"
+            className="size-4 accent-indigo-600"
+            checked={!!other}
+            onChange={async e => {
+              if (e.target.checked) return setOther({})
+              const filled = other && Object.values(other).some(v => v?.trim())
+              if (!filled || (await confirmDialog({ title: t('removeOtherAddress'), message: t('removeOtherAddressConfirm'), confirmLabel: t('removeOtherAddress'), danger: true }))) setOther(null)
+            }}
+          />
+          {t('hasOtherAddress')}
+        </label>
+        {other && <div className="sm:col-span-2">{text('address_label', 'addressLabel', { placeholder: 'phMainAddressLabel' })}</div>}
         {text('house_number', 'houseNumber', { placeholder: 'phHouse' })}
         {text('street', 'street', { placeholder: 'phStreet' })}
         {text('branch_of_street', 'branchOfStreet', { placeholder: 'phBranch' })}
@@ -141,6 +162,12 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
         </Field>
         {text('apartment', 'apartmentLabel', { placeholder: 'phApartment' })}
       </Section>
+
+      {other && (
+        <Section title={t('otherAddress')}>
+          <OtherAddressFields value={other} onChange={setOther} />
+        </Section>
+      )}
 
       <Section title={t('phones')}>
         <div className="space-y-4 sm:col-span-2">
@@ -325,6 +352,44 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
       <legend className="rounded-full bg-linear-to-l from-indigo-600 to-indigo-500 px-4 py-1 text-sm font-bold text-white shadow-md shadow-indigo-500/25 dark:from-indigo-500 dark:to-indigo-400">{title}</legend>
       <div className="grid gap-4 sm:grid-cols-2">{children}</div>
     </fieldset>
+  )
+}
+
+/** Every part trimmed, empty parts dropped — what is saved for the other home. */
+function cleanAddress(a: OtherAddress): OtherAddress {
+  return Object.fromEntries(Object.entries(a).map(([k, v]) => [k, v?.trim()]).filter(([, v]) => v)) as OtherAddress
+}
+
+/** The second home: whose it is, then the same parts as the usual address. */
+function OtherAddressFields({ value, onChange }: { value: OtherAddress; onChange: (a: OtherAddress) => void }) {
+  const { t } = useI18n()
+  const part = (k: keyof OtherAddress, label: TKey, placeholder: TKey, wide = false) => (
+    <div className={wide ? 'sm:col-span-2' : ''}>
+      <Field label={t(label)}>
+        <input className={inputClass(false)} placeholder={t(placeholder)} value={value[k] ?? ''} onChange={e => onChange({ ...value, [k]: e.target.value })} />
+      </Field>
+    </div>
+  )
+  return (
+    <>
+      {part('label', 'addressLabel', 'phOtherAddressLabel', true)}
+      {part('house_number', 'houseNumber', 'phHouse')}
+      {part('street', 'street', 'phStreet')}
+      {part('branch_of_street', 'branchOfStreet', 'phBranch')}
+      {part('landmark', 'landmark', 'phLandmark')}
+      {part('floor', 'floorLabel', 'phFloor')}
+      <Field label={t('side')}>
+        <select className={inputClass(false)} value={value.side ?? ''} onChange={e => onChange({ ...value, side: e.target.value })}>
+          <option value="">—</option>
+          {SIDES.map(s => (
+            <option key={s.value} value={s.value}>
+              {t(s.key)}
+            </option>
+          ))}
+        </select>
+      </Field>
+      {part('apartment', 'apartmentLabel', 'phApartment')}
+    </>
   )
 }
 

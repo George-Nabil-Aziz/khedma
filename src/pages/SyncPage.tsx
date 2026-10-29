@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
-import type { CoreField, CustomField, Phone } from '../lib/supabase'
+import type { CoreField, CustomField, OtherAddress, Phone } from '../lib/supabase'
+import { otherAddressText } from '../lib/columns'
 import { useI18n, type TKey } from '../lib/i18n'
 import { go } from '../lib/router'
 import { discardOp, flatGet, resolveConflict, retryOp, sync, useStore, X, type Conflict, type Op } from '../lib/store'
@@ -23,6 +24,8 @@ const FIELD_LABEL: Record<CoreField, TKey> = {
   phones: 'phones',
   primary_contacts: 'primaryContact',
   photo: 'photo',
+  address_label: 'addressLabel',
+  other_address: 'otherAddress',
 }
 
 /** Label and display text for a field key of the sync "flat" view (built-in or "x:<custom>"). */
@@ -43,6 +46,7 @@ function useFieldText() {
       return list.length ? list.map(p => `${t(OWNER_LABEL[p.owner])}: ${p.number}${p.whatsapp ? ' (WhatsApp)' : ''}`).join(lang === 'ar' ? '، ' : ', ') : '—'
     }
     if (key === 'primary_contacts') return (v as Phone['owner'][]).map(o => t(OWNER_LABEL[o])).join(lang === 'ar' ? '، ' : ', ') || '—'
+    if (key === 'other_address') return otherAddressText(v as OtherAddress, t, lang) || '—'
     if (typeof v === 'boolean') return v ? t('yes') : t('no')
     return String(v)
   }

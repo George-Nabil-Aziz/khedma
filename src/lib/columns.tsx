@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { OWNERS, type CustomField, type Owner } from './supabase'
+import { OWNERS, type Address, type CustomField, type OtherAddress, type Owner } from './supabase'
 import { useI18n, type TKey } from './i18n'
 import { load, save } from './storage'
 import { classFields, useStore, type ViewRow } from './store'
@@ -25,6 +25,27 @@ export const SIDES = [
   { value: 'ش', key: 'left' },
   { value: 'وسط', key: 'middle' },
 ] as const satisfies readonly { value: string; key: TKey }[]
+
+/** An address on one line: "بيت 5، شارع النصر، متفرع من ...، الدور 3، يمين، شقة 7". */
+export function formatAddress(a: Address, t: (k: TKey) => string, lang: string): string {
+  const sideKey = SIDES.find(s => s.value === a.side?.trim())?.key
+  return [
+    a.house_number && `${t('house')} ${a.house_number}`,
+    a.street,
+    a.branch_of_street && `${t('branchOf')} ${a.branch_of_street}`,
+    a.floor && `${t('floor')} ${a.floor}`,
+    sideKey ? t(sideKey) : a.side,
+    a.apartment && `${t('apartment')} ${a.apartment}`,
+  ]
+    .filter(Boolean)
+    .join(lang === 'ar' ? '، ' : ', ')
+}
+
+/** The other home on one line, with whose home it is first: "بيت الجد: شارع النصر، ...". */
+export function otherAddressText(a: OtherAddress, t: (k: TKey) => string, lang: string): string {
+  const where = formatAddress(a, t, lang)
+  return a.label?.trim() ? `${a.label.trim()}${where ? ': ' + where : ''}` : where
+}
 
 /** الحالة of a child, as stored in the `category` column, with its colours. */
 export const CATEGORIES = [
@@ -52,19 +73,8 @@ export function useColumns(): Column[] {
   return useMemo(() => {
     const sep = lang === 'ar' ? '، ' : ', '
 
-    function address(r: ViewRow) {
-      const sideKey = SIDES.find(s => s.value === r.side?.trim())?.key
-      return [
-        r.house_number && `${t('house')} ${r.house_number}`,
-        r.street,
-        r.branch_of_street && `${t('branchOf')} ${r.branch_of_street}`,
-        r.floor && `${t('floor')} ${r.floor}`,
-        sideKey ? t(sideKey) : r.side,
-        r.apartment && `${t('apartment')} ${r.apartment}`,
-      ]
-        .filter(Boolean)
-        .join(sep)
-    }
+    // the usual address only — a second home shows on the child's own page
+    const address = (r: ViewRow) => formatAddress(r, t, lang)
 
     const phoneColumn = (owner: Owner): Column => ({
       id: `phones_${owner}`,

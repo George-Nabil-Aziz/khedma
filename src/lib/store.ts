@@ -130,7 +130,7 @@ export const X = 'x:'
 
 /** Fills defaults so rows cached by an older version (or before the SQL migration) still work. */
 function normalize<T extends ChildInput>(row: T): T {
-  return { ...row, phones: Array.isArray(row.phones) ? row.phones : [], primary_contacts: Array.isArray(row.primary_contacts) ? row.primary_contacts : [], photo: row.photo ?? null, extra: row.extra ?? {} }
+  return { ...row, phones: Array.isArray(row.phones) ? row.phones : [], primary_contacts: Array.isArray(row.primary_contacts) ? row.primary_contacts : [], photo: row.photo ?? null, other_address: row.other_address ?? null, extra: row.extra ?? {} }
 }
 
 function toFlat(c: ChildInput): Flat {
@@ -164,7 +164,7 @@ function applyFlat<T extends ChildInput>(row: T, changes: Flat): T {
 }
 
 function pick(input: ChildInput): ChildInput {
-  const out = { full_name: input.full_name, phones: input.phones ?? [], primary_contacts: input.primary_contacts ?? [], photo: input.photo ?? null, extra: input.extra ?? {} } as ChildInput
+  const out = { full_name: input.full_name, phones: input.phones ?? [], primary_contacts: input.primary_contacts ?? [], photo: input.photo ?? null, other_address: input.other_address ?? null, extra: input.extra ?? {} } as ChildInput
   for (const f of TEXT_FIELDS) out[f] = input[f] ?? null
   return out
 }
