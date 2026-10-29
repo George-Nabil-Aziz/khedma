@@ -457,7 +457,7 @@ const dict = {
   },
   generateCode: { ar: "اطلع رقم", en: "Get a code" },
   newCode: { ar: "رقم تاني", en: "Another code" },
-  codeExpires: { ar: "ينتهي", en: "Expires" },
+  codeExpiresIn: { ar: "ينتهي بعد", en: "Expires in" },
   copy: { ar: "نسخ", en: "Copy" },
   copied: { ar: "اتنسخ ✓", en: "Copied ✓" },
   joinTitle: { ar: "ادخل فصل برقم", en: "Join a class with a code" },

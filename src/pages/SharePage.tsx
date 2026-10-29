@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useI18n } from '../lib/i18n'
 import { go } from '../lib/router'
 import { createInvite, joinClass, useStore } from '../lib/store'
@@ -63,7 +63,7 @@ type Code = { code: string; expires_at: string }
 const codes = new Map<string, Code>()
 
 function Invite({ classId, name }: { classId: string; name: string }) {
-  const { t, lang } = useI18n()
+  const { t } = useI18n()
   const { online } = useStore()
   const [, refresh] = useState(0)
   const [busy, setBusy] = useState(false)
@@ -71,7 +71,16 @@ function Invite({ classId, name }: { classId: string; name: string }) {
   const [copied, setCopied] = useState(false)
 
   const kept = codes.get(classId)
-  const invite = kept && Date.parse(kept.expires_at) > Date.now() ? kept : null
+  const left = kept ? Math.max(0, Math.ceil((Date.parse(kept.expires_at) - Date.now()) / 1000)) : 0
+  // gone at 0
+  const invite = kept && left > 0 ? kept : null
+
+  // count down every second while a code is up; at 0 it disappears
+  useEffect(() => {
+    if (!invite) return
+    const timer = setInterval(() => refresh(n => n + 1), 1000)
+    return () => clearInterval(timer)
+  }, [invite])
 
   async function generate() {
     setBusy(true)
@@ -94,7 +103,6 @@ function Invite({ classId, name }: { classId: string; name: string }) {
     }
   }
 
-  const time = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' })
 
   return (
     <Card title={`${t('inviteTitle')}: ${name}`} icon={<ShareIcon className="size-5" />}>
@@ -105,7 +113,7 @@ function Invite({ classId, name }: { classId: string; name: string }) {
             {invite.code}
           </div>
           <div className="text-xs text-slate-500">
-            {t('codeExpires')}: {time.format(new Date(invite.expires_at))}
+            {t('codeExpiresIn')} <span dir="ltr" className="font-mono font-bold text-indigo-700 dark:text-indigo-300">{Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}</span>
           </div>
           <button onClick={copy} className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 px-3 py-1.5 text-sm font-semibold dark:border-indigo-500/30">
             <CopyIcon />
