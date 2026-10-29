@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { OWNERS, type Address, type CustomField, type OtherAddress, type Owner } from './supabase'
 import { useI18n, type TKey } from './i18n'
 import { load, save } from './storage'
-import { classFields, useStore, type ViewRow } from './store'
+import { classFields, useStore, type ColumnLayout, type ViewRow } from './store'
 import { OWNER_LABEL, OWNER_PHONES_LABEL, telLink, whatsappLink } from './phones'
 import { formatNationalId } from './nationalId'
 import { NO, YES, parseDeacon } from './deacon'
@@ -189,11 +189,12 @@ function customColumn(f: CustomField, t: (k: TKey) => string): Column {
   }
 }
 
-// ---- per-device preferences --------------------------------------------------
+// ---- column layout: per device, with the admin's layout as the default -------------
 
-type Prefs = { order: string[]; hidden: string[] }
+type Prefs = ColumnLayout
 
-const DEFAULT_HIDDEN = ['age', 'primary_contacts']
+/** Built in, for when no admin has set a default yet. */
+const BUILT_IN: Prefs = { order: [], hidden: ['age', 'primary_contacts'] }
 
 function readPrefs(): Prefs | null {
   try {
@@ -204,47 +205,85 @@ function readPrefs(): Prefs | null {
   }
 }
 
-/** Column order + visibility, saved on this device. New custom columns appear at the end, visible. */
-export function useColumnPrefs(all: Column[]) {
-  const [prefs, setPrefs] = useState<Prefs | null>(readPrefs)
+/** The columns in a layout's order with their visibility. Columns it doesn't know (new custom ones) go at the end, shown. */
+function arrange(all: Column[], layout: Prefs) {
+  const byId = new Map(all.map(c => [c.id, c]))
+  const order = layout.order.filter(id => byId.has(id))
+  for (const c of all) if (!order.includes(c.id)) order.push(c.id)
+  const hidden = new Set(layout.hidden)
+  return order.map(id => ({ column: byId.get(id)!, visible: !hidden.has(id) }))
+}
 
-  const ordered = useMemo(() => {
-    const byId = new Map(all.map(c => [c.id, c]))
-    const order = (prefs?.order ?? []).filter(id => byId.has(id))
-    for (const c of all) if (!order.includes(c.id)) order.push(c.id)
-    const hidden = new Set(prefs?.hidden ?? DEFAULT_HIDDEN)
-    return order.map(id => ({ column: byId.get(id)!, visible: !hidden.has(id) }))
-  }, [all, prefs])
+type Arranged = ReturnType<typeof arrange>
+const layoutOf = (ordered: Arranged): Prefs => ({ order: ordered.map(o => o.column.id), hidden: ordered.filter(o => !o.visible).map(o => o.column.id) })
+
+/** Show / hide one column, or drop column `id` where `overId` is (drag and drop). */
+function toggled(p: Prefs, id: string): Prefs {
+  return { ...p, hidden: p.hidden.includes(id) ? p.hidden.filter(h => h !== id) : [...p.hidden, id] }
+}
+function moved(p: Prefs, id: string, overId: string): Prefs | null {
+  const from = p.order.indexOf(id)
+  const to = p.order.indexOf(overId)
+  if (from < 0 || to < 0 || from === to) return null
+  const order = [...p.order]
+  const [m] = order.splice(from, 1)
+  order.splice(to, 0, m)
+  return { ...p, order }
+}
+
+/**
+ * Column order + visibility, saved on this device. Until changed here — or after "default" —
+ * it follows the admin's layout (الإعدادات), or the built-in one if none was set.
+ */
+export function useColumnPrefs(all: Column[]) {
+  const { columnDefaults } = useStore()
+  const [prefs, setPrefs] = useState<Prefs | null>(readPrefs)
+  const ordered = useMemo(() => arrange(all, prefs ?? columnDefaults ?? BUILT_IN), [all, prefs, columnDefaults])
 
   function update(next: Prefs | null) {
     setPrefs(next)
-    if (next) save('columns', JSON.stringify(next))
-    else save('columns', '')
+    save('columns', next ? JSON.stringify(next) : '')
   }
-
-  const current = (): Prefs => ({ order: ordered.map(o => o.column.id), hidden: ordered.filter(o => !o.visible).map(o => o.column.id) })
 
   return {
     ordered,
     visible: ordered.filter(o => o.visible).map(o => o.column),
     isDefault: prefs === null,
-    toggle(id: string) {
-      const p = current()
-      update({ ...p, hidden: p.hidden.includes(id) ? p.hidden.filter(h => h !== id) : [...p.hidden, id] })
-    },
-    /** Drop column `id` where `overId` is (drag and drop). */
+    toggle: (id: string) => update(toggled(layoutOf(ordered), id)),
     reorder(id: string, overId: string) {
-      const p = current()
-      const from = p.order.indexOf(id)
-      const to = p.order.indexOf(overId)
-      if (from < 0 || to < 0 || from === to) return
-      const [moved] = p.order.splice(from, 1)
-      p.order.splice(to, 0, moved)
-      update(p)
+      const next = moved(layoutOf(ordered), id, overId)
+      if (next) update(next)
     },
     reset: () => update(null),
   }
 }
+
+/**
+ * Admins, in الإعدادات: the default layout for everyone. Changes stay a draft until saved;
+ * "reset" goes back to what is saved now.
+ */
+export function useColumnDefaultsEditor(all: Column[]) {
+  const { columnDefaults } = useStore()
+  const saved = columnDefaults ?? BUILT_IN
+  const [draft, setDraft] = useState<Prefs | null>(null)
+  const ordered = useMemo(() => arrange(all, draft ?? saved), [all, draft, saved])
+  const changed = draft !== null && JSON.stringify(layoutOf(ordered)) !== JSON.stringify(layoutOf(arrange(all, saved)))
+
+  return {
+    ordered,
+    changed,
+    toggle: (id: string) => setDraft(toggled(layoutOf(ordered), id)),
+    reorder(id: string, overId: string) {
+      const next = moved(layoutOf(ordered), id, overId)
+      if (next) setDraft(next)
+    },
+    reset: () => setDraft(null),
+    /** The layout to save. */
+    layout: () => layoutOf(ordered),
+    saved: () => setDraft(null),
+  }
+}
+
 
 // ---- sorting -------------------------------------------------------------------
 

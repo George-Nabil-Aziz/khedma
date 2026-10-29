@@ -1,10 +1,53 @@
-import { useState } from 'react'
-import { useI18n } from '../lib/i18n'
+import { useState, type ReactNode } from 'react'
+import { useI18n, type TKey } from '../lib/i18n'
+import { go, useRoute, type Path, type Route } from '../lib/router'
 import { saveYearEndWeeks, useStore } from '../lib/store'
 import { MAX_EXTRA_WEEKS, currentServiceYear, iso, yearEnd } from '../lib/serviceYear'
 import { CalendarCheckIcon, CloudOffIcon, PlusIcon } from '../components/Icons'
 
-/** Admins only: app-wide settings. */
+/**
+ * الإعدادات: three tabs, each its own page (#/fields, #/sync, #/settings) under this one bar —
+ * columns and sync for everyone, the end of the service year for admins only.
+ */
+export function SettingsTabs({ admin }: { admin: boolean }) {
+  const { t } = useI18n()
+  const route = useRoute()
+  const { outbox, conflicts, attOutbox, dayOutbox, attError } = useStore()
+  const issues = conflicts.length + outbox.filter(o => o.error).length + (attError ? 1 : 0)
+  const pending = outbox.length + attOutbox.length + dayOutbox.length
+
+  const tab = (name: Route['name'], path: Path, label: TKey, badge?: ReactNode) => (
+    <button
+      onClick={() => go(path)}
+      aria-current={route.name === name ? 'page' : undefined}
+      className={`flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-semibold ${
+        route.name === name ? 'border-indigo-600 text-indigo-700 dark:border-indigo-400 dark:text-indigo-300' : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+      }`}
+    >
+      {t(label)}
+      {badge}
+    </button>
+  )
+
+  return (
+    <nav className="mx-auto mb-5 flex max-w-4xl overflow-x-auto border-b border-slate-200 dark:border-slate-800">
+      {tab('fields', '/fields', 'customize')}
+      {tab(
+        'sync',
+        '/sync',
+        'sync',
+        issues > 0 ? (
+          <span className="rounded-full bg-red-500 px-2 text-xs font-bold text-white">{issues}</span>
+        ) : pending > 0 ? (
+          <span className="rounded-full bg-amber-500 px-2 text-xs font-bold text-white">{pending}</span>
+        ) : null,
+      )}
+      {admin && tab('settings', '/settings', 'yearEndTitle')}
+    </nav>
+  )
+}
+
+/** Admins only: the end of the service year. */
 export function SettingsPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-5">

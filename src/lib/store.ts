@@ -57,7 +57,12 @@ type State = {
   dayOutbox: DayOp[]
   /** Fridays added to (or taken off) the end of every service year — set by an admin. */
   yearEndWeeks: number
+  /** The admin's column layout — what "default" in the columns menu goes back to; null = built-in. */
+  columnDefaults: ColumnLayout | null
 }
+
+/** The children table's columns: their order and which are hidden (column ids). */
+export type ColumnLayout = { order: string[]; hidden: string[] }
 
 /** Two ticks per child per Friday: الحضور (attendance) and الافتقاد (visit). */
 export type FollowUpKind = 'attendance' | 'visit'
@@ -86,6 +91,7 @@ let state: State = {
   dayMarks: {},
   dayOutbox: [],
   yearEndWeeks: 0,
+  columnDefaults: null,
 }
 
 const listeners = new Set<() => void>()
@@ -107,6 +113,7 @@ function set(patch: Partial<State>, persist = true) {
       ['dayMarks', state.dayMarks],
       ['dayOutbox', state.dayOutbox],
       ['yearEndWeeks', state.yearEndWeeks],
+      ['columnDefaults', state.columnDefaults],
     ]).catch(() => {})
   }
 }
@@ -182,7 +189,7 @@ export async function startStore(userId: string) {
     state = { ...state, currentClass: null }
     await setMany([['owner', userId]]).catch(() => {})
   }
-  const [rows, fields, outbox, conflicts, lastSyncAt, attendance, attOutbox, classes, profile, dayMarks, dayOutbox, yearEndWeeks] = await Promise.all([
+  const [rows, fields, outbox, conflicts, lastSyncAt, attendance, attOutbox, classes, profile, dayMarks, dayOutbox, yearEndWeeks, columnDefaults] = await Promise.all([
     get<Child[]>('rows'),
     get<CustomField[]>('fields'),
     get<Op[]>('outbox'),
@@ -195,6 +202,7 @@ export async function startStore(userId: string) {
     get<Record<string, boolean>>('dayMarks'),
     get<DayOp[]>('dayOutbox'),
     get<number>('yearEndWeeks'),
+    get<ColumnLayout>('columnDefaults'),
   ]).catch(() => [] as undefined[])
   set(
     {
@@ -211,6 +219,7 @@ export async function startStore(userId: string) {
       dayOutbox: (dayOutbox ?? []).map(o => (o.kind ? o : { ...o, kind: 'communion' as const, on: (o as unknown as { communion: boolean }).communion })),
       profile: profile ?? null,
       yearEndWeeks: setWeeks(yearEndWeeks ?? 0),
+      columnDefaults: columnDefaults ?? null,
       loaded: true,
     },
     false,
@@ -234,7 +243,7 @@ export async function resetStore() {
   resetTrips()
   openedDefault = false // the next user to sign in gets their own ⭐ class
   set(
-    { rows: [], fields: [], classes: [], profile: null, currentClass: null, outbox: [], conflicts: [], lastSyncAt: null, syncError: null, classLoading: false, attendance: {}, attOutbox: [], attError: null, dayMarks: {}, dayOutbox: [], yearEndWeeks: setWeeks(0) },
+    { rows: [], fields: [], classes: [], profile: null, currentClass: null, outbox: [], conflicts: [], lastSyncAt: null, syncError: null, classLoading: false, attendance: {}, attOutbox: [], attError: null, dayMarks: {}, dayOutbox: [], yearEndWeeks: setWeeks(0), columnDefaults: null },
     false,
   )
 }
@@ -278,12 +287,25 @@ function setWeeks(n: number) {
 }
 
 async function pullSettings() {
-  const { data, error } = await supabase.from('settings').select('value').eq('key', 'year_end_weeks').maybeSingle()
+  const { data, error } = await supabase.from('settings').select('key,value').in('key', ['year_end_weeks', 'column_defaults'])
   if (error) {
     if (isNetworkError(error.message)) throw new Offline()
     return // the settings table is not there yet (014 not run) — keep the default
   }
-  set({ yearEndWeeks: setWeeks(Number(data?.value ?? 0)) })
+  const value = (key: string) => (data as { key: string; value: unknown }[]).find(r => r.key === key)?.value
+  const cols = value('column_defaults') as ColumnLayout | undefined
+  set({
+    yearEndWeeks: setWeeks(Number(value('year_end_weeks') ?? 0)),
+    columnDefaults: cols && Array.isArray(cols.order) && Array.isArray(cols.hidden) ? cols : null,
+  })
+}
+
+/** Admins only; needs a connection. The admin's column layout becomes everyone's "default". */
+export async function saveColumnDefaults(layout: ColumnLayout): Promise<string | null> {
+  const { error } = await supabase.rpc('set_column_defaults', { p_value: layout })
+  if (error) return error.message
+  set({ columnDefaults: layout })
+  return null
 }
 
 /** Admins only; needs a connection. */

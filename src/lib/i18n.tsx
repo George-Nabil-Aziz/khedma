@@ -261,6 +261,11 @@ const dict = {
     ar: 'هيتمسح "{name}" نهائياً، ومعاه متابعته وكل رحلاته والفلوس اللي اتسجلت له. بياناته هتفضل في سجل التعديلات بس. متأكد؟',
     en: '"{name}" will be deleted for good, with their follow-up, trips and payments. Their data stays only in the audit log. Sure?',
   },
+  columnDefaultsTitle: { ar: 'الشكل الافتراضي للجدول', en: 'Default table layout' },
+  columnDefaultsHelp: {
+    ar: 'رتّب الأعمدة بالسحب وعلّم على اللي يظهر. ده اللي بيرجعله أي خادم لما يدوس "الافتراضي" في قايمة الأعمدة.',
+    en: 'Drag to order the columns and tick the ones shown. This is what anyone gets back with "Default" in the columns menu.',
+  },
   movedOutSection: { ar: "خروج من الفصل", en: "Leaving the class" },
   movedOutFormHint: {
     ar: "اكتب الكنيسة اللي راحها واسم الخادم اللي راحله (مش لازم)",

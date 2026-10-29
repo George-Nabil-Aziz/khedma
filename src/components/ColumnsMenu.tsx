@@ -20,18 +20,6 @@ type Prefs = ReturnType<typeof useColumnPrefs>
 /** Show / hide columns, and drag them into any order. The name column is fixed first. */
 export function ColumnsMenu({ prefs, onClose }: { prefs: Prefs; onClose: () => void }) {
   const { t } = useI18n()
-  const sensors = useSensors(
-    // A small move before dragging starts, so ticking a checkbox is still a plain click.
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    // On a phone: press and hold briefly, so the list can still be scrolled with a finger.
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  )
-
-  function onDragEnd({ active, over }: DragEndEvent) {
-    if (over && active.id !== over.id) prefs.reorder(String(active.id), String(over.id))
-  }
-
   return (
     <>
       <div className="fixed inset-0 z-30" onClick={onClose} />
@@ -48,22 +36,8 @@ export function ColumnsMenu({ prefs, onClose }: { prefs: Prefs; onClose: () => v
         </div>
         <p className="mb-2 px-1 text-xs text-slate-400">{t('dragToReorder')}</p>
 
-        <div className="max-h-[60vh] space-y-0.5 overflow-y-auto">
-          <div className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-400">
-            <LockIcon className="size-4" />
-            <span className="flex-1 font-semibold text-slate-700 dark:text-slate-200">{t('name')}</span>
-            <span className="text-xs">{t('alwaysShown')}</span>
-          </div>
-
-          <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis, restrictToParentElement]} onDragEnd={onDragEnd}>
-            <SortableContext items={prefs.ordered.map(o => o.column.id)} strategy={verticalListSortingStrategy}>
-              <div className="space-y-0.5">
-                {prefs.ordered.map(({ column, visible }) => (
-                  <SortableRow key={column.id} column={column} visible={visible} onToggle={() => prefs.toggle(column.id)} />
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
+        <div className="max-h-[60vh] overflow-y-auto">
+          <ColumnsList ordered={prefs.ordered} onToggle={prefs.toggle} onReorder={prefs.reorder} />
         </div>
 
         <button
@@ -75,6 +49,42 @@ export function ColumnsMenu({ prefs, onClose }: { prefs: Prefs; onClose: () => v
         </button>
       </div>
     </>
+  )
+}
+
+/** The name (fixed first), then every column: drag to reorder, tick to show. */
+export function ColumnsList({ ordered, onToggle, onReorder }: { ordered: Prefs['ordered']; onToggle: (id: string) => void; onReorder: (id: string, overId: string) => void }) {
+  const { t } = useI18n()
+  const sensors = useSensors(
+    // A small move before dragging starts, so ticking a checkbox is still a plain click.
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    // On a phone: press and hold briefly, so the list can still be scrolled with a finger.
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
+
+  function onDragEnd({ active, over }: DragEndEvent) {
+    if (over && active.id !== over.id) onReorder(String(active.id), String(over.id))
+  }
+
+  return (
+    <div className="space-y-0.5">
+      <div className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-400">
+        <LockIcon className="size-4" />
+        <span className="flex-1 font-semibold text-slate-700 dark:text-slate-200">{t('name')}</span>
+        <span className="text-xs">{t('alwaysShown')}</span>
+      </div>
+
+      <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis, restrictToParentElement]} onDragEnd={onDragEnd}>
+        <SortableContext items={ordered.map(o => o.column.id)} strategy={verticalListSortingStrategy}>
+          <div className="space-y-0.5">
+            {ordered.map(({ column, visible }) => (
+              <SortableRow key={column.id} column={column} visible={visible} onToggle={() => onToggle(column.id)} />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+    </div>
   )
 }
 

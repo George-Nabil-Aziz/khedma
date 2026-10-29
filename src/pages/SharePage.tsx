@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { useI18n } from '../lib/i18n'
 import { go } from '../lib/router'
 import { createInvite, joinClass, useStore } from '../lib/store'
-import { CloudOffIcon, CopyIcon, PlusIcon, ShareIcon } from '../components/Icons'
+import { ArrowBackIcon, CloudOffIcon, CopyIcon, PlusIcon, ShareIcon } from '../components/Icons'
 import { CodeInput } from '../components/CodeInput'
 
 const primary = 'flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50'
@@ -15,6 +15,12 @@ export function SharePage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
+      {/* a way back — reached from the classes page's "no class yet" card too */}
+      <button onClick={() => go('/classes')} className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
+        <ArrowBackIcon className="size-4" />
+        {t('classes')}
+      </button>
+
       {!online && (
         <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
           <CloudOffIcon className="size-4 shrink-0" />

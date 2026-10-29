@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import type { CustomField, FieldType } from '../lib/supabase'
 import { useI18n, type TKey } from '../lib/i18n'
-import { addField, classFields, deleteField, renameField, useStore, viewRows } from '../lib/store'
+import { addField, classFields, deleteField, renameField, saveColumnDefaults, useStore, viewRows } from '../lib/store'
+import { useColumnDefaultsEditor, useColumns } from '../lib/columns'
+import { ColumnsList } from '../components/ColumnsMenu'
 import { CloudOffIcon, LockIcon, PlusIcon, TrashIcon } from '../components/Icons'
 import { confirmDialog } from '../components/ConfirmDialog'
 
@@ -156,6 +158,70 @@ export function FieldsPage({ admin }: { admin: boolean }) {
           ))}
         </div>
       </section>
+
+      {/* admins: the table's default look for everyone */}
+      {admin && <ColumnDefaultsCard />}
     </div>
+  )
+}
+
+/**
+ * Admins: the order of the table's columns and which are shown, for everyone. Anyone's
+ * "default" in the columns menu goes back to this. A draft until saved.
+ */
+function ColumnDefaultsCard() {
+  const { t } = useI18n()
+  const { online } = useStore()
+  const editor = useColumnDefaultsEditor(useColumns())
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [done, setDone] = useState(false)
+
+  async function save() {
+    setBusy(true)
+    setError('')
+    const err = await saveColumnDefaults(editor.layout())
+    setBusy(false)
+    if (err) return setError(err)
+    editor.saved()
+    setDone(true)
+  }
+
+  return (
+    <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+      <div>
+        <h2 className="font-bold">{t('columnDefaultsTitle')}</h2>
+        <p className="mt-1 text-sm text-slate-500">{t('columnDefaultsHelp')}</p>
+      </div>
+      <ColumnsList
+        ordered={editor.ordered}
+        onToggle={id => {
+          editor.toggle(id)
+          setDone(false)
+        }}
+        onReorder={(id, overId) => {
+          editor.reorder(id, overId)
+          setDone(false)
+        }}
+      />
+      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">{error}</p>}
+      <div className="flex items-center justify-end gap-2">
+        {done && <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{t('saved')}</span>}
+        <button
+          onClick={editor.reset}
+          disabled={busy || !editor.changed}
+          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+        >
+          {t('cancel')}
+        </button>
+        <button
+          onClick={save}
+          disabled={!online || busy || !editor.changed}
+          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+        >
+          {t('save')}
+        </button>
+      </div>
+    </section>
   )
 }

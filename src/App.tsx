@@ -19,7 +19,7 @@ import { NoClass, SharePage } from './pages/SharePage'
 import { ClassesPage } from './pages/ClassesPage'
 import { UsersPage } from './pages/UsersPage'
 import { ProfilePage } from './pages/ProfilePage'
-import { SettingsPage } from './pages/SettingsPage'
+import { SettingsPage, SettingsTabs } from './pages/SettingsPage'
 import { TripPage, TripsPage } from './pages/TripsPage'
 
 export default function App() {
@@ -64,13 +64,23 @@ function Routes({ email, userId, admin }: { email: string; userId: string; admin
     </Layout>
   )
 
+  // الإعدادات: columns, sync and (admins) the service year — three tabs under one bar.
+  const settings = (body: ReactNode) =>
+    page(
+      'settings',
+      <>
+        <SettingsTabs admin={admin} />
+        {body}
+      </>,
+    )
+
   // Pages that work without a class; everything else needs one.
   if (route.name === 'share') return page('share', <SharePage />)
-  if (route.name === 'sync') return page('sync', <SyncPage />)
+  if (route.name === 'sync') return settings(<SyncPage />)
   if (route.name === 'profile') return page('profile', <ProfilePage email={email} admin={admin} />)
   if (admin && route.name === 'users') return page('users', <UsersPage myId={userId} />)
   if (admin && route.name === 'audit') return page('audit', <AuditPage />)
-  if (admin && route.name === 'settings') return page('settings', <SettingsPage />)
+  if (admin && route.name === 'settings') return settings(<SettingsPage />)
   if (route.name === 'classes') return page('classes', <ClassesPage admin={admin} />)
   // No class yet: say so, and offer to create one or join a colleague's with a code.
   if ((lastSyncAt || syncError) && activeClasses(classes).length === 0) return page('classes', <NoClass />)
@@ -89,7 +99,7 @@ function Routes({ email, userId, admin }: { email: string; userId: string; admin
     case 'trip':
       return page('trips', <TripPage id={route.id} />)
     case 'fields':
-      return page('customize', <FieldsPage admin={admin} />)
+      return settings(<FieldsPage admin={admin} />)
     default:
       return page('children', <ChildrenPage />)
   }

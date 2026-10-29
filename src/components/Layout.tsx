@@ -21,10 +21,8 @@ import {
   MenuIcon,
   MoonIcon,
   ShieldIcon,
-  SlidersIcon,
   StarIcon,
   SunIcon,
-  SyncIcon,
   UsersIcon,
 } from './Icons'
 
@@ -95,10 +93,6 @@ export function Layout({ email, admin, title, children }: { email: string; admin
             <BusIcon />
             {t('trips')}
           </button>
-          <button className={item(route.name === 'fields')} onClick={() => nav('/fields')}>
-            <SlidersIcon />
-            {t('customize')}
-          </button>
           <div className="mx-3 my-2 border-t border-slate-200 dark:border-slate-800" />
           <button className={item(route.name === 'classes')} onClick={() => nav('/classes')}>
             <SchoolIcon />
@@ -119,17 +113,14 @@ export function Layout({ email, admin, title, children }: { email: string; admin
                 <HistoryIcon />
                 {t('audit')}
               </button>
-              <button className={item(route.name === 'settings')} onClick={() => nav('/settings')}>
-                <SettingsIcon />
-                {t('settings')}
-              </button>
             </>
           )}
-          {/* at the bottom, with الإعدادات — a divider of its own when there is no admin section */}
+          {/* الإعدادات, last: its tabs hold the columns, sync and (admins) the service year.
+              The sync count shows here, since sync lives inside it. */}
           {!admin && <div className="mx-3 my-2 border-t border-slate-200 dark:border-slate-800" />}
-          <button className={item(route.name === 'sync')} onClick={() => nav('/sync')}>
-            <SyncIcon />
-            <span className="flex-1">{t('sync')}</span>
+          <button className={item(route.name === 'settings' || route.name === 'fields' || route.name === 'sync')} onClick={() => nav('/fields')}>
+            <SettingsIcon />
+            <span className="flex-1">{t('settings')}</span>
             {issues > 0 ? (
               <span className="rounded-full bg-red-500 px-2 text-xs font-bold text-white">{issues}</span>
             ) : pending > 0 ? (
