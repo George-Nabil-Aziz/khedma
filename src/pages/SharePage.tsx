@@ -4,6 +4,7 @@ import { go } from '../lib/router'
 import { createInvite, joinClass, useStore } from '../lib/store'
 import { CloudOffIcon, CopyIcon, PlusIcon, ShareIcon } from '../components/Icons'
 import { CodeInput } from '../components/CodeInput'
+import { toast } from '../components/Toast'
 
 const primary = 'flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50'
 
@@ -98,6 +99,7 @@ function Invite({ classId, name }: { classId: string; name: string }) {
     try {
       await navigator.clipboard.writeText(invite.code)
       setCopied(true)
+      toast(t('copied'))
     } catch {
       /* clipboard blocked — the code is on screen anyway */
     }

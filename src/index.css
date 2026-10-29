@@ -111,6 +111,14 @@ button:disabled {
   }
 }
 
+/* the small "copied" note rising from the bottom (Toast.tsx) */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
 /*
  * Every <select>: our own arrow with breathing room, instead of the browser's arrow squeezed
  * against the text. The arrow sits at the end of the box — the left in Arabic, the right in English.
