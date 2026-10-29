@@ -373,8 +373,9 @@ function DeaconField({ value, onChange }: { value: string; onChange: (v: string)
     return (
       <button
         type="button"
-        // a note on its own would read as yes again, so clearing the choice clears the note too
-        onClick={() => set(on ? { is: null, note: '' } : { is })}
+        // a note on its own would read as yes again, so clearing the choice clears the note too;
+        // so does picking ⛔ — the note (the rank) is only for a deacon
+        onClick={() => set(on ? { is: null, note: '' } : is ? { is } : { is, note: '' })}
         aria-pressed={on}
         className={`flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-semibold ${
           on
@@ -398,10 +399,11 @@ function DeaconField({ value, onChange }: { value: string; onChange: (v: string)
         {choice(true)}
         {choice(false)}
         <input
-          className={`${inputClass(false)} min-w-0`}
-          placeholder={t('phDeacon')}
+          className={`${inputClass(false)} min-w-0 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-50 dark:disabled:bg-slate-800/50`}
+          placeholder={d.is === false ? '' : t('phDeacon')}
           aria-label={t('deacon')}
           value={d.note}
+          disabled={d.is === false}
           // writing a rank with nothing picked yet means yes
           onChange={e => set({ note: e.target.value, is: d.is ?? (e.target.value.trim() ? true : null) })}
         />
