@@ -21,8 +21,11 @@ export function SettingsTabs({ admin }: { admin: boolean }) {
     <button
       onClick={() => go(path)}
       aria-current={route.name === name ? 'page' : undefined}
-      className={`flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-semibold ${
-        route.name === name ? 'border-indigo-600 text-indigo-700 dark:border-indigo-400 dark:text-indigo-300' : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+      // a phone: boxes, the open one filled; wider screens: tabs underlined
+      className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold sm:justify-start sm:whitespace-nowrap sm:rounded-none sm:border-0 sm:border-b-2 sm:px-4 sm:py-2.5 ${
+        route.name === name
+          ? 'border-indigo-600 bg-indigo-600 text-white sm:bg-transparent sm:text-indigo-700 dark:sm:border-indigo-400 dark:sm:text-indigo-300'
+          : 'border-slate-200 bg-white text-slate-600 hover:text-slate-800 sm:border-transparent sm:bg-transparent sm:text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:text-slate-200 dark:sm:bg-transparent'
       }`}
     >
       {t(label)}
@@ -31,7 +34,7 @@ export function SettingsTabs({ admin }: { admin: boolean }) {
   )
 
   return (
-    <nav className="mx-auto mb-5 flex max-w-4xl overflow-x-auto border-b border-slate-200 dark:border-slate-800">
+    <nav className="mx-auto mb-5 grid max-w-4xl grid-cols-2 gap-2 sm:flex sm:gap-0 sm:overflow-x-auto sm:border-b sm:border-slate-200 dark:sm:border-slate-800">
       {tab('fields', '/fields', 'customize')}
       {tab(
         'sync',
