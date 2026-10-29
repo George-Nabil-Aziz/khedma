@@ -101,8 +101,12 @@ export function AttendancePage() {
   }, [rows.length > 0, lang])
 
   // Name and row label stay in view while scrolling across the Fridays.
-  const stickyName = 'sticky inset-s-0 z-10 w-44 min-w-44 max-w-44 bg-white dark:bg-slate-900'
-  const stickyKind = 'sticky inset-s-44 z-10 w-24 min-w-24 bg-white dark:bg-slate-900'
+  // Narrow on a phone, so the Fridays still get most of the screen.
+  const stickyName = 'sticky inset-s-0 z-10 w-24 min-w-24 max-w-24 sm:w-44 sm:min-w-44 sm:max-w-44'
+  const stickyKind = 'sticky inset-s-24 sm:inset-s-44 z-10 w-16 min-w-16 sm:w-24 sm:min-w-24'
+  const headBg = 'bg-white dark:bg-slate-900'
+  // every other child on a light band (both of its rows); opaque, as the name cells stay on top while scrolling
+  const band = (i: number) => (i % 2 ? 'bg-slate-50 dark:bg-slate-800' : 'bg-white dark:bg-slate-900')
 
   // First "loading", then either the grid or — for a class with no children yet — a card saying so.
   // Never an empty grid (same rule as the Children page).
@@ -138,10 +142,10 @@ export function AttendancePage() {
         <table className="border-separate border-spacing-0 text-sm">
           <thead className="text-slate-600 dark:text-slate-300">
             <tr>
-              <th ref={nameHeader} rowSpan={2} className={`${stickyName} border-b border-slate-200 px-3 py-2 text-start font-semibold dark:border-slate-800`}>
+              <th ref={nameHeader} rowSpan={2} className={`${stickyName} ${headBg} border-b border-slate-200 px-2 py-2 text-start font-semibold sm:px-3 dark:border-slate-800`}>
                 {t('name')}
               </th>
-              <th ref={kindHeader} rowSpan={2} className={`${stickyKind} border-b border-e border-slate-200 dark:border-slate-800`} />
+              <th ref={kindHeader} rowSpan={2} className={`${stickyKind} ${headBg} border-b border-e border-slate-200 dark:border-slate-800`} />
               <th rowSpan={2} className="border-b border-e border-slate-200 px-2 py-2 font-semibold dark:border-slate-800" title={t('attendanceTotal')}>
                 ∑
               </th>
@@ -215,18 +219,18 @@ export function AttendancePage() {
                   const bottom = last ? 'border-b-2 border-slate-200 dark:border-slate-700' : 'border-b border-slate-100 dark:border-slate-800'
                   const total = days.filter(d => isChecked(store, r.client_id, d.date, kind)).length
                   return (
-                    <tr key={`${r.client_id}-${kind}`} className={r.moved_out_on ? 'opacity-60' : ''}>
+                    <tr key={`${r.client_id}-${kind}`} className={`${band(ri)} ${r.moved_out_on ? 'opacity-60' : ''}`}>
                       {i === 0 && (
-                        <td rowSpan={KINDS.length} className={`${stickyName} border-b-2 border-slate-200 px-3 py-1.5 align-middle dark:border-slate-700`}>
+                        <td rowSpan={KINDS.length} className={`${stickyName} ${band(ri)} border-b-2 border-slate-200 px-2 py-1.5 align-middle sm:px-3 dark:border-slate-700`}>
                           <button
                             onClick={() => go(`/child/${r.client_id}`)}
-                            className="text-start font-semibold leading-snug hover:text-indigo-600 dark:hover:text-indigo-300"
+                            className="text-start text-xs font-semibold leading-snug hover:text-indigo-600 sm:text-sm dark:hover:text-indigo-300"
                           >
                             {r.full_name}
                           </button>
                         </td>
                       )}
-                      <td className={`${stickyKind} ${bottom} border-e px-2 py-1 text-xs font-semibold text-slate-500 dark:text-slate-400`}>{t(label)}</td>
+                      <td className={`${stickyKind} ${band(ri)} ${bottom} border-e px-1.5 py-1 text-xs font-semibold text-slate-500 sm:px-2 dark:text-slate-400`}>{t(label)}</td>
                       <td className={`${bottom} border-e px-2 text-center font-bold text-slate-700 dark:text-slate-200`} title={t('attendanceTotal')}>
                         {total}
                       </td>
