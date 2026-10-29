@@ -6,6 +6,7 @@ import { ColumnsMenu } from '../components/ColumnsMenu'
 import { Pagination, usePageSize } from '../components/Pagination'
 import { sortRows, useColumnPrefs, useColumns, useSort, type Column } from '../lib/columns'
 import { Avatar } from '../components/Avatar'
+import { NoChildren } from '../components/NoChildren'
 import { AlertIcon, ChevronDownIcon, ChevronUpIcon, CloudOffIcon, ColumnsIcon, PlusIcon, SortIcon, StarIcon } from '../components/Icons'
 
 export function ChildrenPage() {
@@ -58,8 +59,8 @@ export function ChildrenPage() {
   const showLoading = !store.loaded || (store.syncing && rows.length === 0)
   const colSpan = prefs.visible.length + 2
 
-  return (
-    <div className="space-y-4">
+  const top = (
+    <>
       {!store.online && (
         <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
           <CloudOffIcon className="mt-0.5 size-4 shrink-0" />
@@ -77,6 +78,21 @@ export function ChildrenPage() {
           </span>
         </h2>
       )}
+    </>
+  )
+
+  // A class with no children yet: say so, instead of an empty table.
+  if (!showLoading && rows.length === 0)
+    return (
+      <div className="space-y-4">
+        {top}
+        <NoChildren />
+      </div>
+    )
+
+  return (
+    <div className="space-y-4">
+      {top}
 
       <div className="flex flex-wrap items-center gap-3">
         <input
@@ -133,7 +149,7 @@ export function ChildrenPage() {
             ) : filtered.length === 0 ? (
               <tr>
                 <td colSpan={colSpan} className="px-3 py-10 text-center text-slate-500">
-                  {rows.length ? t('noResults') : t('empty')}
+                  {t('noResults')}
                 </td>
               </tr>
             ) : (
