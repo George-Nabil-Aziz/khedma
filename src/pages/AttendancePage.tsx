@@ -23,9 +23,9 @@ const DAY: Record<DayKind, { label: TKey; sign: string; text: string; menuOn: st
 
 /** Background of a Friday's column, header and rows alike: amber for تناول, sky for نادي, both when it is both. */
 function dayBg(communion: boolean, club: boolean) {
-  if (communion && club) return 'bg-linear-to-b from-amber-200 to-sky-200 dark:from-amber-500/30 dark:to-sky-500/30'
-  if (communion) return 'bg-amber-200 dark:bg-amber-500/30'
-  if (club) return 'bg-sky-200 dark:bg-sky-500/30'
+  if (communion && club) return 'bg-linear-to-b from-amber-200/60 to-sky-200/60 dark:from-amber-500/20 dark:to-sky-500/20'
+  if (communion) return 'bg-amber-200/60 dark:bg-amber-500/20'
+  if (club) return 'bg-sky-200/60 dark:bg-sky-500/20'
   return ''
 }
 
@@ -103,7 +103,7 @@ export function AttendancePage() {
   const stickyKind = 'sticky inset-s-24 sm:inset-s-44 z-10 w-16 min-w-16 sm:w-24 sm:min-w-24'
   const headBg = 'bg-white dark:bg-slate-900'
   // every other child on a light band (both of its rows); opaque, as the name cells stay on top while scrolling
-  const band = (i: number) => (i % 2 ? 'bg-slate-200 dark:bg-slate-800' : 'bg-white dark:bg-slate-900')
+  const band = (i: number) => (i % 2 ? 'bg-[#e9eef4] dark:bg-slate-800' : 'bg-white dark:bg-slate-900') // between slate-100 and -200
 
   // First "loading", then either the grid or — for a class with no children yet — a card saying so.
   // Never an empty grid (same rule as the Children page).
