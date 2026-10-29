@@ -205,6 +205,8 @@ const dict = {
     en: 'Is "{name}" back in the class? They move up with the others; the leaving date, church and servant are cleared.',
   },
   movedOutBanner: { ar: 'خرج من الفصل يوم {date}', en: 'Left the class on {date}' },
+  movedOutSection: { ar: 'خروج من الفصل', en: 'Leaving the class' },
+  movedOutFormHint: { ar: 'اكتب الكنيسة اللي راحها واسم الخادم اللي راحله (مش لازم)', en: 'Write the church they went to and their servant there (optional)' },
   movedToChurch: { ar: 'الكنيسة اللي راحها', en: 'Church they went to' },
   phMovedToChurch: { ar: 'مثال: كنيسة مارجرجس', en: 'e.g. St George’s church' },
   movedToServant: { ar: 'اسم الخادم هناك', en: 'Their servant there' },

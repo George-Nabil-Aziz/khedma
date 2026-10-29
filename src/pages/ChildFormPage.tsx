@@ -121,6 +121,20 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
         {initial?.full_name || t('children')}
       </button>
 
+      {/* a child who left the class, first of all: when, and where they went (church and servant
+          optional), with a line under it before the child's own data. Clearing the date puts
+          them back in the class. */}
+      {(texts.moved_out_on || initial?.moved_out_on) && (
+        <div className="space-y-5 border-b-2 border-dashed border-slate-300 pb-5 dark:border-slate-700">
+          <Section title={t('movedOutSection')}>
+            <p className="text-sm text-slate-500 sm:col-span-2">{t('movedOutFormHint')}</p>
+            {text('moved_to_church', 'movedToChurch', { placeholder: 'phMovedToChurch' })}
+            {text('moved_to_servant', 'movedToServant', { placeholder: 'phMovedToServant' })}
+            {text('moved_out_on', 'movedOutOn', { type: 'date', ltr: true })}
+          </Section>
+        </div>
+      )}
+
       <Section title={t('basicInfo')}>
         <div className="sm:col-span-2">
           <PhotoPicker photo={photo} name={texts.full_name} onChange={setPhoto} />
@@ -170,17 +184,6 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
       {other && (
         <Section title={t('otherAddress')}>
           <OtherAddressFields value={other} onChange={setOther} />
-        </Section>
-      )}
-
-      {/* a child who left the class: when, and where to (church and servant optional).
-          Clearing the date puts them back in the class. */}
-      {(texts.moved_out_on || initial?.moved_out_on) && (
-        <Section title={t('markMovedOut')}>
-          {text('moved_out_on', 'movedOutOn', { type: 'date', ltr: true })}
-          <div />
-          {text('moved_to_church', 'movedToChurch', { placeholder: 'phMovedToChurch' })}
-          {text('moved_to_servant', 'movedToServant', { placeholder: 'phMovedToServant' })}
         </Section>
       )}
 
