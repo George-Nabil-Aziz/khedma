@@ -130,7 +130,7 @@ export const X = 'x:'
 
 /** Fills defaults so rows cached by an older version (or before the SQL migration) still work. */
 function normalize<T extends ChildInput>(row: T): T {
-  return { ...row, phones: Array.isArray(row.phones) ? row.phones : [], primary_contacts: Array.isArray(row.primary_contacts) ? row.primary_contacts : [], photo: row.photo ?? null, other_address: row.other_address ?? null, extra: row.extra ?? {} }
+  return { ...row, phones: Array.isArray(row.phones) ? row.phones : [], primary_contacts: Array.isArray(row.primary_contacts) ? row.primary_contacts : [], photo: row.photo ?? null, other_address: row.other_address ?? null, position: row.position ?? null, extra: row.extra ?? {} }
 }
 
 function toFlat(c: ChildInput): Flat {
@@ -164,7 +164,7 @@ function applyFlat<T extends ChildInput>(row: T, changes: Flat): T {
 }
 
 function pick(input: ChildInput): ChildInput {
-  const out = { full_name: input.full_name, phones: input.phones ?? [], primary_contacts: input.primary_contacts ?? [], photo: input.photo ?? null, other_address: input.other_address ?? null, extra: input.extra ?? {} } as ChildInput
+  const out = { full_name: input.full_name, phones: input.phones ?? [], primary_contacts: input.primary_contacts ?? [], photo: input.photo ?? null, other_address: input.other_address ?? null, position: input.position ?? null, extra: input.extra ?? {} } as ChildInput
   for (const f of TEXT_FIELDS) out[f] = input[f] ?? null
   return out
 }
@@ -512,6 +512,29 @@ export function findRow(s: State, clientId: string) {
  */
 export function stillInClassFirst<T extends ChildInput>(rows: T[]): T[] {
   return [...rows.filter(r => !r.moved_out_on), ...rows.filter(r => r.moved_out_on)]
+}
+
+/**
+ * ترتيبي: move list[i] one place up (-1) or down (+1), swapping with its neighbour. `list` is
+ * the whole class in the order on screen. The first move numbers everyone in that order;
+ * after that a move only changes the two children involved. Works offline like any edit.
+ */
+export function moveChild(list: Child[], i: number, dir: -1 | 1) {
+  const j = i + dir
+  if (j < 0 || j >= list.length) return
+  const numbered = list.every(r => r.position != null) && new Set(list.map(r => r.position)).size === list.length
+  const pos = new Map(list.map((r, k) => [r.client_id, numbered ? r.position! : (k + 1) * 10]))
+  const a = list[i].client_id
+  const b = list[j].client_id
+  const pa = pos.get(a)!
+  pos.set(a, pos.get(b)!)
+  pos.set(b, pa)
+  for (const r of list) {
+    const p = pos.get(r.client_id)!
+    if (p === r.position) continue
+    const row = findRow(state, r.client_id)
+    if (row) saveChild(r.client_id, { ...row, position: p })
+  }
 }
 
 /** The child left the class (today), or came back (null). Works offline like any edit. */

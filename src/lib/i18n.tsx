@@ -186,6 +186,13 @@ const dict = {
   attendanceOrderNote: { ar: 'نفس ترتيب صفحة الأولاد', en: 'Same order as the Children page' },
   attPending: { ar: 'علامات متابعة مستنية تتبعت', en: 'Follow-up ticks waiting to be sent' },
   refresh: { ar: 'تحديث', en: 'Refresh' },
+  // ترتيبي — the class's own order of its children
+  myOrder: { ar: 'ترتيبي', en: 'My order' },
+  reorder: { ar: 'رتّب', en: 'Reorder' },
+  reorderDone: { ar: 'خلصت', en: 'Done' },
+  reorderHelp: { ar: 'حرّك الأولاد بالأسهم ▲▼ — الترتيب ده بيتحفظ وبيبقى عند كل خدام الفصل', en: 'Move children with ▲▼ — this order is saved for everyone in the class' },
+  moveUp: { ar: 'طلّع', en: 'Move up' },
+  moveDown: { ar: 'نزّل', en: 'Move down' },
   // a child who left the class
   movedOutOn: { ar: 'خرج من الفصل يوم', en: 'Left the class on' },
   movedOut: { ar: 'خرجوا من الفصل', en: 'Left the class' },

@@ -109,7 +109,13 @@ export function useColumns(): Column[] {
     })
 
     const builtIn: Column[] = [
-      { id: 'address', label: t('address'), render: address, sort: r => address(r) || null },
+      {
+        id: 'address',
+        label: t('address'),
+        render: address,
+        // by the street's name (then متفرع من, then the house number as a number), not "بيت 5…"
+        sort: r => [r.street, r.branch_of_street, r.house_number].map(p => p?.trim() ?? '').join('\u0001').replace(/^\u0001+$/, '') || address(r) || null,
+      },
       { id: 'landmark', label: t('landmark'), render: r => r.landmark, sort: r => r.landmark },
       { id: 'birth_date', label: t('birthDate'), render: r => r.birth_date && <span dir="ltr">{r.birth_date}</span>, sort: r => r.birth_date, nowrap: true },
       {
@@ -247,28 +253,34 @@ export type Sort = { id: string; dir: 'asc' | 'desc' }
 export function useSort() {
   const [sort, setSort] = useState<Sort>(() => {
     try {
-      const s = JSON.parse(load('sort') ?? 'null')
+      const s = JSON.parse(load(SORT_KEY) ?? 'null')
       if (s && typeof s.id === 'string' && (s.dir === 'asc' || s.dir === 'desc')) return s
     } catch {
       /* ignore */
     }
-    return { id: 'name', dir: 'asc' }
+    return { id: MY_ORDER, dir: 'asc' }
   })
 
   /** First click sorts ascending, the next click on the same column flips it. */
   function toggle(id: string) {
     const next: Sort = sort.id === id ? { id, dir: sort.dir === 'asc' ? 'desc' : 'asc' } : { id, dir: 'asc' }
     setSort(next)
-    save('sort', JSON.stringify(next))
+    save(SORT_KEY, JSON.stringify(next))
   }
 
   return { sort, toggle }
 }
 
+/** Sort id of ترتيبي, the class's own order (the "#" column) — the default. */
+export const MY_ORDER = 'position'
+// new key when ترتيبي became the default, so everyone starts on it once
+const SORT_KEY = 'sort2'
+
 /** The order the children page shows — الافتقاد uses the same one. */
 export function sortRows(rows: ViewRow[], columns: Column[], sort: Sort, lang: string) {
   const col = columns.find(c => c.id === sort.id)
-  const key = col ? col.sort : (r: ViewRow) => r.full_name
+  // ترتيبي: children not placed yet come after the placed ones, by name
+  const key = sort.id === MY_ORDER ? (r: ViewRow) => r.position : col ? col.sort : (r: ViewRow) => r.full_name
   return [...rows].sort((a, b) => compare(key(a), key(b), sort.dir, lang) || a.full_name.localeCompare(b.full_name, lang))
 }
 

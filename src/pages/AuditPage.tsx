@@ -47,6 +47,7 @@ const FIELD_LABEL: Record<string, TKey> = {
   moved_to_church: 'movedToChurch',
   moved_to_servant: 'movedToServant',
   other_address: 'otherAddress',
+  position: 'myOrder',
   display_name: 'displayName',
   checked: 'attendance',
   label: 'fieldLabel',

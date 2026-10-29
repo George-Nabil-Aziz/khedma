@@ -79,6 +79,8 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
       extra,
       photo,
       other_address: other && cleanAddress(other),
+      // the form doesn't edit the order: keep the child's place as it is now (it may have moved meanwhile)
+      position: clientId ? (findRow(store, clientId)?.position ?? null) : null,
     } as ChildInput
     // whose home the usual address is only means something next to a second one
     if (!other) input.address_label = null

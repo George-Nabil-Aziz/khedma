@@ -47,7 +47,7 @@ export type Address = { [K in AddressField]?: string | null }
 export type OtherAddress = Address & { label?: string | null }
 
 // Every built-in column the app can change (custom columns live inside `extra`).
-export const CORE_FIELDS = ['full_name', ...TEXT_FIELDS, 'phones', 'primary_contacts', 'photo', 'other_address'] as const
+export const CORE_FIELDS = ['full_name', ...TEXT_FIELDS, 'phones', 'primary_contacts', 'photo', 'other_address', 'position'] as const
 export type CoreField = (typeof CORE_FIELDS)[number]
 
 export type ChildInput = {
@@ -59,6 +59,8 @@ export type ChildInput = {
   photo: string | null
   /** Another home the child also lives in, or null. */
   other_address: OtherAddress | null
+  /** ترتيبي: the class's own order of its children, smaller first; null = not placed yet. */
+  position: number | null
   extra: Record<string, unknown>
 } & { [K in TextField]: string | null }
 

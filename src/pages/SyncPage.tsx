@@ -29,6 +29,7 @@ const FIELD_LABEL: Record<CoreField, TKey> = {
   moved_to_church: 'movedToChurch',
   moved_to_servant: 'movedToServant',
   other_address: 'otherAddress',
+  position: 'myOrder',
 }
 
 /** Label and display text for a field key of the sync "flat" view (built-in or "x:<custom>"). */
