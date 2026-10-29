@@ -675,7 +675,9 @@ async function syncOnce() {
         // starts from what we just wrote — otherwise it would look like a conflict with itself.
         outbox = outbox.map(o => (o.client_id === op.client_id && o.kind === 'update' ? { ...o, base: applyFlat(normalize(o.base), op.changes) } : o))
       }
-      if (result === 'done') set({ outbox })
+      // Sent: put the change into the local copy right away. The fresh copy only comes at the
+      // end of the sync, and until then the child would show as before the edit, then flip back.
+      if (result === 'done') set({ outbox, rows: withPushed(state.rows, op) })
       else if ('conflict' in result) set({ outbox, conflicts: [...state.conflicts.filter(c => c.client_id !== op.client_id), result.conflict] })
       else set({ outbox: state.outbox.map(o => (o === op ? { ...o, error: result.error } : o)) })
     }
@@ -711,6 +713,14 @@ async function syncOnce() {
   } finally {
     set({ syncing: false, classLoading: false }, false)
   }
+}
+
+/** The local copy of the children with a change that was just sent applied to it. */
+function withPushed(rows: Child[], op: Op): Child[] {
+  if (op.kind === 'update') return rows.map(r => (r.client_id === op.client_id ? applyFlat(normalize(r), op.changes) : r))
+  if (rows.some(r => r.client_id === op.client_id)) return rows
+  // a new child: a stand-in until the next pull brings the server's own row (with its id)
+  return [...rows, { ...op.data, id: 0, client_id: op.client_id, class_id: op.class_id, created_at: op.queued_at, updated_at: op.queued_at }]
 }
 
 /** Supabase returns at most 1000 rows per request — page through everything. */
