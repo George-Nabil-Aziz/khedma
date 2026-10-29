@@ -118,7 +118,7 @@ export function Layout({ email, admin, title, children }: { email: string; admin
           {/* الإعدادات, last: its tabs hold the columns, sync and (admins) the service year.
               The sync count shows here, since sync lives inside it. */}
           {!admin && <div className="mx-3 my-2 border-t border-slate-200 dark:border-slate-800" />}
-          <button className={item(route.name === 'settings' || route.name === 'fields' || route.name === 'sync' || route.name === 'install')} onClick={() => nav('/fields')}>
+          <button className={item(route.name === 'settings' || route.name === 'fields' || route.name === 'sync' || route.name === 'install' || route.name === 'help')} onClick={() => nav('/fields')}>
             <SettingsIcon />
             <span className="flex-1">{t('settings')}</span>
             {issues > 0 ? (

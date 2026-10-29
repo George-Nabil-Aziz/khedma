@@ -66,16 +66,12 @@ export function UsersPage({ myId }: { myId: string }) {
 
   return (
     <div className="mx-auto max-w-4xl space-y-5">
-      <p className="text-sm text-slate-500">{t('usersHelp')}</p>
-
       {!online && (
         <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
           <CloudOffIcon className="size-4 shrink-0" />
           {t('needsOnline')}
         </div>
       )}
-
-      <CreateUser disabled={!online} onCreate={body => run(() => callAdmin({ action: 'create', ...body }))} />
 
       {error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300" dir="auto">
@@ -195,6 +191,9 @@ export function UsersPage({ myId }: { myId: string }) {
           ))}
         </ul>
       </section>
+
+      {/* adding a user: below the list of users there already are */}
+      <CreateUser disabled={!online} onCreate={body => run(() => callAdmin({ action: 'create', ...body }))} />
     </div>
   )
 }

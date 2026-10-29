@@ -494,13 +494,19 @@ export function isDay(s: State, date: string, kind: DayKind): boolean {
   return !!s.currentClass && dayMark(s, s.currentClass, date, kind)
 }
 
-/** Mark / unmark a Friday of the class on screen as a communion or club day. Works offline. */
-export function toggleDay(date: string, kind: DayKind) {
+/**
+ * Each tap on a Friday's date, for the class on screen:
+ * nothing → ✝ communion → ⚽ club → ✝⚽ both → nothing. Works offline.
+ */
+export function cycleDay(date: string) {
   const classId = state.currentClass
   if (!classId) return
-  const on = !isDay(state, date, kind)
-  const dayOutbox = state.dayOutbox.filter(o => !(o.classId === classId && o.date === date && o.kind === kind))
-  dayOutbox.push({ classId, date, kind, on, queued_at: new Date().toISOString() })
+  const communion = isDay(state, date, 'communion')
+  const club = isDay(state, date, 'club')
+  const [nextCommunion, nextClub] = !communion && !club ? [true, false] : communion && !club ? [false, true] : !communion && club ? [true, true] : [false, false]
+  const now = new Date().toISOString()
+  const dayOutbox = state.dayOutbox.filter(o => !(o.classId === classId && o.date === date))
+  dayOutbox.push({ classId, date, kind: 'communion', on: nextCommunion, queued_at: now }, { classId, date, kind: 'club', on: nextClub, queued_at: now })
   set({ dayOutbox })
   scheduleSync()
 }

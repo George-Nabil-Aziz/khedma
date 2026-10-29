@@ -62,8 +62,6 @@ export function FieldsPage({ admin }: { admin: boolean }) {
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
-      <p className="text-sm text-slate-500">{t('customFieldsHelp')}</p>
-
       {!online && (
         <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
           <CloudOffIcon className="size-4 shrink-0" />

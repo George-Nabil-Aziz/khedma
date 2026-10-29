@@ -218,13 +218,13 @@ const dict = {
   communionDay: { ar: "يوم تناول", en: "Communion day" },
   clubDay: { ar: "يوم نادي", en: "Club day" },
   communionHint: {
-    ar: "دوس على تاريخ الجمعة فوق علشان تعلّمها يوم تناول ✝ أو نادي ⚽",
-    en: "Click a Friday’s date to mark it as a communion ✝ or club ⚽ day",
+    ar: "تاريخ الجمعة فوق: دوسة ✝ تناول، دوستين ⚽ نادي، التالتة الاتنين، الرابعة تمسح",
+    en: "A Friday’s date: tap once ✝ communion, twice ⚽ club, three times both, a fourth clears",
   },
   attendanceTotal: { ar: "عدد العلامات", en: "Ticks" },
   attendanceOrderNote: {
-    ar: "نفس ترتيب صفحة الأولاد",
-    en: "Same order as the Children page",
+    ar: "الأولاد في المتابعة بنفس ترتيب صفحة الأولاد",
+    en: "Children are in the same order as on the Children page",
   },
   attPending: {
     ar: "علامات متابعة مستنية تتبعت",
@@ -262,6 +262,7 @@ const dict = {
     ar: 'رتّب الأعمدة بالسحب وعلّم على اللي يظهر. ده اللي بيرجعله أي خادم لما يدوس "الافتراضي" في قايمة الأعمدة.',
     en: 'Drag to order the columns and tick the ones shown. This is what anyone gets back with "Default" in the columns menu.',
   },
+  howToUse: { ar: 'طريقة الاستخدام', en: 'How to use' },
   installApp: { ar: 'تحميل التطبيق', en: 'Install the app' },
   installHelp: { ar: 'سطّبه على موبايلك أو الكمبيوتر، يفتح بأيقونته زي أي تطبيق ويشتغل من غير نت', en: 'Install it on your phone or computer: it opens from its icon like any app and works offline' },
   installNow: { ar: 'حمّل التطبيق', en: 'Install' },

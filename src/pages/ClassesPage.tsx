@@ -27,8 +27,6 @@ export function ClassesPage({ admin }: { admin: boolean }) {
         </div>
       )}
 
-      <NewClassForm />
-
       {/* no class yet: say so, and point to the other way in — a colleague's share code */}
       {activeClasses(classes).length === 0 && (
         <div className="space-y-3 rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-center dark:border-indigo-500/30 dark:bg-indigo-500/10">
@@ -60,8 +58,8 @@ export function ClassesPage({ admin }: { admin: boolean }) {
         </section>
       ))}
 
-      {/* at the very bottom, and only once there is at least one class to star */}
-      {activeClasses(classes).length > 0 && <p className="text-center text-sm text-slate-500">{t('classesHelp')}</p>}
+      {/* a new class: below the classes there already are */}
+      <NewClassForm />
     </div>
   )
 }
@@ -93,7 +91,7 @@ function NewClassForm() {
         {t('newClass')}
       </h2>
       <div className="grid gap-2 sm:grid-cols-[1fr_10rem_auto]">
-        <input className={input} placeholder={t('phClassName')} value={name} onChange={e => setName(e.target.value)} disabled={!online || busy} autoFocus />
+        <input className={input} placeholder={t('phClassName')} value={name} onChange={e => setName(e.target.value)} disabled={!online || busy} />
         {/* The list shows single years (2027); once picked, the box shows the whole service year
             (2026-2027). The select's own text is hidden and the full year is drawn over it. */}
         <div className="relative" dir="ltr">

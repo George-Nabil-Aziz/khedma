@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useI18n } from '../lib/i18n'
 import { go } from '../lib/router'
-import { DAY_KINDS, childrenLoading, cycleVisit, isChecked, visitOf, isDay, stillInClassFirst, toggleDay, toggleFollowUp, useStore, viewRows, type DayKind, type FollowUpKind } from '../lib/store'
+import { DAY_KINDS, childrenLoading, cycleDay, cycleVisit, isChecked, visitOf, isDay, stillInClassFirst, toggleFollowUp, useStore, viewRows, type DayKind, type FollowUpKind } from '../lib/store'
 import type { TKey } from '../lib/i18n'
 import { sortRows, useColumns, useSort } from '../lib/columns'
 import { NoChildren } from '../components/NoChildren'
@@ -17,9 +17,9 @@ const KINDS: { kind: FollowUpKind; label: TKey; on: string; hover: string }[] = 
 ]
 
 // The two marks a Friday can carry for the whole class, each with its own sign and colour.
-const DAY: Record<DayKind, { label: TKey; sign: string; text: string; menuOn: string }> = {
-  communion: { label: 'communionDay', sign: '✝', text: 'text-amber-600 dark:text-amber-300', menuOn: 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200' },
-  club: { label: 'clubDay', sign: '⚽', text: 'text-sky-600 dark:text-sky-300', menuOn: 'bg-sky-100 text-sky-800 dark:bg-sky-500/20 dark:text-sky-200' },
+const DAY: Record<DayKind, { label: TKey; sign: string; text: string }> = {
+  communion: { label: 'communionDay', sign: '✝', text: 'text-amber-600 dark:text-amber-300' },
+  club: { label: 'clubDay', sign: '⚽', text: 'text-sky-600 dark:text-sky-300' },
 }
 
 /** Background of a Friday's column, header and rows alike: amber for تناول, sky for نادي, both when it is both. */
@@ -46,7 +46,6 @@ export function AttendancePage() {
   const { sort } = useSort()
   const [query, setQuery] = useState('')
   const scroller = useRef<HTMLDivElement>(null)
-  const [dayMenu, setDayMenu] = useState<{ date: string; top: number; left: number } | null>(null)
   const currentCell = useRef<HTMLTableCellElement>(null)
   const currentMonthCell = useRef<HTMLTableCellElement>(null)
   const nameHeader = useRef<HTMLTableCellElement>(null)
@@ -120,9 +119,8 @@ export function AttendancePage() {
 
   return (
     <div className="space-y-4">
-      {dayMenu && <DayMenu {...dayMenu} onClose={() => setDayMenu(null)} />}
       <ClassTitle />
-      {/* on a phone: search and the count on one line, the communion / club hint on its own line under them */}
+      {/* search and the count; how the grid works is under الإعدادات → طريقة الاستخدام */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <input
           className="min-w-40 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 sm:max-w-xs dark:border-slate-700 dark:bg-slate-900"
@@ -133,9 +131,6 @@ export function AttendancePage() {
         <span className="shrink-0 rounded-full bg-indigo-50 px-3 py-1 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
           {t('total')}: {rows.length}
         </span>
-        <span className="hidden text-xs text-slate-500 sm:inline">{t('attendanceOrderNote')}</span>
-        <span className="basis-full text-xs text-emerald-700 sm:basis-auto dark:text-emerald-300">{t('visitHint')}</span>
-        <span className="basis-full text-xs text-amber-700 sm:basis-auto dark:text-amber-300">{t('communionHint')}</span>
       </div>
 
       <div ref={scroller} className="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
@@ -169,15 +164,10 @@ export function AttendancePage() {
                     dayBg(isDay(store, d.date, 'communion'), isDay(store, d.date, 'club'))
                   }`}
                 >
-                  {/* click a date to choose what that Friday is for the whole class: تناول, نادي, or both */}
+                  {/* each tap on a date, for the whole class: nothing → ✝ تناول → ⚽ نادي → both → nothing */}
                   <button
-                    onClick={e => {
-                      const r = e.currentTarget.getBoundingClientRect()
-                      setDayMenu(m => (m?.date === d.date ? null : { date: d.date, top: r.bottom + 4, left: r.left + r.width / 2 }))
-                    }}
-                    title={t('communionHint')}
-                    aria-haspopup="menu"
-                    aria-expanded={dayMenu?.date === d.date}
+                    onClick={() => cycleDay(d.date)}
+                    title={DAY_KINDS.filter(k => isDay(store, d.date, k)).map(k => t(DAY[k].label)).join(' + ') || t('communionHint')}
                     className="flex w-full flex-col items-center rounded px-1 py-0.5 hover:bg-black/5 dark:hover:bg-white/10"
                   >
                     {d.day}
@@ -279,67 +269,6 @@ export function AttendancePage() {
           </tbody>
         </table>
       </div>
-    </div>
-  )
-}
-
-/**
- * What a Friday is for the whole class: تناول, نادي, or both — each one toggles on its own.
- * Fixed on screen under the date, since the grid's scroll box would clip it.
- */
-function DayMenu({ date, top, left, onClose }: { date: string; top: number; left: number; onClose: () => void }) {
-  const { t } = useI18n()
-  const store = useStore()
-  const box = useRef<HTMLDivElement>(null)
-
-  // close on a click outside, Escape, or any scroll (it would no longer sit under its date)
-  useEffect(() => {
-    const click = (e: MouseEvent) => {
-      const target = e.target as Element
-      // the date that opened it toggles it itself
-      if (!box.current?.contains(target) && !target.closest('[aria-expanded="true"]')) onClose()
-    }
-    const key = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    document.addEventListener('mousedown', click)
-    document.addEventListener('keydown', key)
-    document.addEventListener('scroll', onClose, true)
-    return () => {
-      document.removeEventListener('mousedown', click)
-      document.removeEventListener('keydown', key)
-      document.removeEventListener('scroll', onClose, true)
-    }
-  }, [onClose])
-
-  return (
-    <div
-      ref={box}
-      role="menu"
-      style={{ top, left }}
-      className="fixed z-50 w-40 -translate-x-1/2 space-y-0.5 rounded-lg border border-slate-200 bg-white p-1 shadow-lg dark:border-slate-700 dark:bg-slate-800"
-    >
-      <div className="px-2 pb-1 pt-0.5 text-center text-xs text-slate-400" dir="ltr">
-        {date}
-      </div>
-      {DAY_KINDS.map(k => {
-        const on = isDay(store, date, k)
-        return (
-          <button
-            key={k}
-            role="menuitemcheckbox"
-            aria-checked={on}
-            onClick={() => toggleDay(date, k)}
-            className={`flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-start text-sm font-semibold ${on ? DAY[k].menuOn : 'hover:bg-slate-100 dark:hover:bg-slate-700/60'}`}
-          >
-            <span className={`w-4 text-center ${on ? '' : DAY[k].text}`}>{DAY[k].sign}</span>
-            <span className="flex-1">{t(DAY[k].label)}</span>
-            {on && (
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" className="size-4">
-                <path d="M20 6 9 17l-5-5" />
-              </svg>
-            )}
-          </button>
-        )
-      })}
     </div>
   )
 }

@@ -43,6 +43,7 @@ export function SettingsTabs({ admin }: { admin: boolean }) {
           <span className="rounded-full bg-amber-500 px-2 text-xs font-bold text-white">{pending}</span>
         ) : null,
       )}
+      {tab('help', '/help', 'howToUse')}
       {tab('install', '/install', 'installApp')}
       {admin && tab('settings', '/settings', 'yearEndTitle')}
     </nav>
@@ -187,6 +188,49 @@ export function InstallPage() {
           steps(['installOther1', 'installOther2'])
         )}
       </section>
+    </div>
+  )
+}
+
+const TONE = {
+  green: 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200',
+  amber: 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200',
+  indigo: 'border-indigo-200 bg-indigo-50 text-indigo-800 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-200',
+  grey: 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-200',
+}
+
+/**
+ * How things work — the explanations of every page in one place, each under its page's name
+ * (they used to sit on top of the pages). The admins' pages only for admins.
+ */
+export function HelpPage({ admin }: { admin: boolean }) {
+  const { t } = useI18n()
+  const section = (title: TKey, tips: [TKey, string][]) => (
+    <section className="space-y-2">
+      <h2 className="px-1 pt-2 font-bold">{t(title)}</h2>
+      {tips.map(([key, tone]) => (
+        <p key={key} className={`rounded-xl border px-4 py-3 text-sm font-semibold ${tone}`}>
+          {t(key)}
+        </p>
+      ))}
+    </section>
+  )
+  return (
+    <div className="mx-auto max-w-2xl space-y-4">
+      {section('attendance', [
+        ['visitHint', TONE.green],
+        ['communionHint', TONE.amber],
+        ['attendanceOrderNote', TONE.grey],
+      ])}
+      {section('classes', [['classesHelp', TONE.indigo]])}
+      {section('share', [
+        ['inviteHelp', TONE.indigo],
+        ['joinHelp', TONE.indigo],
+      ])}
+      {section('customize', [['customFieldsHelp', TONE.grey], ...(admin ? ([['columnDefaultsHelp', TONE.grey]] as [TKey, string][]) : [])])}
+      {section('installApp', [['installHelp', TONE.green]])}
+      {admin && section('users', [['usersHelp', TONE.indigo]])}
+      {admin && section('yearEndTitle', [['yearEndHelp', TONE.amber]])}
     </div>
   )
 }
