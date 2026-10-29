@@ -33,8 +33,8 @@ export function ChildViewPage({ clientId }: { clientId: string }) {
       </button>
 
       <section className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-        <Avatar photo={child.photo} name={child.full_name} className="size-20 text-2xl" />
-        <div className="min-w-0 flex-1">
+        <Avatar photo={child.photo} name={child.full_name} className="size-16 text-xl sm:size-20 sm:text-2xl" />
+        <div className="min-w-40 flex-1">
           <h2 className="text-2xl font-bold">{child.full_name}</h2>
           {/* not on the server yet, or waiting on a decision */}
           {child.status !== 'synced' && (
@@ -44,25 +44,28 @@ export function ChildViewPage({ clientId }: { clientId: string }) {
             </p>
           )}
         </div>
-        {!child.moved_out_on && (
+        {/* the buttons: their own line under the name on a phone, at the end of the row when there is room */}
+        <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
+          {!child.moved_out_on && (
+            <button
+              onClick={async () => {
+                const ok = await confirmDialog({ title: t('markMovedOut'), message: t('markMovedOutConfirm').replace('{name}', child.full_name), confirmLabel: t('markMovedOut'), danger: true })
+                if (ok) setMovedOut(clientId, true)
+              }}
+              className="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              <DoorIcon />
+              {t('markMovedOut')}
+            </button>
+          )}
           <button
-            onClick={async () => {
-              const ok = await confirmDialog({ title: t('markMovedOut'), message: t('markMovedOutConfirm').replace('{name}', child.full_name), confirmLabel: t('markMovedOut'), danger: true })
-              if (ok) setMovedOut(clientId, true)
-            }}
-            className="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            onClick={() => go(`/child/${clientId}/edit`)}
+            className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white shadow-sm hover:bg-indigo-700"
           >
-            <DoorIcon />
-            {t('markMovedOut')}
+            <PencilIcon />
+            {t('edit')}
           </button>
-        )}
-        <button
-          onClick={() => go(`/child/${clientId}/edit`)}
-          className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white shadow-sm hover:bg-indigo-700"
-        >
-          <PencilIcon />
-          {t('edit')}
-        </button>
+        </div>
       </section>
 
       {/* left the class: say since when, with a way back */}

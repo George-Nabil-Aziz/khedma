@@ -118,10 +118,11 @@ export function ChildrenPage() {
         <span className="rounded-full bg-indigo-50 px-3 py-1 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
           {t('total')}: {filtered.length}
         </span>
-        <div className="ms-auto flex items-center gap-2">
+        {/* a phone: the three buttons on their own line, full width; wider: at the end of the row */}
+        <div className="flex w-full items-center gap-2 sm:ms-auto sm:w-auto">
           <button
             onClick={() => go('/new')}
-            className="flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
+            className="flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 sm:flex-none"
           >
             <PlusIcon className="size-4" />
             {t('addChild')}
@@ -131,7 +132,7 @@ export function ChildrenPage() {
               setQuery('')
               setReordering(true)
             }}
-            className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+            className="flex items-center gap-2 whitespace-nowrap rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
           >
             <SortIcon className="size-4" />
             {t('reorder')}
@@ -139,7 +140,7 @@ export function ChildrenPage() {
           <div className="relative">
             <button
               onClick={() => setMenuOpen(o => !o)}
-              className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+              className="flex items-center gap-2 whitespace-nowrap rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
             >
               <ColumnsIcon />
               {t('columns')}

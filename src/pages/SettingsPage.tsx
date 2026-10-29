@@ -130,10 +130,23 @@ function YearEndSetting() {
       </div>
 
       <p className="rounded-lg bg-slate-50 px-3 py-2 text-center text-sm dark:bg-slate-800/60">
+        {/* the year and the numeric date kept left-to-right and whole, inside the Arabic sentence */}
         {t('yearEndResult')
-          .replace('{year}', year)
-          .replace('{date}', date)}{' '}
-        <span className="text-slate-400" dir="ltr">
+          .split(/(\{year\}|\{date\})/)
+          .map((part, i) =>
+            part === '{year}' ? (
+              <span key={i} dir="ltr" className="whitespace-nowrap font-semibold">
+                {year}
+              </span>
+            ) : part === '{date}' ? (
+              <span key={i} className="font-semibold">
+                {date}
+              </span>
+            ) : (
+              part
+            ),
+          )}{' '}
+        <span className="whitespace-nowrap text-slate-400" dir="ltr">
           ({iso(end)})
         </span>
       </p>
@@ -170,8 +183,9 @@ export function InstallPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex items-center gap-3">
-          <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="" className="size-12" />
+        {/* a phone: the logo above the words, centred, so the words get the full width */}
+        <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:text-start">
+          <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="" className="size-14 sm:size-12" />
           <div>
             <h2 className="font-bold">{t('installApp')}</h2>
             <p className="text-sm text-slate-500">{t('installHelp')}</p>
@@ -195,6 +209,31 @@ export function InstallPage() {
   )
 }
 
+/**
+ * One hint, a point per line. "الافتقاد: دوسة 📞 تليفون، دوستين 🏠 زيارة، …" → the part before ":"
+ * as its title and a bullet per piece between commas; a hint without a title gets a bullet per
+ * sentence (its commas belong to the sentence).
+ */
+function Tip({ text, tone }: { text: string; tone: string }) {
+  const colon = text.indexOf(':')
+  const hasTitle = colon > 0 && colon < 30
+  const title = hasTitle ? text.slice(0, colon).trim() : null
+  const points = (hasTitle ? text.slice(colon + 1) : text)
+    .split(hasTitle ? /[،,]\s*|\.\s+/ : /\.\s+/)
+    .map(p => p.trim().replace(/\.$/, ''))
+    .filter(Boolean)
+  return (
+    <div className={`rounded-xl border px-4 py-3 text-sm ${tone}`}>
+      {title && <div className="mb-1 font-bold">{title}</div>}
+      <ul className="list-inside list-disc space-y-1 font-semibold">
+        {points.map(p => (
+          <li key={p}>{p}</li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 const TONE = {
   green: 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200',
   amber: 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200',
@@ -212,9 +251,7 @@ export function HelpPage({ admin }: { admin: boolean }) {
     <section className="space-y-2">
       <h2 className="px-1 pt-2 font-bold">{t(title)}</h2>
       {tips.map(([key, tone]) => (
-        <p key={key} className={`rounded-xl border px-4 py-3 text-sm font-semibold ${tone}`}>
-          {t(key)}
-        </p>
+        <Tip key={key} text={t(key)} tone={tone} />
       ))}
     </section>
   )

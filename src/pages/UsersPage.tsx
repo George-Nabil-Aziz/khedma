@@ -174,7 +174,8 @@ export function UsersPage({ myId }: { myId: string }) {
                     value=""
                     disabled={!online}
                     onChange={e => e.target.value && addToClass(u.id, e.target.value)}
-                    className="rounded-full border border-dashed border-slate-300 bg-transparent px-3 py-0.5 text-sm text-slate-500 dark:border-slate-600"
+                    // long class names: never wider than the card (full width on a phone)
+                    className="w-full max-w-full truncate rounded-full border border-dashed border-slate-300 bg-transparent px-3 py-0.5 text-sm text-slate-500 sm:w-auto dark:border-slate-600"
                   >
                     <option value="">{t('addToClass')}</option>
                     {classes
