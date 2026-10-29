@@ -32,6 +32,7 @@ export const TEXT_FIELDS = [
   'national_id',
   'category', // الحالة: normal / hidden / brothers — see CATEGORIES
   'address_label', // whose home the usual address is — only used when there is an other_address
+  'moved_out_on', // the day the child left the class; null = still in it
 ] as const
 export type TextField = (typeof TEXT_FIELDS)[number]
 

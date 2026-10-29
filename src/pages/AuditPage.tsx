@@ -43,6 +43,7 @@ const FIELD_LABEL: Record<string, TKey> = {
   primary_contacts: 'primaryContact',
   photo: 'photo',
   address_label: 'addressLabel',
+  moved_out_on: 'movedOutOn',
   other_address: 'otherAddress',
   display_name: 'displayName',
   checked: 'attendance',

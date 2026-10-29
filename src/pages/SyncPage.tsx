@@ -25,6 +25,7 @@ const FIELD_LABEL: Record<CoreField, TKey> = {
   primary_contacts: 'primaryContact',
   photo: 'photo',
   address_label: 'addressLabel',
+  moved_out_on: 'movedOutOn',
   other_address: 'otherAddress',
 }
 

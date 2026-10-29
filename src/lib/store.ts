@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react'
 import { clear, get, setMany } from 'idb-keyval'
 import { CORE_FIELDS, TEXT_FIELDS, supabase, type Child, type ChildInput, type ClassInfo, type CustomField, type FieldType, type Profile } from './supabase'
 import { load, save } from './storage'
-import { setYearEndWeeks } from './serviceYear'
+import { iso, setYearEndWeeks } from './serviceYear'
 import { resetTrips } from './trips'
 
 /*
@@ -506,6 +506,21 @@ export function findRow(s: State, clientId: string) {
 // ---- writing children ------------------------------------------------------
 
 /** Save a new child (clientId = null) or an edit. Works offline. */
+/**
+ * Children still in the class first, then — in the same order — those who left it. Tables
+ * draw a line between the two groups.
+ */
+export function stillInClassFirst<T extends ChildInput>(rows: T[]): T[] {
+  return [...rows.filter(r => !r.moved_out_on), ...rows.filter(r => r.moved_out_on)]
+}
+
+/** The child left the class (today), or came back (null). Works offline like any edit. */
+export function setMovedOut(clientId: string, movedOut: boolean) {
+  const row = findRow(state, clientId)
+  if (!row) return
+  saveChild(clientId, { ...row, moved_out_on: movedOut ? iso(new Date()) : null })
+}
+
 export function saveChild(clientId: string | null, input: ChildInput) {
   const data = pick(input)
   const now = new Date().toISOString()

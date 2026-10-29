@@ -186,6 +186,16 @@ const dict = {
   attendanceOrderNote: { ar: 'نفس ترتيب صفحة الأولاد', en: 'Same order as the Children page' },
   attPending: { ar: 'علامات متابعة مستنية تتبعت', en: 'Follow-up ticks waiting to be sent' },
   refresh: { ar: 'تحديث', en: 'Refresh' },
+  // a child who left the class
+  movedOutOn: { ar: 'خرج من الفصل يوم', en: 'Left the class on' },
+  movedOut: { ar: 'خرجوا من الفصل', en: 'Left the class' },
+  markMovedOut: { ar: 'خرج من الفصل', en: 'Left the class' },
+  markMovedOutConfirm: {
+    ar: '{name} خرج من الفصل؟ هيفضل موجود ببياناته، بس هينزل تحت خالص في الجدول.',
+    en: 'Did {name} leave the class? They stay with all their data, listed at the very bottom.',
+  },
+  movedBack: { ar: 'رجع للفصل', en: 'Back in the class' },
+  movedOutBanner: { ar: 'خرج من الفصل يوم {date}', en: 'Left the class on {date}' },
   // a second home
   hasOtherAddress: { ar: 'عايش في بيت تاني كمان', en: 'Also lives in another home' },
   addressLabel: { ar: 'بيت مين؟', en: 'Whose home?' },

@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useI18n } from '../lib/i18n'
 import { go } from '../lib/router'
-import { childrenLoading, sync, useStore, viewRows, type RowStatus } from '../lib/store'
+import { childrenLoading, stillInClassFirst, sync, useStore, viewRows, type RowStatus } from '../lib/store'
 import { ColumnsMenu } from '../components/ColumnsMenu'
 import { Pagination, usePageSize } from '../components/Pagination'
 import { sortRows, useColumnPrefs, useColumns, useSort, type Column } from '../lib/columns'
@@ -48,8 +48,10 @@ export function ChildrenPage() {
             ...Object.values(r.extra ?? {}).map(v => (v == null ? null : String(v))),
           ].some(v => v?.toLowerCase().includes(q)),
         )
-    return sortRows(list, columns, sort, lang)
+    // sorted as asked, but those who left the class always come after the rest
+    return stillInClassFirst(sortRows(list, columns, sort, lang))
   }, [rows, query, columns, sort, lang])
+  const movedOutCount = filtered.filter(r => r.moved_out_on).length
 
   // Back to a page that exists when the search or page size shrinks the list.
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize))
@@ -140,22 +142,32 @@ export function ChildrenPage() {
               </tr>
             ) : (
               pageRows.map((r, i) => (
-                <tr key={r.client_id} className="align-top hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                  <td className="px-3 py-2 text-slate-400">{(current - 1) * pageSize + i + 1}</td>
-                  <td className="min-w-40 px-3 py-2">
-                    <button
-                      onClick={() => go(`/child/${r.client_id}`)}
-                      className="flex items-center gap-2 text-start font-semibold text-indigo-700 hover:underline dark:text-indigo-300"
-                    >
-                      {r.photo && <Avatar photo={r.photo} name={r.full_name} />}
-                      {r.full_name}
-                      <StatusBadge status={r.status} />
-                    </button>
-                  </td>
-                  {prefs.visible.map(c => (
-                    <Cell key={c.id} column={c} row={r} />
-                  ))}
-                </tr>
+                <Fragment key={r.client_id}>
+                  {/* the line above the first child who left the class */}
+                  {r.moved_out_on && !pageRows[i - 1]?.moved_out_on && (
+                    <tr>
+                      <td colSpan={colSpan} className="border-t-2 border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-500 dark:border-slate-600 dark:bg-slate-800/60">
+                        {t('movedOut')} ({movedOutCount})
+                      </td>
+                    </tr>
+                  )}
+                  <tr className={`align-top hover:bg-slate-50 dark:hover:bg-slate-800/40 ${r.moved_out_on ? 'opacity-60' : ''}`}>
+                    <td className="px-3 py-2 text-slate-400">{(current - 1) * pageSize + i + 1}</td>
+                    <td className="min-w-40 px-3 py-2">
+                      <button
+                        onClick={() => go(`/child/${r.client_id}`)}
+                        className="flex items-center gap-2 text-start font-semibold text-indigo-700 hover:underline dark:text-indigo-300"
+                      >
+                        {r.photo && <Avatar photo={r.photo} name={r.full_name} />}
+                        {r.full_name}
+                        <StatusBadge status={r.status} />
+                      </button>
+                    </td>
+                    {prefs.visible.map(c => (
+                      <Cell key={c.id} column={c} row={r} />
+                    ))}
+                  </tr>
+                </Fragment>
               ))
             )}
           </tbody>

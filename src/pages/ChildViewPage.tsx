@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react'
 import { useI18n } from '../lib/i18n'
 import { go } from '../lib/router'
-import { findRow, useStore } from '../lib/store'
+import { findRow, setMovedOut, useStore } from '../lib/store'
 import { formatAddress, useColumns } from '../lib/columns'
 import { Avatar } from '../components/Avatar'
-import { AlertIcon, ArrowBackIcon, PencilIcon } from '../components/Icons'
+import { AlertIcon, ArrowBackIcon, DoorIcon, PencilIcon } from '../components/Icons'
+import { confirmDialog } from '../components/ConfirmDialog'
 
 /**
  * A child's data, read only — what a tap on a name opens. Every column of the table is listed
@@ -42,6 +43,18 @@ export function ChildViewPage({ clientId }: { clientId: string }) {
             </p>
           )}
         </div>
+        {!child.moved_out_on && (
+          <button
+            onClick={async () => {
+              const ok = await confirmDialog({ title: t('markMovedOut'), message: t('markMovedOutConfirm').replace('{name}', child.full_name), confirmLabel: t('markMovedOut') })
+              if (ok) setMovedOut(clientId, true)
+            }}
+            className="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+          >
+            <DoorIcon />
+            {t('markMovedOut')}
+          </button>
+        )}
         <button
           onClick={() => go(`/child/${clientId}/edit`)}
           className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white shadow-sm hover:bg-indigo-700"
@@ -50,6 +63,22 @@ export function ChildViewPage({ clientId }: { clientId: string }) {
           {t('edit')}
         </button>
       </section>
+
+      {/* left the class: say since when, with a way back */}
+      {child.moved_out_on && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-300 bg-slate-100 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/60">
+          <DoorIcon className="size-5 text-slate-500" />
+          <span className="flex-1 font-semibold">
+            {t('movedOutBanner').replace('{date}', new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { dateStyle: 'long' }).format(new Date(child.moved_out_on + 'T00:00')))}
+          </span>
+          <button
+            onClick={() => setMovedOut(clientId, false)}
+            className="rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 dark:border-indigo-500/40 dark:bg-slate-900 dark:text-indigo-300"
+          >
+            {t('movedBack')}
+          </button>
+        </div>
+      )}
 
       <dl className="grid gap-x-6 gap-y-4 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2 dark:border-slate-800 dark:bg-slate-900">
         {columns.flatMap(c => {

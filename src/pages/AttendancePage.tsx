@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useI18n } from '../lib/i18n'
 import { go } from '../lib/router'
-import { DAY_KINDS, childrenLoading, isChecked, isDay, toggleDay, toggleFollowUp, useStore, viewRows, type DayKind, type FollowUpKind } from '../lib/store'
+import { DAY_KINDS, childrenLoading, isChecked, isDay, stillInClassFirst, toggleDay, toggleFollowUp, useStore, viewRows, type DayKind, type FollowUpKind } from '../lib/store'
 import type { TKey } from '../lib/i18n'
 import { sortRows, useColumns, useSort } from '../lib/columns'
 import { NoChildren } from '../components/NoChildren'
@@ -83,7 +83,8 @@ export function AttendancePage() {
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
     const all = viewRows(store)
-    return sortRows(q ? all.filter(r => r.full_name.toLowerCase().includes(q)) : all, columns, sort, lang)
+    // same order as the Children page: those who left the class at the bottom
+    return stillInClassFirst(sortRows(q ? all.filter(r => r.full_name.toLowerCase().includes(q)) : all, columns, sort, lang))
   }, [store, columns, sort, lang, query])
 
   // Open with this Friday's whole month in view, starting right after the sticky name columns.
@@ -197,14 +198,24 @@ export function AttendancePage() {
                 </td>
               </tr>
             ) : (
-              rows.flatMap(r =>
-                KINDS.map(({ kind, label, on: onClass, hover }, i) => {
+              rows.flatMap((r, ri) => [
+                // the line above the first child who left the class
+                r.moved_out_on && !rows[ri - 1]?.moved_out_on && (
+                  <tr key="moved-out">
+                    <td colSpan={days.length + 3} className="border-y-2 border-slate-300 bg-slate-50 py-1.5 text-xs font-bold text-slate-500 dark:border-slate-600 dark:bg-slate-800/60">
+                      <span className="sticky inset-s-0 px-3">
+                        {t('movedOut')} ({rows.filter(x => x.moved_out_on).length})
+                      </span>
+                    </td>
+                  </tr>
+                ),
+                ...KINDS.map(({ kind, label, on: onClass, hover }, i) => {
                   const last = i === KINDS.length - 1
                   // A thicker line closes each child's pair of rows.
                   const bottom = last ? 'border-b-2 border-slate-200 dark:border-slate-700' : 'border-b border-slate-100 dark:border-slate-800'
                   const total = days.filter(d => isChecked(store, r.client_id, d.date, kind)).length
                   return (
-                    <tr key={`${r.client_id}-${kind}`}>
+                    <tr key={`${r.client_id}-${kind}`} className={r.moved_out_on ? 'opacity-60' : ''}>
                       {i === 0 && (
                         <td rowSpan={KINDS.length} className={`${stickyName} border-b-2 border-slate-200 px-3 py-1.5 align-middle dark:border-slate-700`}>
                           <button
@@ -249,7 +260,7 @@ export function AttendancePage() {
                     </tr>
                   )
                 }),
-              )
+              ])
             )}
           </tbody>
         </table>
