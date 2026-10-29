@@ -6,6 +6,7 @@ import type { TKey } from '../lib/i18n'
 import { sortRows, useColumns, useSort } from '../lib/columns'
 import { NoChildren } from '../components/NoChildren'
 import { Loading } from '../components/Loading'
+import { ClassTitle } from '../components/ClassTitle'
 import { currentServiceYear, iso, serviceYearRange } from '../lib/serviceYear'
 
 // Two rows per child, each with its own colour so they are easy to tell apart.
@@ -105,12 +106,19 @@ export function AttendancePage() {
   // First "loading", then either the grid or — for a class with no children yet — a card saying so.
   // Never an empty grid (same rule as the Children page).
   const count = viewRows(store).length
-  if (childrenLoading(store, count)) return <Loading />
-  if (count === 0) return <NoChildren />
+  const loading = childrenLoading(store, count)
+  if (loading || count === 0)
+    return (
+      <div className="space-y-4">
+        <ClassTitle />
+        {loading ? <Loading /> : <NoChildren />}
+      </div>
+    )
 
   return (
     <div className="space-y-4">
       {dayMenu && <DayMenu {...dayMenu} onClose={() => setDayMenu(null)} />}
+      <ClassTitle />
       <div className="flex flex-wrap items-center gap-3">
         <input
           className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 sm:max-w-xs dark:border-slate-700 dark:bg-slate-900"

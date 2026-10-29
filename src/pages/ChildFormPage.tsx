@@ -3,7 +3,7 @@ import { OWNERS, TEXT_FIELDS, type ChildInput, type CustomField, type Owner, typ
 import { useI18n, type TKey } from '../lib/i18n'
 import { go } from '../lib/router'
 import { classFields, findRow, saveChild, useStore } from '../lib/store'
-import { SIDES } from '../lib/columns'
+import { CATEGORIES, SIDES } from '../lib/columns'
 import { formatNationalId, nationalIdDigits } from '../lib/nationalId'
 import { NO, YES, formatDeacon, parseDeacon } from '../lib/deacon'
 import { PhotoPicker } from '../components/Avatar'
@@ -115,6 +115,7 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
         {text('birth_date', 'birthDate', { type: 'date', ltr: true })}
         {text('national_id', 'nationalId', { ltr: true, inputMode: 'numeric', placeholder: 'phNationalId' })}
         <DeaconField value={texts.deacon} onChange={setText('deacon')} />
+        <CategoryField value={texts.category} onChange={setText('category')} />
       </Section>
 
       <Section title={t('address')}>
@@ -331,6 +332,33 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
       <legend className="rounded-full bg-linear-to-l from-indigo-600 to-indigo-500 px-4 py-1 text-sm font-bold text-white shadow-md shadow-indigo-500/25 dark:from-indigo-500 dark:to-indigo-400">{title}</legend>
       <div className="grid gap-4 sm:grid-cols-2">{children}</div>
     </fieldset>
+  )
+}
+
+/** الحالة: one of عادي / مستتر / إخوة الرب. Tap the chosen one again to clear it. */
+function CategoryField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { t } = useI18n()
+  return (
+    // a div, not a <label>: a label would pass clicks on its text to the first button
+    <div className="flex flex-col gap-2">
+      <span className="text-sm font-semibold">{t('category')}</span>
+      <div className="flex gap-2">
+        {CATEGORIES.map(c => {
+          const on = value === c.value
+          return (
+            <button
+              key={c.value}
+              type="button"
+              onClick={() => onChange(on ? '' : c.value)}
+              aria-pressed={on}
+              className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold ${on ? c.tone : 'border-slate-300 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800'}`}
+            >
+              {t(c.key)}
+            </button>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 

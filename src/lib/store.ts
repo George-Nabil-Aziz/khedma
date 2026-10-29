@@ -3,6 +3,7 @@ import { clear, get, setMany } from 'idb-keyval'
 import { CORE_FIELDS, TEXT_FIELDS, supabase, type Child, type ChildInput, type ClassInfo, type CustomField, type FieldType, type Profile } from './supabase'
 import { load, save } from './storage'
 import { setYearEndWeeks } from './serviceYear'
+import { resetTrips } from './trips'
 
 /*
  * Offline-first store.
@@ -230,6 +231,7 @@ export async function resetStore() {
   await clear().catch(() => {})
   save('class', '')
   save('lastActive', '') // the idle sign-out clock (idle.ts) starts again at the next sign-in
+  resetTrips()
   openedDefault = false // the next user to sign in gets their own ⭐ class
   set(
     { rows: [], fields: [], classes: [], profile: null, currentClass: null, outbox: [], conflicts: [], lastSyncAt: null, syncError: null, classLoading: false, attendance: {}, attOutbox: [], attError: null, dayMarks: {}, dayOutbox: [], yearEndWeeks: setWeeks(0) },

@@ -8,13 +8,13 @@ import { sortRows, useColumnPrefs, useColumns, useSort, type Column } from '../l
 import { Avatar } from '../components/Avatar'
 import { NoChildren } from '../components/NoChildren'
 import { Loading } from '../components/Loading'
-import { AlertIcon, ChevronDownIcon, ChevronUpIcon, CloudOffIcon, ColumnsIcon, PlusIcon, SortIcon, StarIcon } from '../components/Icons'
+import { ClassTitle } from '../components/ClassTitle'
+import { AlertIcon, ChevronDownIcon, ChevronUpIcon, CloudOffIcon, ColumnsIcon, PlusIcon, SortIcon } from '../components/Icons'
 
 export function ChildrenPage() {
   const { t, lang } = useI18n()
   const store = useStore()
   const rows = useMemo(() => viewRows(store), [store])
-  const currentClass = store.classes.find(c => c.id === store.currentClass)
   const columns = useColumns()
   const prefs = useColumnPrefs(columns)
   const { sort, toggle } = useSort()
@@ -67,16 +67,7 @@ export function ChildrenPage() {
         </div>
       )}
 
-      {/* the class on screen, in full — the sidebar picker cuts long names short */}
-      {currentClass && (
-        <h2 className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span className="text-xl font-bold">{currentClass.name}</span>
-          <span className="flex items-center gap-1.5 text-sm text-slate-500">
-            {currentClass.is_default && <StarIcon className="size-4 text-amber-500" />}
-            <span dir="ltr">{currentClass.service_year}</span>
-          </span>
-        </h2>
-      )}
+      <ClassTitle />
     </>
   )
 

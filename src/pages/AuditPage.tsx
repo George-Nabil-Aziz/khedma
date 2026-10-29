@@ -35,6 +35,7 @@ const FIELD_LABEL: Record<string, TKey> = {
   apartment: 'apartmentLabel',
   birth_date: 'birthDate',
   deacon: 'deacon',
+  category: 'category',
   notes: 'notes',
   national_id: 'nationalId',
   phones: 'phones',
@@ -147,6 +148,12 @@ export function AuditPage() {
     if (e.table_name === 'class_day_marks') {
       const kinds = dayKindsChanged(e).map(k => t(k === 'club' ? 'clubDay' : 'communionDay'))
       return (kinds.join(' + ') || t('communionDay')) + ' — ' + String(row?.date ?? '')
+    }
+    if (e.table_name === 'trips') return `${t('trips')}: ${row?.name ?? ''}`
+    if (e.table_name === 'trip_children' || e.table_name === 'trip_payments') {
+      const child = String(row?.child_client_id ?? '')
+      const who = nameOf.get(child) ?? child.slice(0, 8)
+      return e.table_name === 'trip_payments' ? `${t('trips')} — ${who} — ${t('amount')}: ${row?.amount ?? ''}` : `${t('trips')} — ${who}`
     }
     return ''
   }

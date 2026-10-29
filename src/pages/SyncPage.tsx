@@ -17,6 +17,7 @@ const FIELD_LABEL: Record<CoreField, TKey> = {
   apartment: 'apartmentLabel',
   birth_date: 'birthDate',
   deacon: 'deacon',
+  category: 'category',
   notes: 'notes',
   national_id: 'nationalId',
   phones: 'phones',

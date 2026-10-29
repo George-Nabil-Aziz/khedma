@@ -30,6 +30,7 @@ export const TEXT_FIELDS = [
   'deacon',
   'notes',
   'national_id',
+  'category', // الحالة: normal / hidden / brothers — see CATEGORIES
 ] as const
 export type TextField = (typeof TEXT_FIELDS)[number]
 

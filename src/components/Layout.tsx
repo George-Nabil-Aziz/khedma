@@ -8,6 +8,7 @@ import { activeClasses, resetStore, setCurrentClass, useStore } from '../lib/sto
 import { Avatar } from './Avatar'
 import { confirmDialog } from './ConfirmDialog'
 import {
+  BusIcon,
   CalendarCheckIcon,
   ChevronDownIcon,
   HistoryIcon,
@@ -89,6 +90,10 @@ export function Layout({ email, admin, title, children }: { email: string; admin
           <button className={item(route.name === 'attendance')} onClick={() => nav('/attendance')}>
             <CalendarCheckIcon />
             {t('attendance')}
+          </button>
+          <button className={item(route.name === 'trips' || route.name === 'trip')} onClick={() => nav('/trips')}>
+            <BusIcon />
+            {t('trips')}
           </button>
           <button className={item(route.name === 'fields')} onClick={() => nav('/fields')}>
             <SlidersIcon />

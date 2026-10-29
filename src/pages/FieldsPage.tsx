@@ -12,7 +12,7 @@ const TYPES: { value: FieldType; key: TKey }[] = [
   { value: 'boolean', key: 'typeBoolean' },
 ]
 
-const BUILT_IN: TKey[] = ['name', 'address', 'landmark', 'birthDate', 'age', 'motherMobile', 'fatherMobile', 'childMobile', 'primaryContact', 'deacon', 'notes', 'nationalId']
+const BUILT_IN: TKey[] = ['name', 'address', 'landmark', 'birthDate', 'age', 'motherMobile', 'fatherMobile', 'childMobile', 'primaryContact', 'category', 'deacon', 'notes', 'nationalId']
 
 const input =
   'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800'

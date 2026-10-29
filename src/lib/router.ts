@@ -14,10 +14,12 @@ export type Route =
   | { name: 'classes' }
   | { name: 'profile' }
   | { name: 'settings' }
+  | { name: 'trips' }
+  | { name: 'trip'; id: string }
 
-const STATIC = ['new', 'sync', 'fields', 'attendance', 'audit', 'share', 'users', 'classes', 'profile', 'settings'] as const
+const STATIC = ['new', 'sync', 'fields', 'attendance', 'audit', 'share', 'users', 'classes', 'profile', 'settings', 'trips'] as const
 
-export type Path = '/' | `/${(typeof STATIC)[number]}` | `/child/${string}`
+export type Path = '/' | `/${(typeof STATIC)[number]}` | `/child/${string}` | `/trip/${string}`
 
 function parse(hash: string): Route {
   const path = hash.replace(/^#\/?/, '')
@@ -25,6 +27,8 @@ function parse(hash: string): Route {
   if (fixed) return { name: fixed }
   const m = path.match(/^child\/([\w-]+)$/)
   if (m) return { name: 'edit', id: m[1] }
+  const trip = path.match(/^trip\/([\w-]+)$/)
+  if (trip) return { name: 'trip', id: trip[1] }
   return { name: 'list' }
 }
 

@@ -19,6 +19,7 @@ import { ClassesPage } from './pages/ClassesPage'
 import { UsersPage } from './pages/UsersPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { SettingsPage } from './pages/SettingsPage'
+import { TripPage, TripsPage } from './pages/TripsPage'
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -80,6 +81,10 @@ function Routes({ email, userId, admin }: { email: string; userId: string; admin
       return page('editChild', <ChildFormPage clientId={route.id} />)
     case 'attendance':
       return page('attendance', <AttendancePage />)
+    case 'trips':
+      return page('trips', <TripsPage />)
+    case 'trip':
+      return page('trips', <TripPage id={route.id} />)
     case 'fields':
       return page('customize', <FieldsPage admin={admin} />)
     default:

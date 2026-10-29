@@ -26,6 +26,13 @@ export const SIDES = [
   { value: 'وسط', key: 'middle' },
 ] as const satisfies readonly { value: string; key: TKey }[]
 
+/** الحالة of a child, as stored in the `category` column, with its colours. */
+export const CATEGORIES = [
+  { value: 'normal', key: 'catNormal', tone: 'border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200' },
+  { value: 'hidden', key: 'catHidden', tone: 'border-violet-300 bg-violet-50 text-violet-800 dark:border-violet-500/40 dark:bg-violet-500/10 dark:text-violet-300' },
+  { value: 'brothers', key: 'catBrothers', tone: 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300' },
+] as const satisfies readonly { value: string; key: TKey; tone: string }[]
+
 export function ageOf(birthDate: string | null): number | null {
   if (!birthDate) return null
   const b = new Date(birthDate)
@@ -110,6 +117,19 @@ export function useColumns(): Column[] {
         render: r => r.primary_contacts.map(o => t(OWNER_LABEL[o])).join(sep),
         sort: r => r.primary_contacts.map(o => t(OWNER_LABEL[o])).join(sep) || null,
         nowrap: true,
+      },
+      {
+        id: 'category',
+        label: t('category'),
+        nowrap: true,
+        render: r => {
+          const c = CATEGORIES.find(x => x.value === r.category)
+          return c && <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${c.tone}`}>{t(c.key)}</span>
+        },
+        sort: r => {
+          const i = CATEGORIES.findIndex(x => x.value === r.category)
+          return i < 0 ? null : i
+        },
       },
       {
         id: 'deacon',
