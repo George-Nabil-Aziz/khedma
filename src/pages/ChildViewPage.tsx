@@ -1,10 +1,10 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useI18n } from '../lib/i18n'
 import { go } from '../lib/router'
-import { findRow, setMovedOut, useStore } from '../lib/store'
+import { deleteChild, findRow, setMovedOut, useStore } from '../lib/store'
 import { formatAddress, useColumns } from '../lib/columns'
 import { Avatar } from '../components/Avatar'
-import { AlertIcon, ArrowBackIcon, DoorIcon, PencilIcon } from '../components/Icons'
+import { AlertIcon, ArrowBackIcon, DoorIcon, PencilIcon, TrashIcon } from '../components/Icons'
 import { confirmDialog } from '../components/ConfirmDialog'
 
 /**
@@ -16,6 +16,7 @@ export function ChildViewPage({ clientId }: { clientId: string }) {
   const store = useStore()
   const columns = useColumns()
   const child = findRow(store, clientId)
+  const [error, setError] = useState('')
 
   if (!child)
     return (
@@ -81,6 +82,27 @@ export function ChildViewPage({ clientId }: { clientId: string }) {
             >
               {t('movedBack')}
             </button>
+            {/* gone for good: delete them, after a red confirm that names them */}
+            <button
+              onClick={async () => {
+                const ok = await confirmDialog({
+                  title: t('deleteChild'),
+                  message: t('deleteChildConfirm').replace('{name}', child.full_name),
+                  confirmLabel: t('deleteChild'),
+                  danger: true,
+                })
+                if (!ok) return
+                const err = await deleteChild(clientId)
+                if (err) setError(err)
+                else go('/')
+              }}
+              disabled={!store.online}
+              title={store.online ? undefined : t('needsOnline')}
+              className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-red-500/30 dark:bg-slate-900 dark:text-red-400 dark:hover:bg-red-500/10"
+            >
+              <TrashIcon />
+              {t('deleteChild')}
+            </button>
           </div>
           {/* where they went — optional, filled in from the edit form */}
           {child.moved_to_church || child.moved_to_servant ? (
@@ -105,6 +127,8 @@ export function ChildViewPage({ clientId }: { clientId: string }) {
           )}
         </div>
       )}
+
+      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">{error}</p>}
 
       <dl className="grid gap-x-6 gap-y-4 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2 dark:border-slate-800 dark:bg-slate-900">
         {columns.flatMap(c => {

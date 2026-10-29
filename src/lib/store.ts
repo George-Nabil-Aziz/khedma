@@ -527,6 +527,26 @@ export function saveOrder(ids: string[]) {
   sync()
 }
 
+/**
+ * Deletes a child for good, with their متابعة ticks and trips (the database removes those
+ * with them). Needs a connection. The audit log keeps everything the child had.
+ */
+export async function deleteChild(clientId: string): Promise<string | null> {
+  const queued = state.outbox.find(o => o.client_id === clientId)
+  // never sent: nothing on the server yet — just drop it here
+  if (queued?.kind !== 'insert') {
+    const { error } = await supabase.from('children').delete().eq('client_id', clientId)
+    if (error) return error.message
+  }
+  set({
+    rows: state.rows.filter(r => r.client_id !== clientId),
+    outbox: state.outbox.filter(o => o.client_id !== clientId),
+    conflicts: state.conflicts.filter(c => c.client_id !== clientId),
+    attOutbox: state.attOutbox.filter(o => o.child !== clientId),
+  })
+  return null
+}
+
 /** The child left the class (today), or came back (null). Works offline like any edit. */
 export function setMovedOut(clientId: string, movedOut: boolean) {
   const row = findRow(state, clientId)
