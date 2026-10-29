@@ -1,5 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
+import { save } from '../lib/storage'
 import { useI18n } from '../lib/i18n'
 import { PasswordInput } from '../components/PasswordInput'
 import { HeaderButtons } from '../components/Layout'
@@ -56,6 +57,8 @@ function SignIn() {
     e.preventDefault()
     setBusy(true)
     setError('')
+    // start the 3-hour idle clock (lib/idle.ts) afresh — before signing in, as the app opens right away
+    save('lastActive', String(Date.now()))
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) setError(error.message)
     else

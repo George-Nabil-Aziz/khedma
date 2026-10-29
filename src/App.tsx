@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 import { useI18n, type TKey } from './lib/i18n'
 import { useRoute } from './lib/router'
+import { useIdleSignOut } from './lib/idle'
 import { activeClasses, startStore, useStore } from './lib/store'
 import { Layout } from './components/Layout'
 import { AccountGate } from './components/AccountGate'
@@ -53,6 +54,7 @@ function Routes({ email, userId, admin }: { email: string; userId: string; admin
   useEffect(() => {
     startStore(userId)
   }, [userId])
+  useIdleSignOut()
 
   const page = (title: TKey, body: ReactNode) => (
     <Layout email={email} admin={admin} title={t(title)}>

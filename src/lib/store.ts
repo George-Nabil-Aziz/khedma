@@ -107,6 +107,9 @@ function set(patch: Partial<State>, persist = true) {
   }
 }
 
+/** The store outside React. */
+export const getState = () => state
+
 export function useStore() {
   return useSyncExternalStore(
     l => {
@@ -222,6 +225,7 @@ export async function startStore(userId: string) {
 export async function resetStore() {
   await clear().catch(() => {})
   save('class', '')
+  save('lastActive', '') // the idle sign-out clock (idle.ts) starts again at the next sign-in
   openedDefault = false // the next user to sign in gets their own ⭐ class
   set(
     { rows: [], fields: [], classes: [], profile: null, currentClass: null, outbox: [], conflicts: [], lastSyncAt: null, syncError: null, attendance: {}, attOutbox: [], attError: null, dayMarks: {}, dayOutbox: [], yearEndWeeks: setWeeks(0) },

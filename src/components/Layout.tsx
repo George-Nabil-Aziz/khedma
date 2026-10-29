@@ -209,10 +209,15 @@ function ClassPicker({ classes, current, onPick }: { classes: ClassInfo[]; curre
           open ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-slate-300 dark:border-slate-700'
         }`}
       >
-        {selected?.is_default && <StarIcon className="size-4 shrink-0 text-amber-500" />}
         <span className="min-w-0 flex-1">
           <span className="block truncate">{selected?.name ?? '—'}</span>
-          {selected && year(selected)}
+          {/* the star sits by the year, leaving the whole first line to the name */}
+          {selected && (
+            <span className="flex items-center gap-1">
+              {selected.is_default && <StarIcon className="size-3.5 shrink-0 text-amber-500" />}
+              {year(selected)}
+            </span>
+          )}
         </span>
         <ChevronDownIcon className={`size-4 shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
