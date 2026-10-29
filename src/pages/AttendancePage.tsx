@@ -21,14 +21,11 @@ const DAY: Record<DayKind, { label: TKey; sign: string; text: string; menuOn: st
   club: { label: 'clubDay', sign: '⚽', text: 'text-sky-600 dark:text-sky-300', menuOn: 'bg-sky-100 text-sky-800 dark:bg-sky-500/20 dark:text-sky-200' },
 }
 
-/** Background of a Friday's column: amber for تناول, sky for نادي, both halves when it is both. */
-function dayBg(communion: boolean, club: boolean, strong: boolean) {
-  if (communion && club)
-    return strong
-      ? 'bg-linear-to-b from-amber-200 to-sky-200 dark:from-amber-500/30 dark:to-sky-500/30'
-      : 'bg-linear-to-b from-amber-100 to-sky-100 dark:from-amber-500/15 dark:to-sky-500/15'
-  if (communion) return strong ? 'bg-amber-200 dark:bg-amber-500/30' : 'bg-amber-100 dark:bg-amber-500/15'
-  if (club) return strong ? 'bg-sky-200 dark:bg-sky-500/30' : 'bg-sky-100 dark:bg-sky-500/15'
+/** Background of a Friday's column, header and rows alike: amber for تناول, sky for نادي, both when it is both. */
+function dayBg(communion: boolean, club: boolean) {
+  if (communion && club) return 'bg-linear-to-b from-amber-200 to-sky-200 dark:from-amber-500/30 dark:to-sky-500/30'
+  if (communion) return 'bg-amber-200 dark:bg-amber-500/30'
+  if (club) return 'bg-sky-200 dark:bg-sky-500/30'
   return ''
 }
 
@@ -106,7 +103,7 @@ export function AttendancePage() {
   const stickyKind = 'sticky inset-s-24 sm:inset-s-44 z-10 w-16 min-w-16 sm:w-24 sm:min-w-24'
   const headBg = 'bg-white dark:bg-slate-900'
   // every other child on a light band (both of its rows); opaque, as the name cells stay on top while scrolling
-  const band = (i: number) => (i % 2 ? 'bg-slate-100 dark:bg-slate-800' : 'bg-white dark:bg-slate-900')
+  const band = (i: number) => (i % 2 ? 'bg-slate-200 dark:bg-slate-800' : 'bg-white dark:bg-slate-900')
 
   // First "loading", then either the grid or — for a class with no children yet — a card saying so.
   // Never an empty grid (same rule as the Children page).
@@ -167,7 +164,7 @@ export function AttendancePage() {
                   key={d.date}
                   ref={d.date === currentDate ? currentCell : undefined}
                   className={`border-b border-e border-slate-200 p-0.5 text-xs font-semibold dark:border-slate-800 ${firstOfMonth.has(d.date) ? 'border-s' : ''} ${
-                    d.date === currentDate ? 'bg-indigo-600 text-white' : dayBg(isDay(store, d.date, 'communion'), isDay(store, d.date, 'club'), true)
+                    d.date === currentDate ? 'bg-indigo-600 text-white' : dayBg(isDay(store, d.date, 'communion'), isDay(store, d.date, 'club'))
                   }`}
                 >
                   {/* click a date to choose what that Friday is for the whole class: تناول, نادي, or both */}
@@ -241,7 +238,7 @@ export function AttendancePage() {
                           <td
                             key={d.date}
                             className={`${bottom} border-e border-e-slate-100 p-1 text-center dark:border-e-slate-800 ${firstOfMonth.has(d.date) ? 'border-s border-s-slate-200 dark:border-s-slate-700' : ''} ${
-                              d.date === currentDate ? 'bg-indigo-50 dark:bg-indigo-500/10' : dayBg(isDay(store, d.date, 'communion'), isDay(store, d.date, 'club'), false)
+                              d.date === currentDate ? 'bg-indigo-50 dark:bg-indigo-500/10' : dayBg(isDay(store, d.date, 'communion'), isDay(store, d.date, 'club'))
                             }`}
                           >
                             <button
