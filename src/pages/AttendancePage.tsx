@@ -25,10 +25,10 @@ const DAY: Record<DayKind, { label: TKey; sign: string; text: string; menuOn: st
 function dayBg(communion: boolean, club: boolean, strong: boolean) {
   if (communion && club)
     return strong
-      ? 'bg-linear-to-b from-amber-100 to-sky-100 dark:from-amber-500/15 dark:to-sky-500/15'
-      : 'bg-linear-to-b from-amber-50 to-sky-50 dark:from-amber-500/5 dark:to-sky-500/5'
-  if (communion) return strong ? 'bg-amber-100 dark:bg-amber-500/15' : 'bg-amber-50 dark:bg-amber-500/5'
-  if (club) return strong ? 'bg-sky-100 dark:bg-sky-500/15' : 'bg-sky-50 dark:bg-sky-500/5'
+      ? 'bg-linear-to-b from-amber-200 to-sky-200 dark:from-amber-500/30 dark:to-sky-500/30'
+      : 'bg-linear-to-b from-amber-100 to-sky-100 dark:from-amber-500/15 dark:to-sky-500/15'
+  if (communion) return strong ? 'bg-amber-200 dark:bg-amber-500/30' : 'bg-amber-100 dark:bg-amber-500/15'
+  if (club) return strong ? 'bg-sky-200 dark:bg-sky-500/30' : 'bg-sky-100 dark:bg-sky-500/15'
   return ''
 }
 
@@ -106,7 +106,7 @@ export function AttendancePage() {
   const stickyKind = 'sticky inset-s-24 sm:inset-s-44 z-10 w-16 min-w-16 sm:w-24 sm:min-w-24'
   const headBg = 'bg-white dark:bg-slate-900'
   // every other child on a light band (both of its rows); opaque, as the name cells stay on top while scrolling
-  const band = (i: number) => (i % 2 ? 'bg-slate-50 dark:bg-slate-800' : 'bg-white dark:bg-slate-900')
+  const band = (i: number) => (i % 2 ? 'bg-slate-100 dark:bg-slate-800' : 'bg-white dark:bg-slate-900')
 
   // First "loading", then either the grid or — for a class with no children yet — a card saying so.
   // Never an empty grid (same rule as the Children page).
@@ -124,18 +124,19 @@ export function AttendancePage() {
     <div className="space-y-4">
       {dayMenu && <DayMenu {...dayMenu} onClose={() => setDayMenu(null)} />}
       <ClassTitle />
-      <div className="flex flex-wrap items-center gap-3">
+      {/* on a phone: search and the count on one line, the communion / club hint on its own line under them */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <input
-          className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 sm:max-w-xs dark:border-slate-700 dark:bg-slate-900"
+          className="min-w-40 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 sm:max-w-xs dark:border-slate-700 dark:bg-slate-900"
           placeholder={t('search')}
           value={query}
           onChange={e => setQuery(e.target.value)}
         />
-        <span className="rounded-full bg-indigo-50 px-3 py-1 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
+        <span className="shrink-0 rounded-full bg-indigo-50 px-3 py-1 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
           {t('total')}: {rows.length}
         </span>
-        <span className="text-xs text-slate-500">{t('attendanceOrderNote')}</span>
-        <span className="text-xs text-amber-700 dark:text-amber-300">{t('communionHint')}</span>
+        <span className="hidden text-xs text-slate-500 sm:inline">{t('attendanceOrderNote')}</span>
+        <span className="basis-full text-xs text-amber-700 sm:basis-auto dark:text-amber-300">{t('communionHint')}</span>
       </div>
 
       <div ref={scroller} className="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
