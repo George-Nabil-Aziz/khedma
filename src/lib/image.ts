@@ -19,10 +19,9 @@ export async function photoToThumbnail(file: File, max = 320): Promise<string> {
 }
 
 /**
- * Up to two capital initials for a placeholder avatar:
- * "george nabil" → "GN", "george.nabil.biy@gmail.com" → "GN", "جورج نبيل" → "ج ن".
- * Arabic letters next to each other join into a word ("جن"), so they get a thin space between
- * them and show as two separate letters.
+ * Initials for a placeholder avatar: two capitals in English — "george nabil" → "GN",
+ * "george.nabil.biy@gmail.com" → "GN" — but only the first letter in Arabic: "جورج نبيل" → "ج"
+ * (two Arabic letters side by side join into a word, "جن").
  */
 export function initials(name: string | null | undefined): string {
   const letters = (name ?? '')
@@ -32,5 +31,5 @@ export function initials(name: string | null | undefined): string {
     .filter(Boolean)
     .slice(0, 2)
     .map(w => [...w][0] ?? '')
-  return letters.join(letters.some(l => /[؀-ۿ]/.test(l)) ? ' ' : '').toUpperCase()
+  return (/[؀-ۿ]/.test(letters[0] ?? '') ? letters[0] : letters.join('').toUpperCase()) ?? ''
 }
