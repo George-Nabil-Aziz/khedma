@@ -5,6 +5,7 @@ import { load, save } from './storage'
 import { classFields, useStore, type ViewRow } from './store'
 import { OWNER_LABEL, OWNER_PHONES_LABEL, telLink, whatsappLink } from './phones'
 import { formatNationalId } from './nationalId'
+import { NO, YES, parseDeacon } from './deacon'
 import { StarIcon, WhatsAppIcon } from '../components/Icons'
 
 export type SortValue = string | number | null
@@ -110,7 +111,25 @@ export function useColumns(): Column[] {
         sort: r => r.primary_contacts.map(o => t(OWNER_LABEL[o])).join(sep) || null,
         nowrap: true,
       },
-      { id: 'deacon', label: t('deacon'), render: r => r.deacon, sort: r => r.deacon },
+      {
+        id: 'deacon',
+        label: t('deacon'),
+        render: r => {
+          const d = parseDeacon(r.deacon)
+          if (d.is === null) return null
+          return (
+            <span className="inline-flex items-center gap-1.5">
+              <span title={t(d.is ? 'yes' : 'no')}>{d.is ? YES : NO}</span>
+              {d.note.trim()}
+            </span>
+          )
+        },
+        // yes first, then no; by the note within each
+        sort: r => {
+          const d = parseDeacon(r.deacon)
+          return d.is === null ? null : `${d.is ? 0 : 1}${d.note.trim()}`
+        },
+      },
       { id: 'notes', label: t('notes'), render: r => r.notes, sort: r => r.notes },
       { id: 'national_id', label: t('nationalId'), render: r => r.national_id && <span dir="ltr">{formatNationalId(r.national_id)}</span>, sort: r => r.national_id, nowrap: true },
     ]

@@ -5,6 +5,7 @@ import { go } from '../lib/router'
 import { classFields, findRow, saveChild, useStore } from '../lib/store'
 import { SIDES } from '../lib/columns'
 import { formatNationalId, nationalIdDigits } from '../lib/nationalId'
+import { NO, YES, formatDeacon, parseDeacon } from '../lib/deacon'
 import { PhotoPicker } from '../components/Avatar'
 import { OWNER_LABEL, OWNER_PHONES_LABEL } from '../lib/phones'
 import { ArrowBackIcon, PlusIcon, StarIcon, StarOutlineIcon, TrashIcon, WhatsAppIcon } from '../components/Icons'
@@ -113,7 +114,7 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
         <div className="sm:col-span-2">{text('full_name', 'name', { hint: 'nameHint', placeholder: 'phName' })}</div>
         {text('birth_date', 'birthDate', { type: 'date', ltr: true })}
         {text('national_id', 'nationalId', { ltr: true, inputMode: 'numeric', placeholder: 'phNationalId' })}
-        {text('deacon', 'deacon', { placeholder: 'phDeacon' })}
+        <DeaconField value={texts.deacon} onChange={setText('deacon')} />
       </Section>
 
       <Section title={t('address')}>
@@ -330,6 +331,54 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
       <legend className="rounded-full bg-linear-to-l from-indigo-600 to-indigo-500 px-4 py-1 text-sm font-bold text-white shadow-md shadow-indigo-500/25 dark:from-indigo-500 dark:to-indigo-400">{title}</legend>
       <div className="grid gap-4 sm:grid-cols-2">{children}</div>
     </fieldset>
+  )
+}
+
+/** شماس: ✅ / ⛔ (tap the chosen one again to clear the field), plus a note such as the rank — أغنسطس. */
+function DeaconField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { t } = useI18n()
+  const d = parseDeacon(value)
+  const set = (next: Partial<typeof d>) => onChange(formatDeacon({ ...d, ...next }))
+
+  const choice = (is: boolean) => {
+    const on = d.is === is
+    return (
+      <button
+        type="button"
+        // a note on its own would read as yes again, so clearing the choice clears the note too
+        onClick={() => set(on ? { is: null, note: '' } : { is })}
+        aria-pressed={on}
+        className={`flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-semibold ${
+          on
+            ? is
+              ? 'border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-500/50 dark:bg-emerald-500/10 dark:text-emerald-300'
+              : 'border-red-300 bg-red-50 text-red-700 dark:border-red-500/50 dark:bg-red-500/10 dark:text-red-300'
+            : 'border-slate-300 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800'
+        }`}
+      >
+        <span aria-hidden>{is ? YES : NO}</span>
+        {t(is ? 'yes' : 'no')}
+      </button>
+    )
+  }
+
+  return (
+    // a div, not a <label>: a label would pass clicks on its text to the first button
+    <div className="flex flex-col gap-2">
+      <span className="text-sm font-semibold">{t('deacon')}</span>
+      <div className="flex gap-2">
+        {choice(true)}
+        {choice(false)}
+        <input
+          className={`${inputClass(false)} min-w-0`}
+          placeholder={t('phDeacon')}
+          aria-label={t('deacon')}
+          value={d.note}
+          // writing a rank with nothing picked yet means yes
+          onChange={e => set({ note: e.target.value, is: d.is ?? (e.target.value.trim() ? true : null) })}
+        />
+      </div>
+    </div>
   )
 }
 
