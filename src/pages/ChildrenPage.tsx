@@ -1,12 +1,13 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useI18n } from '../lib/i18n'
 import { go } from '../lib/router'
-import { childrenLoading, moveChild, stillInClassFirst, sync, useStore, viewRows, type RowStatus, type ViewRow } from '../lib/store'
+import { childrenLoading, stillInClassFirst, sync, useStore, viewRows, type RowStatus } from '../lib/store'
 import { ColumnsMenu } from '../components/ColumnsMenu'
 import { Pagination, usePageSize } from '../components/Pagination'
 import { MY_ORDER, sortRows, useColumnPrefs, useColumns, useSort, type Column } from '../lib/columns'
 import { Avatar } from '../components/Avatar'
 import { NoChildren } from '../components/NoChildren'
+import { ReorderList } from '../components/ReorderList'
 import { Loading } from '../components/Loading'
 import { ClassTitle } from '../components/ClassTitle'
 import { AlertIcon, ChevronDownIcon, ChevronUpIcon, CloudOffIcon, ColumnsIcon, PlusIcon, SortIcon } from '../components/Icons'
@@ -21,7 +22,7 @@ export function ChildrenPage() {
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = usePageSize('children')
-  // ترتيبي by hand: ▲▼ on every row, everyone on one page, no search
+  // ترتيبي by hand: the table gives way to a list to drag the children in
   const [reordering, setReordering] = useState(false)
 
   // A new sort starts from the first page.
@@ -37,7 +38,7 @@ export function ChildrenPage() {
   }, [])
 
   const filtered = useMemo(() => {
-    const q = reordering ? '' : query.trim().toLowerCase()
+    const q = query.trim().toLowerCase()
     const list = !q
       ? rows
       : rows.filter(r =>
@@ -51,14 +52,14 @@ export function ChildrenPage() {
           ].some(v => v?.toLowerCase().includes(q)),
         )
     // sorted as asked, but those who left the class always come after the rest
-    return stillInClassFirst(sortRows(list, columns, reordering ? { id: MY_ORDER, dir: 'asc' } : sort, lang))
-  }, [rows, query, columns, sort, lang, reordering])
+    return stillInClassFirst(sortRows(list, columns, sort, lang))
+  }, [rows, query, columns, sort, lang])
   const movedOutCount = filtered.filter(r => r.moved_out_on).length
 
   // Back to a page that exists when the search or page size shrinks the list.
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const current = Math.min(page, pages)
-  const pageRows = reordering ? filtered : filtered.slice((current - 1) * pageSize, current * pageSize)
+  const pageRows = filtered.slice((current - 1) * pageSize, current * pageSize)
 
   const colSpan = prefs.visible.length + 2
 
@@ -86,68 +87,70 @@ export function ChildrenPage() {
       </div>
     )
 
+  if (reordering)
+    return (
+      <div className="space-y-4">
+        {top}
+        <ReorderList
+          rows={stillInClassFirst(sortRows(rows, columns, { id: MY_ORDER, dir: 'asc' }, lang))}
+          onClose={() => setReordering(false)}
+        />
+      </div>
+    )
+
   return (
     <div className="space-y-4">
       {top}
 
-      {reordering ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 dark:border-indigo-500/30 dark:bg-indigo-500/10">
-          <span className="flex-1 text-sm font-semibold text-indigo-800 dark:text-indigo-200">{t('reorderHelp')}</span>
-          <button onClick={() => setReordering(false)} className="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700">
-            {t('reorderDone')}
+      <div className="flex flex-wrap items-center gap-3">
+        <input
+          className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 sm:max-w-xs dark:border-slate-700 dark:bg-slate-900"
+          placeholder={t('search')}
+          value={query}
+          onChange={e => {
+            setQuery(e.target.value)
+            setPage(1)
+          }}
+        />
+        <span className="rounded-full bg-indigo-50 px-3 py-1 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
+          {t('total')}: {filtered.length}
+        </span>
+        <div className="ms-auto flex items-center gap-2">
+          <button
+            onClick={() => go('/new')}
+            className="flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
+          >
+            <PlusIcon className="size-4" />
+            {t('addChild')}
           </button>
-        </div>
-      ) : (
-        <div className="flex flex-wrap items-center gap-3">
-          <input
-            className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 sm:max-w-xs dark:border-slate-700 dark:bg-slate-900"
-            placeholder={t('search')}
-            value={query}
-            onChange={e => {
-              setQuery(e.target.value)
-              setPage(1)
+          <button
+            onClick={() => {
+              setQuery('')
+              setReordering(true)
             }}
-          />
-          <span className="rounded-full bg-indigo-50 px-3 py-1 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
-            {t('total')}: {filtered.length}
-          </span>
-          <div className="ms-auto flex items-center gap-2">
+            className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+          >
+            <SortIcon className="size-4" />
+            {t('reorder')}
+          </button>
+          <div className="relative">
             <button
-              onClick={() => go('/new')}
-              className="flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
-            >
-              <PlusIcon className="size-4" />
-              {t('addChild')}
-            </button>
-            <button
-              onClick={() => {
-                setQuery('')
-                setReordering(true)
-              }}
+              onClick={() => setMenuOpen(o => !o)}
               className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
             >
-              <SortIcon className="size-4" />
-              {t('reorder')}
+              <ColumnsIcon />
+              {t('columns')}
             </button>
-            <div className="relative">
-              <button
-                onClick={() => setMenuOpen(o => !o)}
-                className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-              >
-                <ColumnsIcon />
-                {t('columns')}
-              </button>
-              {menuOpen && <ColumnsMenu prefs={prefs} onClose={() => setMenuOpen(false)} />}
-            </div>
+            {menuOpen && <ColumnsMenu prefs={prefs} onClose={() => setMenuOpen(false)} />}
           </div>
         </div>
-      )}
+      </div>
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         <table className="table-grid w-full text-sm">
           <thead className="bg-slate-50 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
             <tr>
-              <SortHeader id={MY_ORDER} label="#" sort={reordering ? { id: MY_ORDER, dir: 'asc' } : sort} onSort={reordering ? () => {} : sortBy} />
+              <SortHeader id={MY_ORDER} label="#" sort={sort} onSort={sortBy} />
               <SortHeader id="name" label={t('name')} sort={sort} onSort={sortBy} />
               {prefs.visible.map(c => (
                 <SortHeader key={c.id} id={c.id} label={c.label} sort={sort} onSort={sortBy} />
@@ -174,11 +177,7 @@ export function ChildrenPage() {
                   )}
                   <tr className={`align-top hover:bg-slate-50 dark:hover:bg-slate-800/40 ${r.moved_out_on ? 'opacity-60' : ''}`}>
                     <td className="px-3 py-2 text-slate-400">
-                    {reordering ? (
-                      <MoveButtons list={filtered} index={i} />
-                    ) : (
-                      (current - 1) * pageSize + i + 1
-                    )}
+                    {(current - 1) * pageSize + i + 1}
                   </td>
                     <td className="min-w-40 px-3 py-2">
                       <button
@@ -201,7 +200,7 @@ export function ChildrenPage() {
         </table>
       </div>
 
-      {filtered.length > 0 && !reordering && (
+      {filtered.length > 0 && (
         <Pagination
           page={current}
           size={pageSize}
@@ -247,23 +246,5 @@ function StatusBadge({ status }: { status: RowStatus }) {
     <span title={status === 'conflict' ? t('statusConflict') : t('statusError')} className="text-red-500">
       <AlertIcon />
     </span>
-  )
-}
-
-/** ▲▼ for one row. Children who left the class move only among themselves, below the rest. */
-function MoveButtons({ list, index }: { list: ViewRow[]; index: number }) {
-  const { t } = useI18n()
-  const row = list[index]
-  const sameGroup = (j: number) => j >= 0 && j < list.length && !!list[j].moved_out_on === !!row.moved_out_on
-  const btn = 'grid size-7 place-items-center rounded-md border border-slate-200 text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 disabled:opacity-25 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-indigo-500/10'
-  return (
-    <div className="flex gap-1">
-      <button onClick={() => moveChild(list, index, -1)} disabled={!sameGroup(index - 1)} title={t('moveUp')} aria-label={`${row.full_name} — ${t('moveUp')}`} className={btn}>
-        <ChevronUpIcon />
-      </button>
-      <button onClick={() => moveChild(list, index, 1)} disabled={!sameGroup(index + 1)} title={t('moveDown')} aria-label={`${row.full_name} — ${t('moveDown')}`} className={btn}>
-        <ChevronDownIcon />
-      </button>
-    </div>
   )
 }

@@ -515,26 +515,16 @@ export function stillInClassFirst<T extends ChildInput>(rows: T[]): T[] {
 }
 
 /**
- * ترتيبي: move list[i] one place up (-1) or down (+1), swapping with its neighbour. `list` is
- * the whole class in the order on screen. The first move numbers everyone in that order;
- * after that a move only changes the two children involved. Works offline like any edit.
+ * ترتيبي: save the class's children in this order (client ids, first to last), all at once
+ * with one sync — only the children whose place changed are sent. Works offline like any edit.
  */
-export function moveChild(list: Child[], i: number, dir: -1 | 1) {
-  const j = i + dir
-  if (j < 0 || j >= list.length) return
-  const numbered = list.every(r => r.position != null) && new Set(list.map(r => r.position)).size === list.length
-  const pos = new Map(list.map((r, k) => [r.client_id, numbered ? r.position! : (k + 1) * 10]))
-  const a = list[i].client_id
-  const b = list[j].client_id
-  const pa = pos.get(a)!
-  pos.set(a, pos.get(b)!)
-  pos.set(b, pa)
-  for (const r of list) {
-    const p = pos.get(r.client_id)!
-    if (p === r.position) continue
-    const row = findRow(state, r.client_id)
-    if (row) saveChild(r.client_id, { ...row, position: p })
-  }
+export function saveOrder(ids: string[]) {
+  ids.forEach((id, k) => {
+    const row = findRow(state, id)
+    const position = (k + 1) * 10
+    if (row && row.position !== position) queueChild(id, { ...row, position })
+  })
+  sync()
 }
 
 /** The child left the class (today), or came back (null). Works offline like any edit. */
@@ -545,6 +535,12 @@ export function setMovedOut(clientId: string, movedOut: boolean) {
 }
 
 export function saveChild(clientId: string | null, input: ChildInput) {
+  queueChild(clientId, input)
+  sync()
+}
+
+/** Puts an add / edit in the outbox without syncing yet. */
+function queueChild(clientId: string | null, input: ChildInput) {
   const data = pick(input)
   const now = new Date().toISOString()
   let outbox = [...state.outbox]
@@ -570,7 +566,6 @@ export function saveChild(clientId: string | null, input: ChildInput) {
     }
   }
   set({ outbox })
-  sync()
 }
 
 export function discardOp(clientId: string) {

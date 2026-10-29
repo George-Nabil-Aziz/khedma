@@ -190,9 +190,7 @@ const dict = {
   myOrder: { ar: 'ترتيبي', en: 'My order' },
   reorder: { ar: 'رتّب', en: 'Reorder' },
   reorderDone: { ar: 'خلصت', en: 'Done' },
-  reorderHelp: { ar: 'حرّك الأولاد بالأسهم ▲▼ — الترتيب ده بيتحفظ وبيبقى عند كل خدام الفصل', en: 'Move children with ▲▼ — this order is saved for everyone in the class' },
-  moveUp: { ar: 'طلّع', en: 'Move up' },
-  moveDown: { ar: 'نزّل', en: 'Move down' },
+  reorderHelp: { ar: 'امسك الولد واسحبه لفوق أو لتحت. مفيش حاجة بتتحفظ غير لما تدوس خلصت — والترتيب بيبقى عند كل خدام الفصل', en: 'Hold a child and drag up or down. Nothing is saved until Done — the order is then shared with the class' },
   // a child who left the class
   movedOutOn: { ar: 'خرج من الفصل يوم', en: 'Left the class on' },
   movedOut: { ar: 'خرجوا من الفصل', en: 'Left the class' },

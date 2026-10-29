@@ -99,15 +99,6 @@ export function Layout({ email, admin, title, children }: { email: string; admin
             <SlidersIcon />
             {t('customize')}
           </button>
-          <button className={item(route.name === 'sync')} onClick={() => nav('/sync')}>
-            <SyncIcon />
-            <span className="flex-1">{t('sync')}</span>
-            {issues > 0 ? (
-              <span className="rounded-full bg-red-500 px-2 text-xs font-bold text-white">{issues}</span>
-            ) : pending > 0 ? (
-              <span className="rounded-full bg-amber-500 px-2 text-xs font-bold text-white">{pending}</span>
-            ) : null}
-          </button>
           <div className="mx-3 my-2 border-t border-slate-200 dark:border-slate-800" />
           <button className={item(route.name === 'classes')} onClick={() => nav('/classes')}>
             <SchoolIcon />
@@ -134,6 +125,17 @@ export function Layout({ email, admin, title, children }: { email: string; admin
               </button>
             </>
           )}
+          {/* at the bottom, with الإعدادات — a divider of its own when there is no admin section */}
+          {!admin && <div className="mx-3 my-2 border-t border-slate-200 dark:border-slate-800" />}
+          <button className={item(route.name === 'sync')} onClick={() => nav('/sync')}>
+            <SyncIcon />
+            <span className="flex-1">{t('sync')}</span>
+            {issues > 0 ? (
+              <span className="rounded-full bg-red-500 px-2 text-xs font-bold text-white">{issues}</span>
+            ) : pending > 0 ? (
+              <span className="rounded-full bg-amber-500 px-2 text-xs font-bold text-white">{pending}</span>
+            ) : null}
+          </button>
         </nav>
 
         <div className="border-t border-slate-200 p-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
