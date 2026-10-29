@@ -30,8 +30,7 @@ export function ReorderList({ rows, onClose }: { rows: ViewRow[]; onClose: () =>
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 dark:border-indigo-500/30 dark:bg-indigo-500/10">
-        <span className="flex-1 text-sm font-semibold text-indigo-800 dark:text-indigo-200">{t('reorderHelp')}</span>
+      <div className="flex flex-wrap items-center justify-end gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 dark:border-indigo-500/30 dark:bg-indigo-500/10">
         <button onClick={onClose} className="rounded-lg border border-slate-300 bg-white px-4 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">
           {t('cancel')}
         </button>
