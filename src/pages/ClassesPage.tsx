@@ -256,7 +256,8 @@ function ClassCard({ c, admin }: { c: ClassInfo; admin: boolean }) {
               autoFocus
               aria-label={t('className')}
             />
-            <button disabled={busy || !name.trim()} className="rounded-lg bg-indigo-600 px-3 text-sm font-semibold text-white disabled:opacity-50">
+            {/* nothing to save until the name is actually changed */}
+            <button disabled={busy || !name.trim() || name.trim() === c.name} className="rounded-lg bg-indigo-600 px-3 text-sm font-semibold text-white disabled:opacity-50">
               {t('save')}
             </button>
             {/* back to the card without saving */}

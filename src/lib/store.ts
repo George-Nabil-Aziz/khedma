@@ -48,9 +48,9 @@ type State = {
   /** متابعة ticks made on this device and not sent yet. */
   attOutbox: AttOp[]
   attError: string | null
-  /** Fridays marked as communion days, keyed by dayKey(class, date). */
+  /** Fridays marked as communion / club days, keyed by dayKey(class, date, kind). */
   dayMarks: Record<string, boolean>
-  /** Communion-day marks made on this device and not sent yet. */
+  /** Communion / club marks made on this device and not sent yet. */
   dayOutbox: DayOp[]
   /** Fridays added to (or taken off) the end of every service year — set by an admin. */
   yearEndWeeks: number
@@ -203,7 +203,8 @@ export async function startStore(userId: string) {
       attOutbox: (attOutbox ?? []).filter(o => o.kind), // drop ticks queued by an older version
       classes: classes ?? [],
       dayMarks: dayMarks ?? {},
-      dayOutbox: dayOutbox ?? [],
+      // marks queued by an older version were communion-only: { communion } instead of { kind, on }
+      dayOutbox: (dayOutbox ?? []).map(o => (o.kind ? o : { ...o, kind: 'communion' as const, on: (o as unknown as { communion: boolean }).communion })),
       profile: profile ?? null,
       yearEndWeeks: setWeeks(yearEndWeeks ?? 0),
       loaded: true,
@@ -409,29 +410,36 @@ export function toggleFollowUp(child: string, date: string, kind: FollowUpKind) 
   scheduleSync()
 }
 
-// ---- يوم تناول — a Friday marked for the whole class -----------------------
+// ---- يوم تناول / نادي — a Friday marked for the whole class ------------------
 
-export type DayOp = { classId: string; date: string; communion: boolean; queued_at: string }
+/** A Friday can be a communion day (تناول), a club day (نادي), or both. */
+export type DayKind = 'communion' | 'club'
+export const DAY_KINDS: DayKind[] = ['communion', 'club']
 
-export const dayKey = (classId: string, date: string) => `${classId}|${date}`
+export type DayOp = { classId: string; date: string; kind: DayKind; on: boolean; queued_at: string }
 
-export function isCommunion(s: State, date: string): boolean {
-  const classId = s.currentClass
-  if (!classId) return false
+export const dayKey = (classId: string, date: string, kind: DayKind) => `${classId}|${date}|${kind}`
+
+function dayMark(s: State, classId: string, date: string, kind: DayKind): boolean {
   for (let i = s.dayOutbox.length - 1; i >= 0; i--) {
     const o = s.dayOutbox[i]
-    if (o.classId === classId && o.date === date) return o.communion
+    if (o.classId === classId && o.date === date && o.kind === kind) return o.on
   }
-  return s.dayMarks[dayKey(classId, date)] ?? false
+  return s.dayMarks[dayKey(classId, date, kind)] ?? false
 }
 
-/** Mark / unmark a Friday of the class on screen as a communion day. Works offline. */
-export function toggleCommunion(date: string) {
+/** Is this Friday of the class on screen marked as `kind`? */
+export function isDay(s: State, date: string, kind: DayKind): boolean {
+  return !!s.currentClass && dayMark(s, s.currentClass, date, kind)
+}
+
+/** Mark / unmark a Friday of the class on screen as a communion or club day. Works offline. */
+export function toggleDay(date: string, kind: DayKind) {
   const classId = state.currentClass
   if (!classId) return
-  const communion = !isCommunion(state, date)
-  const dayOutbox = state.dayOutbox.filter(o => !(o.classId === classId && o.date === date))
-  dayOutbox.push({ classId, date, communion, queued_at: new Date().toISOString() })
+  const on = !isDay(state, date, kind)
+  const dayOutbox = state.dayOutbox.filter(o => !(o.classId === classId && o.date === date && o.kind === kind))
+  dayOutbox.push({ classId, date, kind, on, queued_at: new Date().toISOString() })
   set({ dayOutbox })
   scheduleSync()
 }
@@ -629,13 +637,19 @@ async function syncOnce() {
     const att = await fetchAll<{ child_client_id: string; date: string; kind: FollowUpKind; checked: boolean }>((from, to) =>
       supabase.from('follow_up').select('child_client_id,date,kind,checked').order('child_client_id').order('date').order('kind').range(from, to),
     )
-    const days = await fetchAll<{ class_id: string; date: string; communion: boolean }>((from, to) =>
-      supabase.from('class_day_marks').select('class_id,date,communion').order('class_id').order('date').range(from, to),
+    // '*': still works before 015 adds the club column
+    const days = await fetchAll<{ class_id: string; date: string; communion: boolean; club?: boolean }>((from, to) =>
+      supabase.from('class_day_marks').select('*').order('class_id').order('date').range(from, to),
     )
     set({
       rows: children.map(normalize),
       attendance: Object.fromEntries(att.map(a => [attKey(a.child_client_id, a.date, a.kind), a.checked])),
-      dayMarks: Object.fromEntries(days.map(d => [dayKey(d.class_id, d.date), d.communion])),
+      dayMarks: Object.fromEntries(
+        days.flatMap(d => [
+          [dayKey(d.class_id, d.date, 'communion'), d.communion],
+          [dayKey(d.class_id, d.date, 'club'), d.club ?? false],
+        ]),
+      ),
       lastSyncAt: new Date().toISOString(),
     })
   } catch (e) {
@@ -660,16 +674,21 @@ async function fetchAll<T>(page: (from: number, to: number) => PromiseLike<{ dat
 async function pushDayMarks() {
   const batch = state.dayOutbox
   if (!batch.length) return
-  const { error } = await supabase
-    .from('class_day_marks')
-    .upsert(batch.map(o => ({ class_id: o.classId, date: o.date, communion: o.communion })), { onConflict: 'class_id,date' })
+  // One row per class + Friday holding both marks, so each changed day is sent whole.
+  const days = [...new Map(batch.map(o => [`${o.classId}|${o.date}`, o])).values()].map(o => ({
+    class_id: o.classId,
+    date: o.date,
+    communion: dayMark(state, o.classId, o.date, 'communion'),
+    club: dayMark(state, o.classId, o.date, 'club'),
+  }))
+  const { error } = await supabase.from('class_day_marks').upsert(days, { onConflict: 'class_id,date' })
   if (error) {
     if (isNetworkError(error.message)) throw new Offline()
     set({ attError: error.message }, false)
     return
   }
   const dayMarks = { ...state.dayMarks }
-  for (const o of batch) dayMarks[dayKey(o.classId, o.date)] = o.communion
+  for (const o of batch) dayMarks[dayKey(o.classId, o.date, o.kind)] = o.on
   set({ dayOutbox: state.dayOutbox.filter(o => !batch.includes(o)), dayMarks })
 }
 

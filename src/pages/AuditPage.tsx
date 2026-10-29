@@ -19,6 +19,11 @@ type Entry = {
 
 const PAGE = 100
 
+/** Which marks of a day (تناول / نادي) an entry is about: the changed ones, or those set when added. */
+function dayKindsChanged(e: Entry): ('communion' | 'club')[] {
+  return (['communion', 'club'] as const).filter(k => (e.action === 'update' ? e.changed_fields?.includes(k) : e.new_data?.[k] === true))
+}
+
 const FIELD_LABEL: Record<string, TKey> = {
   full_name: 'name',
   house_number: 'houseNumber',
@@ -139,7 +144,10 @@ export function AuditPage() {
       return `${t('classLabel')}: ${cls}`
     }
     if (e.table_name === 'users') return String(row?.email ?? e.record_id ?? '')
-    if (e.table_name === 'class_day_marks') return t('communionDay') + ' — ' + String(row?.date ?? '')
+    if (e.table_name === 'class_day_marks') {
+      const kinds = dayKindsChanged(e).map(k => t(k === 'club' ? 'clubDay' : 'communionDay'))
+      return (kinds.join(' + ') || t('communionDay')) + ' — ' + String(row?.date ?? '')
+    }
     return ''
   }
 
@@ -147,7 +155,7 @@ export function AuditPage() {
     if (e.action === 'login') return { text: t('auditLogin'), tone: 'bg-sky-100 text-sky-800 dark:bg-sky-500/15 dark:text-sky-300' }
     if (e.action === 'logout') return { text: t('auditLogout'), tone: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' }
     if (e.table_name === 'follow_up' || e.table_name === 'class_day_marks') {
-      const on = (e.new_data?.checked ?? e.new_data?.communion ?? false) as boolean
+      const on = (e.table_name === 'class_day_marks' ? dayKindsChanged(e).some(k => e.new_data?.[k] === true) : (e.new_data?.checked ?? false)) as boolean
       return on
         ? { text: t('auditTicked'), tone: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300' }
         : { text: t('auditUnticked'), tone: 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300' }
