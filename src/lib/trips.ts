@@ -13,7 +13,10 @@ export type Trip = {
   class_id: string
   name: string
   place: string | null
+  /** First day. */
   trip_date: string | null
+  /** Last day of a trip of more than one day; null for one day. */
+  end_date: string | null
   gather_time: string | null
   gather_place: string | null
   return_time: string | null
@@ -123,6 +126,16 @@ export const addPayment = (tripId: string, child: string, amount: number) =>
   run(supabase.from('trip_payments').insert({ trip_id: tripId, child_client_id: child, amount }))
 
 export const deletePayment = (id: string) => run(supabase.from('trip_payments').delete().eq('id', id))
+
+/** The trip's last day: end_date, or the one day it takes. */
+export const lastDay = (trip: Pick<Trip, 'trip_date' | 'end_date'>) => trip.end_date ?? trip.trip_date
+
+/** How many days the trip takes, counting both ends; null without dates. */
+export function tripDays(trip: Pick<Trip, 'trip_date' | 'end_date'>): number | null {
+  if (!trip.trip_date) return null
+  if (!trip.end_date) return 1
+  return Math.round((Date.parse(trip.end_date) - Date.parse(trip.trip_date)) / 86_400_000) + 1
+}
 
 /** What a child going on the trip owes, has paid, and still has to pay. */
 export function balance(trip: Trip, going: TripChild, payments: TripPayment[]) {

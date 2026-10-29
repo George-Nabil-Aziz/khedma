@@ -1,6 +1,7 @@
-import { useState, type FormEvent, type MouseEvent, type ReactNode } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { OWNERS, TEXT_FIELDS, type ChildInput, type CustomField, type Owner, type Phone, type TextField } from '../lib/supabase'
 import { useI18n, type TKey } from '../lib/i18n'
+import { openPicker } from '../lib/picker'
 import { go } from '../lib/router'
 import { classFields, findRow, saveChild, useStore } from '../lib/store'
 import { CATEGORIES, SIDES } from '../lib/columns'
@@ -309,17 +310,6 @@ function CustomInput({ field, value, onChange }: { field: CustomField; value: un
       />
     </Field>
   )
-}
-
-/** Date fields: a click anywhere in the box opens the calendar, not only on the small icon. */
-function openPicker(e: MouseEvent<HTMLInputElement>) {
-  const input = e.currentTarget
-  if (input.type !== 'date') return
-  try {
-    input.showPicker()
-  } catch {
-    /* older browsers: the default behaviour still works */
-  }
 }
 
 const inputClass = (invalid: boolean) =>

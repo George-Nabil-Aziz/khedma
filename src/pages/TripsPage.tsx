@@ -15,8 +15,11 @@ import {
   useTrips,
   type Trip,
   type TripInput,
+  lastDay,
+  tripDays,
 } from '../lib/trips'
 import { iso } from '../lib/serviceYear'
+import { openPicker } from '../lib/picker'
 import { ClassTitle } from '../components/ClassTitle'
 import { Loading } from '../components/Loading'
 import { confirmDialog } from '../components/ConfirmDialog'
@@ -28,11 +31,19 @@ const input =
 const money = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 2 })
 
 function useFormat() {
-  const { lang } = useI18n()
+  const { lang, t } = useI18n()
   const locale = lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB'
   return {
     date: (d: string | null) => (d ? new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(d + 'T00:00')) : null),
     short: (d: string) => new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(new Date(d + 'T00:00')),
+    // one day: "الخميس 5 نوفمبر 2026"; more: "الخميس 5 نوفمبر ← السبت 7 نوفمبر 2026 (3 أيام)"
+    range(trip: Pick<Trip, 'trip_date' | 'end_date'>) {
+      if (!trip.trip_date) return null
+      const full = (d: string) => new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(d + 'T00:00'))
+      if (!trip.end_date) return full(trip.trip_date)
+      const first = new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(trip.trip_date + 'T00:00'))
+      return `${first} ← ${full(trip.end_date)} (${t('tripDaysCount').replace('{n}', String(tripDays(trip)))})`
+    },
     // "14:30:00" → "2:30 م"
     time: (t: string | null) => (t ? new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(new Date(`2000-01-01T${t}`)) : null),
   }
@@ -66,8 +77,9 @@ export function TripsPage() {
   const today = iso(new Date())
   const mine = trips.filter(tr => tr.class_id === currentClass)
   // coming (and undated) trips soonest first; past trips newest first
-  const coming = mine.filter(tr => !tr.trip_date || tr.trip_date >= today).sort((a, b) => (a.trip_date ?? '9999').localeCompare(b.trip_date ?? '9999'))
-  const past = mine.filter(tr => tr.trip_date && tr.trip_date < today)
+  // a trip still running counts as coming until its last day is over
+  const coming = mine.filter(tr => !tr.trip_date || lastDay(tr)! >= today).sort((a, b) => (a.trip_date ?? '9999').localeCompare(b.trip_date ?? '9999'))
+  const past = mine.filter(tr => tr.trip_date && lastDay(tr)! < today)
 
   if (!loaded) return <Loading />
 
@@ -143,7 +155,7 @@ function TripCard({ trip, past, goingCount, collected }: { trip: Trip; past?: bo
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600 dark:text-slate-300">
         {trip.place && <span>📍 {trip.place}</span>}
-        {trip.trip_date && <span>📅 {f.date(trip.trip_date)}</span>}
+        {trip.trip_date && <span>📅 {f.range(trip)}</span>}
         {(trip.gather_time || trip.gather_place) && (
           <span>
             🚏 {t('gathering')}: {[f.time(trip.gather_time), trip.gather_place].filter(Boolean).join(' — ')}
@@ -164,7 +176,7 @@ function TripCard({ trip, past, goingCount, collected }: { trip: Trip; past?: bo
 
 // ---- form ---------------------------------------------------------------------
 
-const EMPTY: TripInput = { name: '', place: null, trip_date: null, gather_time: null, gather_place: null, return_time: null, price: null, brothers_price: null, notes: null }
+const EMPTY: TripInput = { name: '', place: null, trip_date: null, end_date: null, gather_time: null, gather_place: null, return_time: null, price: null, brothers_price: null, notes: null }
 
 function TripForm({ title, initial = EMPTY, onSave, onCancel }: { title: string; initial?: TripInput; onSave: (d: TripInput) => Promise<string | null>; onCancel: () => void }) {
   const { t } = useI18n()
@@ -180,14 +192,18 @@ function TripForm({ title, initial = EMPTY, onSave, onCancel }: { title: string;
       setD(prev => ({ ...prev, [k]: v === '' ? (k === 'name' ? '' : null) : k.endsWith('price') ? Number(v) : v }))
     },
     disabled: busy,
+    onClick: openPicker, // date / time: tap anywhere opens the calendar
   })
   const changed = JSON.stringify(d) !== JSON.stringify(initial)
 
   async function submit(e: FormEvent) {
     e.preventDefault()
+    if (d.end_date && d.trip_date && d.end_date < d.trip_date) return setError(t('tripEndBeforeStart'))
     setBusy(true)
     setError('')
-    const err = await onSave({ ...d, name: d.name.trim() })
+    // no first day → no last day either; a last day equal to the first is a one-day trip
+    const end_date = d.trip_date && d.end_date && d.end_date !== d.trip_date ? d.end_date : null
+    const err = await onSave({ ...d, name: d.name.trim(), end_date })
     setBusy(false)
     if (err) setError(err)
   }
@@ -208,7 +224,9 @@ function TripForm({ title, initial = EMPTY, onSave, onCancel }: { title: string;
       <div className="grid gap-4 sm:grid-cols-2">
         {field('tripName', <input required className={input} placeholder={t('phTripName')} {...text('name')} autoFocus />)}
         {field('tripPlace', <input className={input} placeholder={t('phTripPlace')} {...text('place')} />)}
-        {field('tripDate', <input type="date" dir="ltr" className={input} {...text('trip_date')} />)}
+        {field('tripStart', <input type="date" dir="ltr" className={input} {...text('trip_date')} />)}
+        {/* only for a trip of more than one day */}
+        {field('tripEnd', <input type="date" dir="ltr" className={input} min={d.trip_date ?? undefined} {...text('end_date')} disabled={busy || !d.trip_date} />)}
         {field('gatherPlace', <input className={input} placeholder={t('phGatherPlace')} {...text('gather_place')} />)}
         {field('gatherTime', <input type="time" dir="ltr" className={input} {...text('gather_time')} />)}
         {field('returnTime', <input type="time" dir="ltr" className={input} {...text('return_time')} />)}
@@ -299,6 +317,7 @@ export function TripPage({ id }: { id: string }) {
             name: trip.name,
             place: trip.place,
             trip_date: trip.trip_date,
+            end_date: trip.end_date,
             gather_time: trip.gather_time,
             gather_place: trip.gather_place,
             return_time: trip.return_time,
@@ -327,7 +346,7 @@ export function TripPage({ id }: { id: string }) {
           </div>
           <dl className="grid gap-3 sm:grid-cols-3">
             {info('tripPlace', trip.place)}
-            {info('tripDate', f.date(trip.trip_date))}
+            {info('tripDate', trip.trip_date && f.range(trip))}
             {info('gatherPlace', trip.gather_place)}
             {info('gatherTime', f.time(trip.gather_time))}
             {info('returnTime', f.time(trip.return_time))}
