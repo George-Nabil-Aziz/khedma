@@ -62,6 +62,9 @@ export function ChildrenPage() {
   const pageRows = filtered.slice((current - 1) * pageSize, current * pageSize)
 
   const colSpan = prefs.visible.length + 2
+  // the # and name columns stay put when the table scrolls sideways; opaque, the rows pass under them
+  const stickyNum = 'sticky inset-s-0 z-10 w-12 min-w-12'
+  const stickyName = 'sticky inset-s-12 z-10'
 
   const top = (
     <>
@@ -150,8 +153,9 @@ export function ChildrenPage() {
         <table className="table-grid w-full text-sm">
           <thead className="bg-slate-50 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
             <tr>
-              <SortHeader id={MY_ORDER} label="#" sort={sort} onSort={sortBy} />
-              <SortHeader id="name" label={t('name')} sort={sort} onSort={sortBy} />
+              {/* # and the name stay in view while scrolling across the columns */}
+              <SortHeader id={MY_ORDER} label="#" sort={sort} onSort={sortBy} className={`${stickyNum} bg-slate-50 dark:bg-slate-800`} />
+              <SortHeader id="name" label={t('name')} sort={sort} onSort={sortBy} className={`${stickyName} bg-slate-50 dark:bg-slate-800`} />
               {prefs.visible.map(c => (
                 <SortHeader key={c.id} id={c.id} label={c.label} sort={sort} onSort={sortBy} />
               ))}
@@ -175,11 +179,11 @@ export function ChildrenPage() {
                       </td>
                     </tr>
                   )}
-                  <tr className={`align-top hover:bg-indigo-50/60 dark:hover:bg-indigo-500/10 ${i % 2 ? 'bg-slate-200/50 dark:bg-slate-800/70' : ''} ${r.moved_out_on ? 'opacity-60' : ''}`}>
-                    <td className="px-3 py-2 text-slate-400">
+                  <tr className={`align-top hover:bg-indigo-50 dark:hover:bg-slate-800 ${i % 2 ? 'bg-[#f1f4f8] dark:bg-[#1a2435]' : 'bg-white dark:bg-slate-900'} ${r.moved_out_on ? 'opacity-60' : ''}`}>
+                    <td className={`${stickyNum} bg-inherit px-3 py-2 text-slate-400`}>
                     {(current - 1) * pageSize + i + 1}
                   </td>
-                    <td className="min-w-40 px-3 py-2">
+                    <td className={`${stickyName} min-w-40 bg-inherit px-3 py-2`}>
                       <button
                         onClick={() => go(`/child/${r.client_id}`)}
                         className="flex items-center gap-2 text-start font-semibold text-indigo-700 hover:underline dark:text-indigo-300"
@@ -226,10 +230,10 @@ function Cell({ column, row }: { column: Column; row: Parameters<Column['render'
   )
 }
 
-function SortHeader({ id, label, sort, onSort }: { id: string; label: string; sort: { id: string; dir: 'asc' | 'desc' }; onSort: (id: string) => void }) {
+function SortHeader({ id, label, sort, onSort, className = '' }: { id: string; label: string; sort: { id: string; dir: 'asc' | 'desc' }; onSort: (id: string) => void; className?: string }) {
   const active = sort.id === id
   return (
-    <th className="whitespace-nowrap px-3 py-3 text-start font-semibold" aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined}>
+    <th className={`whitespace-nowrap px-3 py-3 text-start font-semibold ${className}`} aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined}>
       <button onClick={() => onSort(id)} className={`flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-300 ${active ? 'text-indigo-700 dark:text-indigo-300' : ''}`}>
         {label}
         {active ? sort.dir === 'asc' ? <ChevronUpIcon className="size-3.5" /> : <ChevronDownIcon className="size-3.5" /> : <SortIcon className="size-3.5 opacity-30" />}

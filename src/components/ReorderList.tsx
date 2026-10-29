@@ -2,7 +2,7 @@ import { useState } from 'react'
 import {
   DndContext,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
   TouchSensor,
   closestCenter,
   useSensor,
@@ -60,9 +60,10 @@ export function ReorderList({ rows, onClose }: { rows: ViewRow[]; onClose: () =>
 
 function Group({ rows, onChange, from, dim }: { rows: ViewRow[]; onChange: (rows: ViewRow[]) => void; from: number; dim?: boolean }) {
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    // on a phone: press and hold briefly, so the page can still be scrolled with a finger
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 6 } }),
+    // the mouse drags straight away; a finger only after pressing and holding a moment —
+    // any earlier movement is a scroll. (A pointer sensor would grab touches too.)
+    useSensor(MouseSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
@@ -96,7 +97,7 @@ function Item({ row, n }: { row: ViewRow; n: number }) {
       {...listeners}
       aria-label={`${t('dragToReorder')}: ${row.full_name}`}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`flex touch-none select-none items-center gap-3 rounded-xl border bg-white px-3 py-2 dark:bg-slate-900 ${
+      className={`flex touch-manipulation select-none items-center [-webkit-touch-callout:none] gap-3 rounded-xl border bg-white px-3 py-2 dark:bg-slate-900 ${
         isDragging ? 'relative z-10 cursor-grabbing border-indigo-400 shadow-lg ring-2 ring-indigo-500/30' : 'cursor-grab border-slate-200 hover:border-indigo-300 dark:border-slate-800'
       }`}
     >

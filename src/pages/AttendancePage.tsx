@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useI18n } from '../lib/i18n'
 import { go } from '../lib/router'
-import { DAY_KINDS, childrenLoading, isChecked, isDay, stillInClassFirst, toggleDay, toggleFollowUp, useStore, viewRows, type DayKind, type FollowUpKind } from '../lib/store'
+import { DAY_KINDS, childrenLoading, cycleVisit, isChecked, visitOf, isDay, stillInClassFirst, toggleDay, toggleFollowUp, useStore, viewRows, type DayKind, type FollowUpKind } from '../lib/store'
 import type { TKey } from '../lib/i18n'
 import { sortRows, useColumns, useSort } from '../lib/columns'
 import { NoChildren } from '../components/NoChildren'
 import { Loading } from '../components/Loading'
+import { HomeIcon, PhoneIcon } from '../components/Icons'
 import { ClassTitle } from '../components/ClassTitle'
 import { currentServiceYear, iso, serviceYearRange } from '../lib/serviceYear'
 
@@ -133,6 +134,7 @@ export function AttendancePage() {
           {t('total')}: {rows.length}
         </span>
         <span className="hidden text-xs text-slate-500 sm:inline">{t('attendanceOrderNote')}</span>
+        <span className="basis-full text-xs text-emerald-700 sm:basis-auto dark:text-emerald-300">{t('visitHint')}</span>
         <span className="basis-full text-xs text-amber-700 sm:basis-auto dark:text-amber-300">{t('communionHint')}</span>
       </div>
 
@@ -164,7 +166,7 @@ export function AttendancePage() {
                   key={d.date}
                   ref={d.date === currentDate ? currentCell : undefined}
                   className={`border-b border-e border-slate-200 p-0.5 text-xs font-semibold dark:border-slate-800 ${firstOfMonth.has(d.date) ? 'border-s' : ''} ${
-                    d.date === currentDate ? 'bg-indigo-600 text-white' : dayBg(isDay(store, d.date, 'communion'), isDay(store, d.date, 'club'))
+                    dayBg(isDay(store, d.date, 'communion'), isDay(store, d.date, 'club'))
                   }`}
                 >
                   {/* click a date to choose what that Friday is for the whole class: تناول, نادي, or both */}
@@ -182,7 +184,7 @@ export function AttendancePage() {
                     {/* kept in place when empty so the header doesn't jump */}
                     <span className="flex h-3 items-center gap-px text-[11px] leading-none">
                       {DAY_KINDS.filter(k => isDay(store, d.date, k)).map(k => (
-                        <span key={k} className={d.date === currentDate ? '' : DAY[k].text}>
+                        <span key={k} className={DAY[k].text}>
                           {DAY[k].sign}
                         </span>
                       ))}
@@ -234,26 +236,36 @@ export function AttendancePage() {
                       </td>
                       {days.map(d => {
                         const on = isChecked(store, r.client_id, d.date, kind)
+                        // الافتقاد: 📞 phone or 🏠 home — each tap moves to the next (then back to empty)
+                        const visit = kind === 'visit' ? visitOf(store, r.client_id, d.date) : null
+                        const visitLabel = visit === 'phone' ? t('visitPhone') : visit === 'home' ? t('visitHome') : null
                         return (
                           <td
                             key={d.date}
                             className={`${bottom} border-e border-e-slate-100 p-1 text-center dark:border-e-slate-800 ${firstOfMonth.has(d.date) ? 'border-s border-s-slate-200 dark:border-s-slate-700' : ''} ${
-                              d.date === currentDate ? 'bg-indigo-50 dark:bg-indigo-500/10' : dayBg(isDay(store, d.date, 'communion'), isDay(store, d.date, 'club'))
+                              dayBg(isDay(store, d.date, 'communion'), isDay(store, d.date, 'club'))
                             }`}
                           >
                             <button
-                              onClick={() => toggleFollowUp(r.client_id, d.date, kind)}
+                              onClick={() => (kind === 'visit' ? cycleVisit(r.client_id, d.date) : toggleFollowUp(r.client_id, d.date, kind))}
                               role="checkbox"
                               aria-checked={on}
-                              aria-label={`${r.full_name} — ${t(label)} — ${d.date}`}
+                              aria-label={`${r.full_name} — ${t(label)} — ${d.date}${visitLabel ? ` — ${visitLabel}` : ''}`}
+                              title={kind === 'visit' ? (visitLabel ?? t('visitHint')) : undefined}
                               className={`grid size-7 place-items-center rounded-md border-2 transition-colors ${
                                 on ? onClass : `border-slate-300 dark:border-slate-600 ${hover}`
                               }`}
                             >
-                              {on && (
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3.5} strokeLinecap="round" strokeLinejoin="round" className="size-4">
-                                  <path d="M20 6 9 17l-5-5" />
-                                </svg>
+                              {visit === 'phone' ? (
+                                <PhoneIcon className="size-4" />
+                              ) : visit === 'home' ? (
+                                <HomeIcon className="size-4" />
+                              ) : (
+                                on && (
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3.5} strokeLinecap="round" strokeLinejoin="round" className="size-4">
+                                    <path d="M20 6 9 17l-5-5" />
+                                  </svg>
+                                )
                               )}
                             </button>
                           </td>

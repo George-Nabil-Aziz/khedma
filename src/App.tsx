@@ -19,7 +19,7 @@ import { NoClass, SharePage } from './pages/SharePage'
 import { ClassesPage } from './pages/ClassesPage'
 import { UsersPage } from './pages/UsersPage'
 import { ProfilePage } from './pages/ProfilePage'
-import { SettingsPage, SettingsTabs } from './pages/SettingsPage'
+import { InstallPage, SettingsPage, SettingsTabs } from './pages/SettingsPage'
 import { TripPage, TripsPage } from './pages/TripsPage'
 
 export default function App() {
@@ -77,6 +77,7 @@ function Routes({ email, userId, admin }: { email: string; userId: string; admin
   // Pages that work without a class; everything else needs one.
   if (route.name === 'share') return page('share', <SharePage />)
   if (route.name === 'sync') return settings(<SyncPage />)
+  if (route.name === 'install') return settings(<InstallPage />)
   if (route.name === 'profile') return page('profile', <ProfilePage email={email} admin={admin} />)
   if (admin && route.name === 'users') return page('users', <UsersPage myId={userId} />)
   if (admin && route.name === 'audit') return page('audit', <AuditPage />)

@@ -48,6 +48,8 @@ type State = {
   classLoading: boolean
   /** متابعة ticks from the server, keyed by attKey(child, date, kind). */
   attendance: Record<string, boolean>
+  /** الافتقاد: phone call or home visit, keyed like attendance (visit ticks only). */
+  visitTypes: Record<string, VisitType>
   /** متابعة ticks made on this device and not sent yet. */
   attOutbox: AttOp[]
   attError: string | null
@@ -67,7 +69,11 @@ export type ColumnLayout = { order: string[]; hidden: string[] }
 /** Two ticks per child per Friday: الحضور (attendance) and الافتقاد (visit). */
 export type FollowUpKind = 'attendance' | 'visit'
 
-export type AttOp = { child: string; date: string; kind: FollowUpKind; checked: boolean; queued_at: string }
+/** How a الافتقاد was done: a phone call or a home visit. */
+export type VisitType = 'phone' | 'home'
+
+/** `visit`: for a الافتقاد tick, how it was done (missing on الحضور ticks and older ones). */
+export type AttOp = { child: string; date: string; kind: FollowUpKind; checked: boolean; visit?: VisitType | null; queued_at: string }
 
 export const attKey = (child: string, date: string, kind: FollowUpKind) => `${child}|${date}|${kind}`
 
@@ -86,6 +92,7 @@ let state: State = {
   syncError: null,
   classLoading: false,
   attendance: {},
+  visitTypes: {},
   attOutbox: [],
   attError: null,
   dayMarks: {},
@@ -109,6 +116,7 @@ function set(patch: Partial<State>, persist = true) {
       ['conflicts', state.conflicts],
       ['lastSyncAt', state.lastSyncAt],
       ['followUp', state.attendance],
+      ['visitTypes', state.visitTypes],
       ['attOutbox', state.attOutbox],
       ['dayMarks', state.dayMarks],
       ['dayOutbox', state.dayOutbox],
@@ -189,7 +197,7 @@ export async function startStore(userId: string) {
     state = { ...state, currentClass: null }
     await setMany([['owner', userId]]).catch(() => {})
   }
-  const [rows, fields, outbox, conflicts, lastSyncAt, attendance, attOutbox, classes, profile, dayMarks, dayOutbox, yearEndWeeks, columnDefaults] = await Promise.all([
+  const [rows, fields, outbox, conflicts, lastSyncAt, attendance, attOutbox, classes, profile, dayMarks, dayOutbox, yearEndWeeks, columnDefaults, visitTypes] = await Promise.all([
     get<Child[]>('rows'),
     get<CustomField[]>('fields'),
     get<Op[]>('outbox'),
@@ -203,6 +211,7 @@ export async function startStore(userId: string) {
     get<DayOp[]>('dayOutbox'),
     get<number>('yearEndWeeks'),
     get<ColumnLayout>('columnDefaults'),
+    get<Record<string, VisitType>>('visitTypes'),
   ]).catch(() => [] as undefined[])
   set(
     {
@@ -220,6 +229,7 @@ export async function startStore(userId: string) {
       profile: profile ?? null,
       yearEndWeeks: setWeeks(yearEndWeeks ?? 0),
       columnDefaults: columnDefaults ?? null,
+      visitTypes: visitTypes ?? {},
       loaded: true,
     },
     false,
@@ -243,7 +253,7 @@ export async function resetStore() {
   resetTrips()
   openedDefault = false // the next user to sign in gets their own ⭐ class
   set(
-    { rows: [], fields: [], classes: [], profile: null, currentClass: null, outbox: [], conflicts: [], lastSyncAt: null, syncError: null, classLoading: false, attendance: {}, attOutbox: [], attError: null, dayMarks: {}, dayOutbox: [], yearEndWeeks: setWeeks(0), columnDefaults: null },
+    { rows: [], fields: [], classes: [], profile: null, currentClass: null, outbox: [], conflicts: [], lastSyncAt: null, syncError: null, classLoading: false, attendance: {}, visitTypes: {}, attOutbox: [], attError: null, dayMarks: {}, dayOutbox: [], yearEndWeeks: setWeeks(0), columnDefaults: null },
     false,
   )
 }
@@ -427,6 +437,29 @@ export function isChecked(s: State, child: string, date: string, kind: FollowUpK
     if (sameTick(o, child, date, kind)) return o.checked
   }
   return s.attendance[attKey(child, date, kind)] ?? false
+}
+
+/**
+ * الافتقاد of a child on a Friday: 'phone', 'home', 'done' (ticked before the type existed),
+ * or null when not done.
+ */
+export function visitOf(s: State, child: string, date: string): VisitType | 'done' | null {
+  for (let i = s.attOutbox.length - 1; i >= 0; i--) {
+    const o = s.attOutbox[i]
+    if (sameTick(o, child, date, 'visit')) return o.checked ? (o.visit ?? 'done') : null
+  }
+  const key = attKey(child, date, 'visit')
+  return s.attendance[key] ? (s.visitTypes[key] ?? 'done') : null
+}
+
+/** Each tap on a الافتقاد box: empty → 📞 phone → 🏠 home → empty. Works offline. */
+export function cycleVisit(child: string, date: string) {
+  const now = visitOf(state, child, date)
+  const next: VisitType | null = now === null ? 'phone' : now === 'phone' ? 'home' : null
+  const attOutbox = state.attOutbox.filter(o => !sameTick(o, child, date, 'visit'))
+  attOutbox.push({ child, date, kind: 'visit', checked: next !== null, visit: next, queued_at: new Date().toISOString() })
+  set({ attOutbox })
+  scheduleSync()
 }
 
 /** Tick / untick الحضور or الافتقاد for a child on a Friday. Works offline; the last tick wins. */
@@ -728,8 +761,9 @@ async function syncOnce() {
     await pullSettings()
     await pullFields()
     const children = await fetchAll<Child>((from, to) => supabase.from('children').select('*').order('id').range(from, to))
-    const att = await fetchAll<{ child_client_id: string; date: string; kind: FollowUpKind; checked: boolean }>((from, to) =>
-      supabase.from('follow_up').select('child_client_id,date,kind,checked').order('child_client_id').order('date').order('kind').range(from, to),
+    // '*': still works before 024 adds visit_type
+    const att = await fetchAll<{ child_client_id: string; date: string; kind: FollowUpKind; checked: boolean; visit_type?: VisitType | null }>((from, to) =>
+      supabase.from('follow_up').select('*').order('child_client_id').order('date').order('kind').range(from, to),
     )
     // '*': still works before 015 adds the club column
     const days = await fetchAll<{ class_id: string; date: string; communion: boolean; club?: boolean }>((from, to) =>
@@ -738,6 +772,7 @@ async function syncOnce() {
     set({
       rows: children.map(normalize),
       attendance: Object.fromEntries(att.map(a => [attKey(a.child_client_id, a.date, a.kind), a.checked])),
+      visitTypes: Object.fromEntries(att.filter(a => a.visit_type).map(a => [attKey(a.child_client_id, a.date, a.kind), a.visit_type!])),
       dayMarks: Object.fromEntries(
         days.flatMap(d => [
           [dayKey(d.class_id, d.date, 'communion'), d.communion],
@@ -798,9 +833,15 @@ async function pushAttendance() {
   // A tick on a child whose own insert is still failing would be rejected — keep it for later.
   const batch = state.attOutbox.filter(o => !state.outbox.some(op => op.kind === 'insert' && op.client_id === o.child))
   if (!batch.length) return
-  const { error } = await supabase
-    .from('follow_up')
-    .upsert(batch.map(o => ({ child_client_id: o.child, date: o.date, kind: o.kind, checked: o.checked })), { onConflict: 'child_client_id,date,kind' })
+  const send = (withType: boolean) =>
+    supabase.from('follow_up').upsert(
+      // visit_type only on الافتقاد ticks; a ✓ from before the type existed (undefined) keeps what the server has
+      batch.map(o => ({ child_client_id: o.child, date: o.date, kind: o.kind, checked: o.checked, ...(withType && o.kind === 'visit' && o.visit !== undefined ? { visit_type: o.visit } : {}) })),
+      { onConflict: 'child_client_id,date,kind' },
+    )
+  let { error } = await send(true)
+  // before 024 adds the column: send the ticks without their type rather than not at all
+  if (error && /visit_type/.test(error.message)) ({ error } = await send(false))
   if (error) {
     if (isNetworkError(error.message)) throw new Offline()
     set({ attError: error.message }, false)
@@ -808,8 +849,14 @@ async function pushAttendance() {
   }
   // Only drop what was sent — ticks made during the request stay queued.
   const attendance = { ...state.attendance }
-  for (const o of batch) attendance[attKey(o.child, o.date, o.kind)] = o.checked
-  set({ attOutbox: state.attOutbox.filter(o => !batch.includes(o)), attendance, attError: null })
+  const visitTypes = { ...state.visitTypes }
+  for (const o of batch) {
+    const key = attKey(o.child, o.date, o.kind)
+    attendance[key] = o.checked
+    if (o.visit) visitTypes[key] = o.visit
+    else if (o.visit === null) delete visitTypes[key]
+  }
+  set({ attOutbox: state.attOutbox.filter(o => !batch.includes(o)), attendance, visitTypes, attError: null })
 }
 
 type PushResult = 'done' | { conflict: Conflict } | { error: string }

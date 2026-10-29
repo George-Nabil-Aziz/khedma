@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { useI18n, type TKey } from '../lib/i18n'
 import { go, useRoute, type Path, type Route } from '../lib/router'
+import { useInstall } from '../lib/install'
 import { saveYearEndWeeks, useStore } from '../lib/store'
 import { MAX_EXTRA_WEEKS, currentServiceYear, iso, yearEnd } from '../lib/serviceYear'
 import { CalendarCheckIcon, CloudOffIcon, PlusIcon } from '../components/Icons'
@@ -42,6 +43,7 @@ export function SettingsTabs({ admin }: { admin: boolean }) {
           <span className="rounded-full bg-amber-500 px-2 text-xs font-bold text-white">{pending}</span>
         ) : null,
       )}
+      {tab('install', '/install', 'installApp')}
       {admin && tab('settings', '/settings', 'yearEndTitle')}
     </nav>
   )
@@ -145,5 +147,46 @@ function YearEndSetting() {
         </button>
       </div>
     </section>
+  )
+}
+
+/** Install the app on this phone / computer: the browser's own box, or the steps on an iPhone. */
+export function InstallPage() {
+  const { t } = useI18n()
+  const { installed, canPrompt, isIOS, install } = useInstall()
+
+  const steps = (keys: TKey[]) => (
+    <ol className="list-inside list-decimal space-y-1.5 text-sm">
+      {keys.map(k => (
+        <li key={k}>{t(k)}</li>
+      ))}
+    </ol>
+  )
+
+  return (
+    <div className="mx-auto max-w-2xl">
+      <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex items-center gap-3">
+          <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="" className="size-12" />
+          <div>
+            <h2 className="font-bold">{t('installApp')}</h2>
+            <p className="text-sm text-slate-500">{t('installHelp')}</p>
+          </div>
+        </div>
+
+        {installed ? (
+          <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">{t('installDone')}</p>
+        ) : canPrompt ? (
+          <button onClick={install} className="w-full rounded-lg bg-indigo-600 px-4 py-3 font-semibold text-white hover:bg-indigo-700 sm:w-auto">
+            {t('installNow')}
+          </button>
+        ) : isIOS ? (
+          steps(['installIos1', 'installIos2', 'installIos3'])
+        ) : (
+          // the browser hasn't offered it (yet, or it can't): the menu way
+          steps(['installOther1', 'installOther2'])
+        )}
+      </section>
+    </div>
   )
 }

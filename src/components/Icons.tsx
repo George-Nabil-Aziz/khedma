@@ -89,7 +89,13 @@ export const ShieldIcon = ({ className = 'size-3.5' }: P) => (
 export const ShareIcon = ({ className = 'size-5' }: P) => (
   <svg {...base} className={className}><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="m8.59 13.51 6.83 3.98M15.41 6.51l-6.82 3.98" /></svg>
 )
-export const BusIcon = ({ className = 'size-5' }: P) => (
+export const PhoneIcon = ({ className = 'size-4' }: P) => (
+  <svg {...base} className={className}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z" /></svg>
+)
+export const HomeIcon = ({ className = 'size-4' }: P) => (
+  <svg {...base} className={className}><path d="M3 10.5 12 3l9 7.5M5 9v11a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9" /></svg>
+)
+export const BusIcon =({ className = 'size-5' }: P) => (
   <svg {...base} className={className}><path d="M8 6v6M15 6v6M2 12h19.6M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3M9 18h5" /><circle cx="7" cy="18" r="2" /><circle cx="16" cy="18" r="2" /></svg>
 )
 export const SettingsIcon =({ className = 'size-5' }: P) => (

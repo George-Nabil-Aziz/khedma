@@ -6,6 +6,7 @@ import { ConfirmHost } from './components/ConfirmDialog'
 import { ToastHost } from './components/Toast'
 import { I18nProvider } from './lib/i18n'
 import { ThemeProvider } from './lib/theme'
+import './lib/install' // catch the browser's install offer early, for الإعدادات
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
