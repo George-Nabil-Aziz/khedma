@@ -47,7 +47,10 @@ export function ChildViewPage({ clientId }: { clientId: string }) {
           <button
             onClick={async () => {
               const ok = await confirmDialog({ title: t('markMovedOut'), message: t('markMovedOutConfirm').replace('{name}', child.full_name), confirmLabel: t('markMovedOut') })
-              if (ok) setMovedOut(clientId, true)
+              if (!ok) return
+              setMovedOut(clientId, true)
+              // straight on to where they went: church and servant (both optional)
+              go(`/child/${clientId}/edit`)
             }}
             className="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
           >
@@ -66,17 +69,40 @@ export function ChildViewPage({ clientId }: { clientId: string }) {
 
       {/* left the class: say since when, with a way back */}
       {child.moved_out_on && (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-300 bg-slate-100 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/60">
-          <DoorIcon className="size-5 text-slate-500" />
-          <span className="flex-1 font-semibold">
-            {t('movedOutBanner').replace('{date}', new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { dateStyle: 'long' }).format(new Date(child.moved_out_on + 'T00:00')))}
-          </span>
-          <button
-            onClick={() => setMovedOut(clientId, false)}
-            className="rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 dark:border-indigo-500/40 dark:bg-slate-900 dark:text-indigo-300"
-          >
-            {t('movedBack')}
-          </button>
+        <div className="space-y-2 rounded-xl border border-slate-300 bg-slate-100 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/60">
+          <div className="flex flex-wrap items-center gap-3">
+            <DoorIcon className="size-5 text-slate-500" />
+            <span className="flex-1 font-semibold">
+              {t('movedOutBanner').replace('{date}', new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { dateStyle: 'long' }).format(new Date(child.moved_out_on + 'T00:00')))}
+            </span>
+            <button
+              onClick={() => setMovedOut(clientId, false)}
+              className="rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 dark:border-indigo-500/40 dark:bg-slate-900 dark:text-indigo-300"
+            >
+              {t('movedBack')}
+            </button>
+          </div>
+          {/* where they went — optional, filled in from the edit form */}
+          {child.moved_to_church || child.moved_to_servant ? (
+            <dl className="grid gap-2 ps-8 text-sm sm:grid-cols-2">
+              {child.moved_to_church && (
+                <div>
+                  <dt className="text-xs font-semibold text-slate-500">{t('movedToChurch')}</dt>
+                  <dd className="font-semibold">{child.moved_to_church}</dd>
+                </div>
+              )}
+              {child.moved_to_servant && (
+                <div>
+                  <dt className="text-xs font-semibold text-slate-500">{t('movedToServant')}</dt>
+                  <dd className="font-semibold">{child.moved_to_servant}</dd>
+                </div>
+              )}
+            </dl>
+          ) : (
+            <button onClick={() => go(`/child/${clientId}/edit`)} className="ms-8 text-sm font-semibold text-indigo-700 hover:underline dark:text-indigo-300">
+              + {t('addMovedOutDetails')}
+            </button>
+          )}
         </div>
       )}
 

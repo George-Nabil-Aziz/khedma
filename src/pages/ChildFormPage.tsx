@@ -82,6 +82,8 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
     } as ChildInput
     // whose home the usual address is only means something next to a second one
     if (!other) input.address_label = null
+    // back in the class: where they had gone no longer applies
+    if (!input.moved_out_on) input.moved_to_church = input.moved_to_servant = null
     saveChild(clientId, input)
     if (online) go(back)
     else {
@@ -166,6 +168,17 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
       {other && (
         <Section title={t('otherAddress')}>
           <OtherAddressFields value={other} onChange={setOther} />
+        </Section>
+      )}
+
+      {/* a child who left the class: when, and where to (church and servant optional).
+          Clearing the date puts them back in the class. */}
+      {(texts.moved_out_on || initial?.moved_out_on) && (
+        <Section title={t('markMovedOut')}>
+          {text('moved_out_on', 'movedOutOn', { type: 'date', ltr: true })}
+          <div />
+          {text('moved_to_church', 'movedToChurch', { placeholder: 'phMovedToChurch' })}
+          {text('moved_to_servant', 'movedToServant', { placeholder: 'phMovedToServant' })}
         </Section>
       )}
 

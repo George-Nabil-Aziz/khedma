@@ -196,6 +196,12 @@ const dict = {
   },
   movedBack: { ar: 'رجع للفصل', en: 'Back in the class' },
   movedOutBanner: { ar: 'خرج من الفصل يوم {date}', en: 'Left the class on {date}' },
+  movedToChurch: { ar: 'الكنيسة اللي راحها', en: 'Church they went to' },
+  phMovedToChurch: { ar: 'مثال: كنيسة مارجرجس', en: 'e.g. St George’s church' },
+  movedToServant: { ar: 'اسم الخادم هناك', en: 'Their servant there' },
+  phMovedToServant: { ar: 'اسم الخادم أو الخادمة', en: 'The servant’s name' },
+  movedOutDetails: { ar: 'بيانات المكان اللي راحه', en: 'Where they went' },
+  addMovedOutDetails: { ar: 'ضيف الكنيسة والخادم', en: 'Add church and servant' },
   // a second home
   hasOtherAddress: { ar: 'عايش في بيت تاني كمان', en: 'Also lives in another home' },
   addressLabel: { ar: 'بيت مين؟', en: 'Whose home?' },

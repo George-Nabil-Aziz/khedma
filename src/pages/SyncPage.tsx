@@ -26,6 +26,8 @@ const FIELD_LABEL: Record<CoreField, TKey> = {
   photo: 'photo',
   address_label: 'addressLabel',
   moved_out_on: 'movedOutOn',
+  moved_to_church: 'movedToChurch',
+  moved_to_servant: 'movedToServant',
   other_address: 'otherAddress',
 }
 

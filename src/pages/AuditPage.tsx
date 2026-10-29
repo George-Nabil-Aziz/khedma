@@ -44,6 +44,8 @@ const FIELD_LABEL: Record<string, TKey> = {
   photo: 'photo',
   address_label: 'addressLabel',
   moved_out_on: 'movedOutOn',
+  moved_to_church: 'movedToChurch',
+  moved_to_servant: 'movedToServant',
   other_address: 'otherAddress',
   display_name: 'displayName',
   checked: 'attendance',

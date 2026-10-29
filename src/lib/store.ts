@@ -518,7 +518,7 @@ export function stillInClassFirst<T extends ChildInput>(rows: T[]): T[] {
 export function setMovedOut(clientId: string, movedOut: boolean) {
   const row = findRow(state, clientId)
   if (!row) return
-  saveChild(clientId, { ...row, moved_out_on: movedOut ? iso(new Date()) : null })
+  saveChild(clientId, movedOut ? { ...row, moved_out_on: iso(new Date()) } : { ...row, moved_out_on: null, moved_to_church: null, moved_to_servant: null })
 }
 
 export function saveChild(clientId: string | null, input: ChildInput) {
