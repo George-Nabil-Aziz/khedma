@@ -309,15 +309,20 @@ function EditUser({
   const [admin, setAdmin] = useState(user.is_admin)
   const [busy, setBusy] = useState(false)
 
+  const changes = {
+    name: name.trim() !== (user.display_name ?? '') ? name.trim() : undefined,
+    email: email.trim() !== user.email ? email.trim() : undefined,
+    password: password || undefined,
+    admin: admin !== user.is_admin ? admin : undefined,
+  }
+  // nothing to save until something is actually changed
+  const changed = Object.values(changes).some(v => v !== undefined)
+
   async function submit(e: FormEvent) {
     e.preventDefault()
+    if (!changed) return
     setBusy(true)
-    await onSave({
-      name: name.trim() !== (user.display_name ?? '') ? name.trim() : undefined,
-      email:email.trim() !== user.email ? email.trim() : undefined,
-      password: password || undefined,
-      admin: admin !== user.is_admin ? admin : undefined,
-    })
+    await onSave(changes)
     setBusy(false)
   }
 
@@ -340,7 +345,7 @@ function EditUser({
       </label>
       {user.shared && <p className="text-xs text-amber-700 sm:col-span-4 dark:text-amber-300">{t('sharedAccountHelp')}</p>}
       <div className="flex gap-2 sm:col-span-4">
-        <button disabled={busy} className="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+        <button disabled={busy || !changed} className="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
           {t('save')}
         </button>
         <button type="button" onClick={onCancel} className="rounded-lg border border-slate-200 px-4 py-1.5 text-sm font-semibold dark:border-slate-700">
