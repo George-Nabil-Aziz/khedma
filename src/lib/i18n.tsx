@@ -195,6 +195,10 @@ const dict = {
     en: 'Did "{name}" leave the class? They stay with all their data, listed at the very bottom.',
   },
   movedBack: { ar: 'رجع للفصل', en: 'Back in the class' },
+  movedBackConfirm: {
+    ar: '"{name}" رجع للفصل؟ هيطلع فوق مع باقي الأولاد، ويوم الخروج والكنيسة والخادم اللي اتكتبوا هيتمسحوا.',
+    en: 'Is "{name}" back in the class? They move up with the others; the leaving date, church and servant are cleared.',
+  },
   movedOutBanner: { ar: 'خرج من الفصل يوم {date}', en: 'Left the class on {date}' },
   movedToChurch: { ar: 'الكنيسة اللي راحها', en: 'Church they went to' },
   phMovedToChurch: { ar: 'مثال: كنيسة مارجرجس', en: 'e.g. St George’s church' },
