@@ -10,6 +10,7 @@ import {
   CalendarCheckIcon,
   HistoryIcon,
   SchoolIcon,
+  SettingsIcon,
   ShareIcon,
   UserCogIcon,
   LanguagesIcon,
@@ -132,6 +133,10 @@ export function Layout({ email, admin, title, children }: { email: string; admin
                 <HistoryIcon />
                 {t('audit')}
               </button>
+              <button className={item(route.name === 'settings')} onClick={() => nav('/settings')}>
+                <SettingsIcon />
+                {t('settings')}
+              </button>
             </>
           )}
         </nav>
@@ -185,10 +190,7 @@ export function HeaderButtons() {
   return (
     <>
       <button className={btn} onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')} title={t('switchLang')} aria-label={t('switchLang')}>
-        <LanguagesIcon />
-        <span className="absolute -bottom-1 -inset-e-1 rounded bg-indigo-600 px-1 text-[9px] font-bold leading-tight text-white">
-          {lang === 'ar' ? 'EN' : 'ع'}
-        </span>
+        <LanguagesIcon letter={lang === 'ar' ? 'E' : 'ع'} />
       </button>
       <button className={btn} onClick={toggle} title={t('toggleTheme')} aria-label={t('toggleTheme')}>
         {theme === 'dark' ? <SunIcon /> : <MoonIcon />}

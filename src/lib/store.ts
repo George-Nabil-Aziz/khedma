@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react'
 import { clear, get, setMany } from 'idb-keyval'
 import { CORE_FIELDS, TEXT_FIELDS, supabase, type Child, type ChildInput, type ClassInfo, type CustomField, type FieldType, type Profile } from './supabase'
 import { load, save } from './storage'
+import { setYearEndWeeks } from './serviceYear'
 
 /*
  * Offline-first store.
@@ -51,6 +52,8 @@ type State = {
   dayMarks: Record<string, boolean>
   /** Communion-day marks made on this device and not sent yet. */
   dayOutbox: DayOp[]
+  /** Fridays added to (or taken off) the end of every service year — set by an admin. */
+  yearEndWeeks: number
 }
 
 /** Two ticks per child per Friday: الحضور (attendance) and الافتقاد (visit). */
@@ -78,6 +81,7 @@ let state: State = {
   attError: null,
   dayMarks: {},
   dayOutbox: [],
+  yearEndWeeks: 0,
 }
 
 const listeners = new Set<() => void>()
@@ -98,6 +102,7 @@ function set(patch: Partial<State>, persist = true) {
       ['attOutbox', state.attOutbox],
       ['dayMarks', state.dayMarks],
       ['dayOutbox', state.dayOutbox],
+      ['yearEndWeeks', state.yearEndWeeks],
     ]).catch(() => {})
   }
 }
@@ -170,7 +175,7 @@ export async function startStore(userId: string) {
     state = { ...state, currentClass: null }
     await setMany([['owner', userId]]).catch(() => {})
   }
-  const [rows, fields, outbox, conflicts, lastSyncAt, attendance, attOutbox, classes, profile, dayMarks, dayOutbox] = await Promise.all([
+  const [rows, fields, outbox, conflicts, lastSyncAt, attendance, attOutbox, classes, profile, dayMarks, dayOutbox, yearEndWeeks] = await Promise.all([
     get<Child[]>('rows'),
     get<CustomField[]>('fields'),
     get<Op[]>('outbox'),
@@ -182,6 +187,7 @@ export async function startStore(userId: string) {
     get<Profile>('profile'),
     get<Record<string, boolean>>('dayMarks'),
     get<DayOp[]>('dayOutbox'),
+    get<number>('yearEndWeeks'),
   ]).catch(() => [] as undefined[])
   set(
     {
@@ -196,6 +202,7 @@ export async function startStore(userId: string) {
       dayMarks: dayMarks ?? {},
       dayOutbox: dayOutbox ?? [],
       profile: profile ?? null,
+      yearEndWeeks: setWeeks(yearEndWeeks ?? 0),
       loaded: true,
     },
     false,
@@ -217,7 +224,7 @@ export async function resetStore() {
   save('class', '')
   openedDefault = false // the next user to sign in gets their own ⭐ class
   set(
-    { rows: [], fields: [], classes: [], profile: null, currentClass: null, outbox: [], conflicts: [], lastSyncAt: null, syncError: null, attendance: {}, attOutbox: [], attError: null, dayMarks: {}, dayOutbox: [] },
+    { rows: [], fields: [], classes: [], profile: null, currentClass: null, outbox: [], conflicts: [], lastSyncAt: null, syncError: null, attendance: {}, attOutbox: [], attError: null, dayMarks: {}, dayOutbox: [], yearEndWeeks: setWeeks(0) },
     false,
   )
 }
@@ -250,6 +257,31 @@ export async function saveProfile(profile: Profile): Promise<string | null> {
 export async function changePassword(password: string): Promise<string | null> {
   const { error } = await supabase.auth.updateUser({ password })
   return error?.message ?? null
+}
+
+// ---- الإعدادات ----------------------------------------------------------------
+
+/** serviceYear.ts reads the offset directly, so it is set there before the store re-renders. */
+function setWeeks(n: number) {
+  setYearEndWeeks(n)
+  return n
+}
+
+async function pullSettings() {
+  const { data, error } = await supabase.from('settings').select('value').eq('key', 'year_end_weeks').maybeSingle()
+  if (error) {
+    if (isNetworkError(error.message)) throw new Offline()
+    return // the settings table is not there yet (014 not run) — keep the default
+  }
+  set({ yearEndWeeks: setWeeks(Number(data?.value ?? 0)) })
+}
+
+/** Admins only; needs a connection. */
+export async function saveYearEndWeeks(weeks: number): Promise<string | null> {
+  const { error } = await supabase.rpc('set_year_end_weeks', { p_weeks: weeks })
+  if (error) return error.message
+  set({ yearEndWeeks: setWeeks(weeks) })
+  return null
 }
 
 // ---- فصول --------------------------------------------------------------------
@@ -587,6 +619,7 @@ async function syncOnce() {
 
     await pullClasses()
     await pullProfile()
+    await pullSettings()
     await pullFields()
     const children = await fetchAll<Child>((from, to) => supabase.from('children').select('*').order('id').range(from, to))
     const att = await fetchAll<{ child_client_id: string; date: string; kind: FollowUpKind; checked: boolean }>((from, to) =>

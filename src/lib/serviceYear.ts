@@ -1,14 +1,24 @@
 // A service year ends on the first Friday AFTER 6 October: 6 Oct and that Friday still belong
 // to the old year. So 2026-2027 runs from Sat 10 Oct 2026 to Fri 8 Oct 2027.
 // Same rule as khedma.service_year_end() in the database.
+// An admin can move that end by up to 3 Fridays either way (الإعدادات); `extraWeeks` holds it.
 
 const pad = (n: number) => String(n).padStart(2, '0')
 export const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 
+export const MAX_EXTRA_WEEKS = 3
+let extraWeeks = 0
+
+/** Fridays added to (or, when negative, taken off) the end of every service year. */
+export const yearEndWeeks = () => extraWeeks
+export function setYearEndWeeks(n: number) {
+  extraWeeks = n
+}
+
 /** The last day (a Friday) of the service year that ends in `year`. */
-function yearEnd(year: number): Date {
+export function yearEnd(year: number, weeks = extraWeeks): Date {
   const d = new Date(year, 9, 6)
-  d.setDate(d.getDate() + ((5 - d.getDay() + 7) % 7 || 7))
+  d.setDate(d.getDate() + ((5 - d.getDay() + 7) % 7 || 7) + weeks * 7)
   return d
 }
 

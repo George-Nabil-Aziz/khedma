@@ -19,8 +19,14 @@ export const LogOutIcon = ({ className = 'size-5' }: P) => (
 export const RefreshIcon = ({ className = 'size-4' }: P) => (
   <svg {...base} className={className}><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8M21 3v5h-5" /></svg>
 )
-export const LanguagesIcon = ({ className = 'size-5' }: P) => (
-  <svg {...base} className={className}><path d="m5 8 6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6" /></svg>
+/** 文 plus `letter` in the corner — the language a tap switches to (E or ع). */
+export const LanguagesIcon = ({ className = 'size-5', letter }: P & { letter: string }) => (
+  <svg {...base} className={className}>
+    <path d="m5 8 6 6M4 14l6-6 2-3M2 5h12M7 2h1" />
+    <text x="17.5" y="22" textAnchor="middle" fontSize="13" fontWeight="700" fill="currentColor" stroke="none" fontFamily="inherit">
+      {letter}
+    </text>
+  </svg>
 )
 export const PlusIcon = ({ className = 'size-5' }: P) => (
   <svg {...base} className={className}><path d="M12 5v14M5 12h14" /></svg>
@@ -82,7 +88,10 @@ export const ShieldIcon = ({ className = 'size-3.5' }: P) => (
 export const ShareIcon = ({ className = 'size-5' }: P) => (
   <svg {...base} className={className}><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="m8.59 13.51 6.83 3.98M15.41 6.51l-6.82 3.98" /></svg>
 )
-export const UserCogIcon = ({ className = 'size-5' }: P) => (
+export const SettingsIcon = ({ className = 'size-5' }: P) => (
+  <svg {...base} className={className}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></svg>
+)
+export const UserCogIcon =({ className = 'size-5' }: P) => (
   <svg {...base} className={className}><circle cx="9" cy="7" r="4" /><path d="M3 21v-2a4 4 0 0 1 4-4h4" /><circle cx="18" cy="17" r="2.5" /><path d="M18 13v1.5M18 19.5V21M14.5 17H16M20 17h1.5M15.5 14.5l1 1M19.5 18.5l1 1M15.5 19.5l1-1M19.5 15.5l1-1" /></svg>
 )
 export const CopyIcon = ({ className = 'size-4' }: P) => (

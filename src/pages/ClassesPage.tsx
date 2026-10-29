@@ -209,7 +209,11 @@ function ClassCard({ c, admin }: { c: ClassInfo; admin: boolean }) {
   return (
     <div
       className={`space-y-2 rounded-xl border bg-white p-3 dark:bg-slate-900 ${
-        c.is_default ? 'border-amber-400 ring-2 ring-amber-400/20 dark:border-amber-500/60' : 'border-slate-200 dark:border-slate-800'
+        c.is_default
+          ? 'border-amber-400 ring-2 ring-amber-400/20 dark:border-amber-500/60'
+          : open
+            ? 'border-indigo-400 ring-2 ring-indigo-400/20 dark:border-indigo-500/60'
+            : 'border-slate-200 dark:border-slate-800'
       }`}
     >
       <div className="flex items-center gap-2">

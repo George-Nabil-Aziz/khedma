@@ -186,6 +186,19 @@ const dict = {
   attendanceOrderNote: { ar: 'نفس ترتيب صفحة الأولاد', en: 'Same order as the Children page' },
   attPending: { ar: 'علامات متابعة مستنية تتبعت', en: 'Follow-up ticks waiting to be sent' },
   refresh: { ar: 'تحديث', en: 'Refresh' },
+  // settings
+  settings: { ar: 'الإعدادات', en: 'Settings' },
+  yearEndTitle: { ar: 'نهاية سنة الخدمة', en: 'End of the service year' },
+  yearEndHelp: {
+    ar: 'السنة بتخلص عادةً أول جمعة بعد 6 أكتوبر. تقدر تزوّد جُمع بعدها أو تنقّص لحد 3.',
+    en: 'The year normally ends on the first Friday after 6 October. Add or remove up to 3 Fridays.',
+  },
+  yearEndNormal: { ar: 'زي ما هي', en: 'As usual' },
+  yearEndAdd: { ar: 'زيادة {n} جمعة', en: '{n} more Friday(s)' },
+  yearEndRemove: { ar: 'نقص {n} جمعة', en: '{n} Friday(s) fewer' },
+  addFriday: { ar: 'زوّد جمعة', en: 'Add a Friday' },
+  removeFriday: { ar: 'نقّص جمعة', en: 'Remove a Friday' },
+  yearEndResult: { ar: 'السنة {year} هتخلص يوم {date}', en: 'Year {year} will end on {date}' },
   // audit
   audit: { ar: 'سجل التعديلات', en: 'Audit log' },
   auditAll: { ar: 'الكل', en: 'All' },

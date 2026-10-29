@@ -38,7 +38,8 @@ export function AttendancePage() {
   const days = useMemo(() => {
     const { start, end } = serviceYearRange(year)
     return fridays(start, end).map(d => ({ date: iso(d), day: d.getDate(), month: `${d.getFullYear()}-${d.getMonth()}`, d }))
-  }, [year])
+    // the range also moves with the admin's year-end setting (الإعدادات)
+  }, [year, store.yearEndWeeks])
 
   // Months as header groups: 4 or 5 Fridays each.
   const months = useMemo(() => {
