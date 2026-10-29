@@ -225,7 +225,8 @@ function ClassCard({ c, admin }: { c: ClassInfo; admin: boolean }) {
               : 'border-slate-200 dark:border-slate-800'
       }`}
     >
-      <div className="flex items-center gap-2">
+      {/* on a phone the buttons drop under the name, so the name and status words get the full width */}
+      <div className="flex flex-wrap items-center gap-2">
         {c.is_member && (
           <button
             onClick={() => run(() => setDefaultClass(c.is_default ? null : c.id))}
@@ -271,8 +272,8 @@ function ClassCard({ c, admin }: { c: ClassInfo; admin: boolean }) {
             </button>
           </form>
         ) : (
-          <div className="min-w-0 flex-1">
-            <div className="truncate font-bold">{c.name}</div>
+          <div className="min-w-0 flex-1 basis-40">
+            <div className="font-bold wrap-break-word sm:truncate">{c.name}</div>
             {/* status words, with a dot only between two of them */}
             <div className="flex flex-wrap gap-x-1.5 text-xs text-slate-500 [&>*+*]:before:me-1.5 [&>*+*]:before:content-['·']">
               {c.is_default && <span className="text-amber-600 dark:text-amber-400">{t('thisYearClass')}</span>}
@@ -283,7 +284,7 @@ function ClassCard({ c, admin }: { c: ClassInfo; admin: boolean }) {
         )}
 
         {!renaming && (
-          <>
+          <div className="ms-auto flex items-center gap-2">
             <button
               onClick={() => setShowServants(v => !v)}
               disabled={!online}
@@ -317,7 +318,7 @@ function ClassCard({ c, admin }: { c: ClassInfo; admin: boolean }) {
                 <TrashIcon />
               </button>
             )}
-          </>
+          </div>
         )}
       </div>
       {showServants && <ClassServants classId={c.id} className={c.name} admin={admin} />}
