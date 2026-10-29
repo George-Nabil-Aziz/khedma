@@ -22,7 +22,8 @@ export function SharePage() {
         </div>
       )}
 
-      {current && <Invite name={current.name} />}
+      {/* key: another class starts with its own busy / error / copied state */}
+      {current && <Invite key={current.id} classId={current.id} name={current.name} />}
       <Join />
     </div>
   )
@@ -52,22 +53,35 @@ export function NoClass() {
   )
 }
 
-function Invite({ name }: { name: string }) {
+type Code = { code: string; expires_at: string }
+
+/**
+ * The last code made for each class, kept while the app is open: switching to another class
+ * shows that class's own code (or none), and coming back shows this one again while it is
+ * still valid.
+ */
+const codes = new Map<string, Code>()
+
+function Invite({ classId, name }: { classId: string; name: string }) {
   const { t, lang } = useI18n()
   const { online } = useStore()
-  const [invite, setInvite] = useState<{ code: string; expires_at: string } | null>(null)
+  const [, refresh] = useState(0)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
+
+  const kept = codes.get(classId)
+  const invite = kept && Date.parse(kept.expires_at) > Date.now() ? kept : null
 
   async function generate() {
     setBusy(true)
     setError('')
     setCopied(false)
-    const r = await createInvite()
-    if (r.ok) setInvite(r.value)
+    const r = await createInvite(classId)
+    if (r.ok) codes.set(classId, r.value)
     else setError(r.error)
     setBusy(false)
+    refresh(n => n + 1)
   }
 
   async function copy() {

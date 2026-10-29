@@ -372,8 +372,9 @@ export async function setDefaultClass(id: string | null): Promise<Result<null>> 
 }
 
 /** A one-time 6-digit code for the class on screen, valid 15 minutes. */
-export async function createInvite(): Promise<Result<{ code: string; expires_at: string }>> {
-  const { data, error } = await supabase.rpc('create_invite', { p_class: state.currentClass })
+/** A share code for `classId` — passed in, so a class switched to meanwhile can't get it. */
+export async function createInvite(classId: string): Promise<Result<{ code: string; expires_at: string }>> {
+  const { data, error } = await supabase.rpc('create_invite', { p_class: classId })
   if (error) return { ok: false, error: error.message }
   return { ok: true, value: (data as { code: string; expires_at: string }[])[0] }
 }
