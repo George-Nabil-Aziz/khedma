@@ -315,6 +315,7 @@ const dict = {
   // users (admin)
   users: { ar: 'المستخدمين', en: 'Users' },
   addUser: { ar: 'إضافة مستخدم', en: 'Add user' },
+  phUserName: { ar: 'اسم الخادم', en: 'Servant’s name' },
   makeAdmin: { ar: 'خليه أدمن', en: 'Make admin' },
   passwordLabel: { ar: 'كلمة المرور', en: 'Password' },
   passwordKeep: { ar: 'سيبها فاضية لو مش عايز تغيّرها', en: 'Leave empty to keep it' },

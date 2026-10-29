@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import type { ClassInfo } from '../lib/supabase'
 import { supabase } from '../lib/supabase'
 import { useI18n } from '../lib/i18n'
 import { useTheme } from '../lib/theme'
@@ -8,6 +9,7 @@ import { Avatar } from './Avatar'
 import { confirmDialog } from './ConfirmDialog'
 import {
   CalendarCheckIcon,
+  ChevronDownIcon,
   HistoryIcon,
   SchoolIcon,
   SettingsIcon,
@@ -19,6 +21,7 @@ import {
   MoonIcon,
   ShieldIcon,
   SlidersIcon,
+  StarIcon,
   SunIcon,
   SyncIcon,
   UsersIcon,
@@ -73,21 +76,8 @@ export function Layout({ email, admin, title, children }: { email: string; admin
         {/* which class is on screen — ⭐ marks this year's class */}
         {activeClasses(classes).length > 0 && (
           <div className="p-3">
-            <label className="block">
-              <span className="px-1 text-xs font-semibold text-slate-500">{t('classLabel')}</span>
-              <select
-                value={currentClass ?? ''}
-                onChange={e => setCurrentClass(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-semibold outline-none focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-800"
-              >
-                {activeClasses(classes).map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.is_default ? '⭐ ' : ''}
-                    {c.name} ({c.service_year})
-                  </option>
-                ))}
-              </select>
-            </label>
+            <span className="px-1 text-xs font-semibold text-slate-500">{t('classLabel')}</span>
+            <ClassPicker classes={activeClasses(classes)} current={currentClass} onPick={setCurrentClass} />
           </div>
         )}
 
@@ -177,6 +167,83 @@ export function Layout({ email, admin, title, children }: { email: string; admin
           {children}
         </main>
       </div>
+    </div>
+  )
+}
+
+/**
+ * The class on screen. A list of our own instead of a <select>: options can't be styled, and the
+ * year (2026-2027) came out reversed inside Arabic text.
+ */
+function ClassPicker({ classes, current, onPick }: { classes: ClassInfo[]; current: string | null; onPick: (id: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const box = useRef<HTMLDivElement>(null)
+  const selected = classes.find(c => c.id === current)
+
+  // close on a click outside or Escape
+  useEffect(() => {
+    if (!open) return
+    const click = (e: MouseEvent) => box.current?.contains(e.target as Node) || setOpen(false)
+    const key = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+    document.addEventListener('mousedown', click)
+    document.addEventListener('keydown', key)
+    return () => {
+      document.removeEventListener('mousedown', click)
+      document.removeEventListener('keydown', key)
+    }
+  }, [open])
+
+  const year = (c: ClassInfo) => (
+    <span dir="ltr" className="shrink-0 text-xs font-normal text-slate-400">
+      {c.service_year}
+    </span>
+  )
+
+  return (
+    <div ref={box} className="relative mt-1">
+      <button
+        onClick={() => setOpen(v => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className={`flex w-full items-center gap-2 rounded-lg border bg-white px-3 py-2 text-start font-semibold dark:bg-slate-800 ${
+          open ? 'border-indigo-500 ring-2 ring-indigo-500/20' : 'border-slate-300 dark:border-slate-700'
+        }`}
+      >
+        {selected?.is_default && <StarIcon className="size-4 shrink-0 text-amber-500" />}
+        <span className="min-w-0 flex-1">
+          <span className="block truncate">{selected?.name ?? '—'}</span>
+          {selected && year(selected)}
+        </span>
+        <ChevronDownIcon className={`size-4 shrink-0 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <ul role="listbox" className="absolute inset-x-0 z-50 mt-1 max-h-72 space-y-0.5 overflow-y-auto rounded-lg border border-slate-200 bg-white p-1 shadow-lg dark:border-slate-700 dark:bg-slate-800">
+          {classes.map(c => {
+            const active = c.id === current
+            return (
+              <li key={c.id}>
+                <button
+                  role="option"
+                  aria-selected={active}
+                  onClick={() => {
+                    onPick(c.id)
+                    setOpen(false)
+                  }}
+                  className={`flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-start text-sm ${
+                    active ? 'bg-indigo-50 font-semibold text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300' : 'hover:bg-slate-100 dark:hover:bg-slate-700/60'
+                  }`}
+                >
+                  {/* keeps the names lined up whether or not a class is starred */}
+                  <span className="grid size-4 shrink-0 place-items-center">{c.is_default && <StarIcon className="size-4 text-amber-500" />}</span>
+                  <span className="min-w-0 flex-1 truncate">{c.name}</span>
+                  {year(c)}
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </div>
   )
 }

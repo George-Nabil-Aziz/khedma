@@ -184,6 +184,12 @@ function ClassCard({ c, admin }: { c: ClassInfo; admin: boolean }) {
     return r.ok
   }
 
+  function cancelRename() {
+    setName(c.name)
+    setError('')
+    setRenaming(false)
+  }
+
   async function leave() {
     const ok = await confirmDialog({ title: t('leaveClass'), message: t('leaveConfirm').replace('{name}', c.name), confirmLabel: t('leaveClass'), danger: true })
     if (ok) run(() => leaveClass(c.id))
@@ -209,11 +215,14 @@ function ClassCard({ c, admin }: { c: ClassInfo; admin: boolean }) {
   return (
     <div
       className={`space-y-2 rounded-xl border bg-white p-3 dark:bg-slate-900 ${
-        c.is_default
-          ? 'border-amber-400 ring-2 ring-amber-400/20 dark:border-amber-500/60'
-          : open
-            ? 'border-indigo-400 ring-2 ring-indigo-400/20 dark:border-indigo-500/60'
-            : 'border-slate-200 dark:border-slate-800'
+        // starred and open: amber border with an indigo ring around it, so both show
+        c.is_default && open
+          ? 'border-amber-400 ring-2 ring-indigo-400 dark:border-amber-500/60 dark:ring-indigo-500/70'
+          : c.is_default
+            ? 'border-amber-400 ring-2 ring-amber-400/20 dark:border-amber-500/60'
+            : open
+              ? 'border-indigo-400 ring-2 ring-indigo-400/20 dark:border-indigo-500/60'
+              : 'border-slate-200 dark:border-slate-800'
       }`}
     >
       <div className="flex items-center gap-2">
@@ -237,9 +246,27 @@ function ClassCard({ c, admin }: { c: ClassInfo; admin: boolean }) {
               if (await run(() => renameClass(c.id, name.trim()))) setRenaming(false)
             }}
           >
-            <input className={input} placeholder={t('phClassName')} value={name} onChange={e => setName(e.target.value)} disabled={busy} autoFocus aria-label={t('className')} />
+            <input
+              className={input}
+              placeholder={t('phClassName')}
+              value={name}
+              onChange={e => setName(e.target.value)}
+              onKeyDown={e => e.key === 'Escape' && cancelRename()}
+              disabled={busy}
+              autoFocus
+              aria-label={t('className')}
+            />
             <button disabled={busy || !name.trim()} className="rounded-lg bg-indigo-600 px-3 text-sm font-semibold text-white disabled:opacity-50">
               {t('save')}
+            </button>
+            {/* back to the card without saving */}
+            <button
+              type="button"
+              onClick={cancelRename}
+              disabled={busy}
+              className="rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              {t('cancel')}
             </button>
           </form>
         ) : (

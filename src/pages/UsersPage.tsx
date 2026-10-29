@@ -199,8 +199,9 @@ export function UsersPage({ myId }: { myId: string }) {
   )
 }
 
-function CreateUser({ disabled, onCreate }: { disabled: boolean; onCreate: (b: { email: string; password: string; admin: boolean }) => Promise<boolean> }) {
+function CreateUser({ disabled, onCreate }: { disabled: boolean; onCreate: (b: { name: string; email: string; password: string; admin: boolean }) => Promise<boolean> }) {
   const { t } = useI18n()
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [repeat, setRepeat] = useState('')
@@ -214,7 +215,8 @@ function CreateUser({ disabled, onCreate }: { disabled: boolean; onCreate: (b: {
     if (password.length < 8) return setError(t('passwordTooShort'))
     if (password !== repeat) return setError(t('passwordMismatch'))
     setBusy(true)
-    if (await onCreate({ email, password, admin })) {
+    if (await onCreate({ name: name.trim(), email, password, admin })) {
+      setName('')
       setEmail('')
       setPassword('')
       setRepeat('')
@@ -236,10 +238,16 @@ function CreateUser({ disabled, onCreate }: { disabled: boolean; onCreate: (b: {
         <PlusIcon className="size-5 text-indigo-600 dark:text-indigo-300" />
         {t('addUser')}
       </h2>
-      {field(
-        t('email'),
-        <input type="email" required dir="ltr" autoComplete="off" placeholder="name@example.com" className={input} value={email} onChange={e => setEmail(e.target.value)} disabled={disabled || busy} />,
-      )}
+      <div className="grid gap-4 sm:grid-cols-2">
+        {field(
+          t('name'),
+          <input required maxLength={100} autoComplete="off" placeholder={t('phUserName')} className={input} value={name} onChange={e => setName(e.target.value)} disabled={disabled || busy} />,
+        )}
+        {field(
+          t('email'),
+          <input type="email" required dir="ltr" autoComplete="off" placeholder="name@example.com" className={input} value={email} onChange={e => setEmail(e.target.value)} disabled={disabled || busy} />,
+        )}
+      </div>
       <div className="grid gap-4 sm:grid-cols-2">
         {field(
           t('passwordLabel'),
@@ -291,10 +299,11 @@ function EditUser({
 }: {
   user: User
   isMe: boolean
-  onSave: (b: { email?: string; password?: string; admin?: boolean }) => Promise<void>
+  onSave: (b: { name?: string; email?: string; password?: string; admin?: boolean }) => Promise<void>
   onCancel: () => void
 }) {
   const { t } = useI18n()
+  const [name, setName] = useState(user.display_name ?? '')
   const [email, setEmail] = useState(user.email)
   const [password, setPassword] = useState('')
   const [admin, setAdmin] = useState(user.is_admin)
@@ -304,7 +313,8 @@ function EditUser({
     e.preventDefault()
     setBusy(true)
     await onSave({
-      email: email.trim() !== user.email ? email.trim() : undefined,
+      name: name.trim() !== (user.display_name ?? '') ? name.trim() : undefined,
+      email:email.trim() !== user.email ? email.trim() : undefined,
       password: password || undefined,
       admin: admin !== user.is_admin ? admin : undefined,
     })
@@ -312,7 +322,8 @@ function EditUser({
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-2 rounded-lg bg-slate-50 p-3 sm:grid-cols-[1fr_1fr_auto] dark:bg-slate-800/50">
+    <form onSubmit={submit} className="grid gap-2 rounded-lg bg-slate-50 p-3 sm:grid-cols-[1fr_1fr_1fr_auto] dark:bg-slate-800/50">
+      <input maxLength={100} placeholder={t('phUserName')} className={input} value={name} onChange={e => setName(e.target.value)} disabled={busy} aria-label={t('name')} />
       <input type="email" required dir="ltr" placeholder="name@example.com" className={input} value={email} onChange={e => setEmail(e.target.value)} disabled={busy || user.shared} aria-label={t('email')} />
       <PasswordInput
         minLength={8}
@@ -327,8 +338,8 @@ function EditUser({
         <input type="checkbox" className="size-4 accent-indigo-600" checked={admin} onChange={e => setAdmin(e.target.checked)} disabled={busy || isMe} />
         {t('admin')}
       </label>
-      {user.shared && <p className="text-xs text-amber-700 sm:col-span-3 dark:text-amber-300">{t('sharedAccountHelp')}</p>}
-      <div className="flex gap-2 sm:col-span-3">
+      {user.shared && <p className="text-xs text-amber-700 sm:col-span-4 dark:text-amber-300">{t('sharedAccountHelp')}</p>}
+      <div className="flex gap-2 sm:col-span-4">
         <button disabled={busy} className="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
           {t('save')}
         </button>

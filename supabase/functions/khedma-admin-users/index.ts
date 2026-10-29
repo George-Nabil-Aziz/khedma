@@ -28,7 +28,7 @@ Deno.serve(async req => {
   const { data: caller } = await admin.auth.getUser(token)
   if (caller.user?.app_metadata?.role !== 'admin') return json({ error: 'Admins only' }, 403)
 
-  let body: { action?: string; id?: string; email?: string; password?: string; admin?: boolean }
+  let body: { action?: string; id?: string; email?: string; password?: string; admin?: boolean; name?: string }
   try {
     body = await req.json()
   } catch {
@@ -47,7 +47,11 @@ Deno.serve(async req => {
     const { data, error } = await admin.schema('khedma').rpc('is_shared_account', { p_user: id })
     return error ? true : data === true // unsure → treat as shared, i.e. refuse
   }
-  const SHARED = 'This account is also used by another app in this project — it cannot be deleted or have its email / password changed here.'
+  // The name lives in Khedma's own profiles table (the one shown in the sidebar), not in the account.
+  const saveName = (id: string, name: string) =>
+    admin.schema('khedma').from('profiles').upsert({ user_id: id, display_name: name.trim() || null })
+
+  const SHARED ='This account is also used by another app in this project — it cannot be deleted or have its email / password changed here.'
 
   switch (body.action) {
     case 'create': {
@@ -61,7 +65,8 @@ Deno.serve(async req => {
       })
       if (error) return json({ error: error.message }, 400)
       await admin.schema('khedma').from('app_users').upsert({ user_id: data.user.id })
-      await audit('user_create', data.user.id, { email: data.user.email, admin: !!body.admin })
+      if (body.name?.trim()) await saveName(data.user.id, body.name)
+      await audit('user_create', data.user.id, { email: data.user.email, name: body.name?.trim() || undefined, admin: !!body.admin })
       return json({ id: data.user.id })
     }
 
@@ -73,10 +78,16 @@ Deno.serve(async req => {
       if (body.email) changes.email = body.email.trim()
       if (body.password) changes.password = body.password
       if (typeof body.admin === 'boolean') changes.app_metadata = { role: body.admin ? 'admin' : null }
-      const { error } = await admin.auth.admin.updateUserById(body.id, changes)
-      if (error) return json({ error: error.message }, 400)
+      if (Object.keys(changes).length) {
+        const { error } = await admin.auth.admin.updateUserById(body.id, changes)
+        if (error) return json({ error: error.message }, 400)
+      }
+      if (typeof body.name === 'string') {
+        const { error } = await saveName(body.id, body.name)
+        if (error) return json({ error: error.message }, 400)
+      }
       // Never log the password itself.
-      await audit('user_update', body.id, { email: body.email, admin: body.admin, password_changed: !!body.password })
+      await audit('user_update', body.id, { email: body.email, name: body.name, admin: body.admin, password_changed: !!body.password })
       return json({ ok: true })
     }
 

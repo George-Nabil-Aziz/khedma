@@ -23,7 +23,8 @@ export const RefreshIcon = ({ className = 'size-4' }: P) => (
 export const LanguagesIcon = ({ className = 'size-5', letter }: P & { letter: string }) => (
   <svg {...base} className={className}>
     <path d="m5 8 6 6M4 14l6-6 2-3M2 5h12M7 2h1" />
-    <text x="17.5" y="22" textAnchor="middle" fontSize="13" fontWeight="700" fill="currentColor" stroke="none" fontFamily="inherit">
+    {/* ع is a small glyph that hangs below the line, so it is drawn larger and a bit higher */}
+    <text x="17.5" y={letter === 'ع' ? 19 : 22} textAnchor="middle" fontSize={letter === 'ع' ? 18 : 13} fontWeight="800" fill="currentColor" stroke="none" fontFamily="inherit">
       {letter}
     </text>
   </svg>
