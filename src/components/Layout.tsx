@@ -83,7 +83,7 @@ export function Layout({ email, admin, title, children }: { email: string; admin
         )}
 
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 pt-3">
-          <button className={item(route.name === 'list' || route.name === 'edit')} onClick={() => nav('/')}>
+          <button className={item(route.name === 'list' || route.name === 'child' || route.name === 'edit')} onClick={() => nav('/')}>
             <UsersIcon />
             {t('children')}
           </button>

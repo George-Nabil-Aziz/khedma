@@ -166,7 +166,7 @@ function OpRow({ op }: { op: Op }) {
       <div className="flex flex-wrap items-center gap-2">
         <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-semibold dark:bg-slate-800">{op.kind === 'insert' ? t('newChild') : t('changed')}</span>
         <span className="flex-1 font-semibold">{name}</span>
-        <button onClick={() => go(`/child/${op.client_id}`)} className="text-sm font-semibold text-indigo-700 hover:underline dark:text-indigo-300">
+        <button onClick={() => go(`/child/${op.client_id}/edit`)} className="text-sm font-semibold text-indigo-700 hover:underline dark:text-indigo-300">
           {t('edit')}
         </button>
       </div>

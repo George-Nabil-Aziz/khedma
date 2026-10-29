@@ -10,6 +10,7 @@ import { AccountGate } from './components/AccountGate'
 import { LoginPage } from './pages/LoginPage'
 import { ChildrenPage } from './pages/ChildrenPage'
 import { ChildFormPage } from './pages/ChildFormPage'
+import { ChildViewPage } from './pages/ChildViewPage'
 import { SyncPage } from './pages/SyncPage'
 import { FieldsPage } from './pages/FieldsPage'
 import { AttendancePage } from './pages/AttendancePage'
@@ -77,6 +78,8 @@ function Routes({ email, userId, admin }: { email: string; userId: string; admin
   switch (route.name) {
     case 'new':
       return page('addChild', <ChildFormPage clientId={null} />)
+    case 'child':
+      return page('children', <ChildViewPage clientId={route.id} />)
     case 'edit':
       return page('editChild', <ChildFormPage clientId={route.id} />)
     case 'attendance':

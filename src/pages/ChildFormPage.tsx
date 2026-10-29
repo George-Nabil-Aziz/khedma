@@ -76,12 +76,15 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
       photo,
     } as ChildInput
     saveChild(clientId, input)
-    if (online) go('/')
+    if (online) go(back)
     else {
       setSavedOffline(true)
-      setTimeout(() => go('/'), 1200)
+      setTimeout(() => go(back), 1200)
     }
   }
+
+  // editing goes back to the child's own page; a new child back to the list
+  const back = clientId ? (`/child/${clientId}` as const) : '/'
 
   const text = (f: FormField, label: TKey, opts: { type?: string; ltr?: boolean; hint?: TKey; inputMode?: 'numeric'; placeholder?: TKey } = {}) => (
     <Field label={t(label)} error={errors[f]} hint={opts.hint && t(opts.hint)}>
@@ -102,9 +105,9 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
 
   return (
     <form onSubmit={submit} className="mx-auto max-w-3xl space-y-5 pb-24">
-      <button type="button" onClick={() => go('/')} className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
+      <button type="button" onClick={() => go(back)} className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
         <ArrowBackIcon className="size-4" />
-        {t('children')}
+        {initial?.full_name || t('children')}
       </button>
 
       <Section title={t('basicInfo')}>
@@ -172,7 +175,7 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/90 p-3 backdrop-blur lg:inset-s-64 dark:border-slate-800 dark:bg-slate-900/90">
         <div className="mx-auto flex max-w-3xl items-center gap-3">
           {savedOffline && <span className="flex-1 text-sm font-semibold text-amber-600 dark:text-amber-300">{t('savedOffline')}</span>}
-          <button type="button" onClick={() => go('/')} className="ms-auto rounded-lg border border-slate-200 px-4 py-2 font-semibold hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800">
+          <button type="button" onClick={() => go(back)} className="ms-auto rounded-lg border border-slate-200 px-4 py-2 font-semibold hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800">
             {t('cancel')}
           </button>
           <button className="rounded-lg bg-indigo-600 px-6 py-2 font-semibold text-white hover:bg-indigo-700">{t('save')}</button>

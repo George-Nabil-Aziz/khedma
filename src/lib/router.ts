@@ -4,7 +4,8 @@ import { useSyncExternalStore } from 'react'
 export type Route =
   | { name: 'list' }
   | { name: 'new' }
-  | { name: 'edit'; id: string }
+  | { name: 'child'; id: string } // #/child/<id>: read only
+  | { name: 'edit'; id: string } // #/child/<id>/edit
   | { name: 'sync' }
   | { name: 'fields' }
   | { name: 'attendance' }
@@ -25,8 +26,8 @@ function parse(hash: string): Route {
   const path = hash.replace(/^#\/?/, '')
   const fixed = STATIC.find(s => s === path)
   if (fixed) return { name: fixed }
-  const m = path.match(/^child\/([\w-]+)$/)
-  if (m) return { name: 'edit', id: m[1] }
+  const m = path.match(/^child\/([\w-]+)(\/edit)?$/)
+  if (m) return { name: m[2] ? 'edit' : 'child', id: m[1] }
   const trip = path.match(/^trip\/([\w-]+)$/)
   if (trip) return { name: 'trip', id: trip[1] }
   return { name: 'list' }
