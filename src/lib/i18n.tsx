@@ -191,8 +191,8 @@ const dict = {
   movedOut: { ar: 'خرجوا من الفصل', en: 'Left the class' },
   markMovedOut: { ar: 'خرج من الفصل', en: 'Left the class' },
   markMovedOutConfirm: {
-    ar: '{name} خرج من الفصل؟ هيفضل موجود ببياناته، بس هينزل تحت خالص في الجدول.',
-    en: 'Did {name} leave the class? They stay with all their data, listed at the very bottom.',
+    ar: '"{name}" خرج من الفصل؟ هيفضل موجود ببياناته، بس هينزل تحت خالص في الجدول.',
+    en: 'Did "{name}" leave the class? They stay with all their data, listed at the very bottom.',
   },
   movedBack: { ar: 'رجع للفصل', en: 'Back in the class' },
   movedOutBanner: { ar: 'خرج من الفصل يوم {date}', en: 'Left the class on {date}' },
@@ -243,8 +243,8 @@ const dict = {
   going: { ar: 'رايح', en: 'Going' },
   notGoing: { ar: 'مش رايح', en: 'Not going' },
   notGoingConfirm: {
-    ar: '{name} دافع فلوس للرحلة دي. لو شيلته، الفلوس اللي اتسجلت له هتتمسح كمان. تكمّل؟',
-    en: '{name} has paid for this trip. Taking them off also deletes what was recorded. Continue?',
+    ar: '"{name}" دافع فلوس للرحلة دي. لو شيلته، الفلوس اللي اتسجلت له هتتمسح كمان. تكمّل؟',
+    en: '"{name}" has paid for this trip. Taking them off also deletes what was recorded. Continue?',
   },
   totalDue: { ar: 'المفروض يتجمع', en: 'Total due' },
   collected: { ar: 'اتجمع', en: 'Collected' },
@@ -259,7 +259,7 @@ const dict = {
   amount: { ar: 'المبلغ', en: 'Amount' },
   addPayment: { ar: 'دفع', en: 'Pay' },
   deletePayment: { ar: 'مسح الدفعة', en: 'Delete payment' },
-  deletePaymentConfirm: { ar: 'تمسح دفعة {amount} بتاعة {name}؟', en: 'Delete the {amount} payment by {name}?' },
+  deletePaymentConfirm: { ar: 'تمسح دفعة "{amount}" بتاعة "{name}"؟', en: 'Delete the "{amount}" payment by "{name}"?' },
   // settings
   settings: { ar: 'الإعدادات', en: 'Settings' },
   yearEndTitle: { ar: 'نهاية سنة الخدمة', en: 'End of the service year' },

@@ -32,6 +32,22 @@ export function confirmDialog(options: Omit<Request, 'resolve'>): Promise<boolea
   })
 }
 
+/**
+ * Names in a message are written between "…" (e.g. فصل "أبو سيفين"); they are shown bold, quotes
+ * kept, so it is plain which part is the name.
+ */
+function Emphasized({ text }: { text: string }) {
+  return text.split(/("[^"]+")/).map((part, i) =>
+    i % 2 ? (
+      <strong key={i} className="font-bold text-slate-900 dark:text-white">
+        {part}
+      </strong>
+    ) : (
+      part
+    ),
+  )
+}
+
 function answer(ok: boolean) {
   current?.resolve(ok)
   current = null
@@ -85,7 +101,7 @@ export function ConfirmHost() {
               {req.title ?? t('areYouSure')}
             </h2>
             <p id="confirm-message" className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-              {req.message}
+              <Emphasized text={req.message} />
             </p>
           </div>
         </div>

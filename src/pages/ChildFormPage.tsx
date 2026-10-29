@@ -129,20 +129,6 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
       </Section>
 
       <Section title={t('address')}>
-        {/* ticking it names this home and opens a second address below */}
-        <label className="flex items-center gap-2 text-sm font-semibold sm:col-span-2">
-          <input
-            type="checkbox"
-            className="size-4 accent-indigo-600"
-            checked={!!other}
-            onChange={async e => {
-              if (e.target.checked) return setOther({})
-              const filled = other && Object.values(other).some(v => v?.trim())
-              if (!filled || (await confirmDialog({ title: t('removeOtherAddress'), message: t('removeOtherAddressConfirm'), confirmLabel: t('removeOtherAddress'), danger: true }))) setOther(null)
-            }}
-          />
-          {t('hasOtherAddress')}
-        </label>
         {other && <div className="sm:col-span-2">{text('address_label', 'addressLabel', { placeholder: 'phMainAddressLabel' })}</div>}
         {text('house_number', 'houseNumber', { placeholder: 'phHouse' })}
         {text('street', 'street', { placeholder: 'phStreet' })}
@@ -161,6 +147,20 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
           </select>
         </Field>
         {text('apartment', 'apartmentLabel', { placeholder: 'phApartment' })}
+        {/* under the address: ticking it names this home and opens a second address below */}
+        <label className="flex items-center gap-2 text-sm font-semibold sm:col-span-2">
+          <input
+            type="checkbox"
+            className="size-4 accent-indigo-600"
+            checked={!!other}
+            onChange={async e => {
+              if (e.target.checked) return setOther({})
+              const filled = other && Object.values(other).some(v => v?.trim())
+              if (!filled || (await confirmDialog({ title: t('removeOtherAddress'), message: t('removeOtherAddressConfirm'), confirmLabel: t('removeOtherAddress'), danger: true }))) setOther(null)
+            }}
+          />
+          {t('hasOtherAddress')}
+        </label>
       </Section>
 
       {other && (
