@@ -20,16 +20,17 @@ export async function photoToThumbnail(file: File, max = 320): Promise<string> {
 
 /**
  * Up to two capital initials for a placeholder avatar:
- * "مينا جرجس" → "مج", "george nabil" → "GN", "george.nabil.biy@gmail.com" → "GN".
+ * "george nabil" → "GN", "george.nabil.biy@gmail.com" → "GN", "جورج نبيل" → "ج ن".
+ * Arabic letters next to each other join into a word ("جن"), so they get a thin space between
+ * them and show as two separate letters.
  */
 export function initials(name: string | null | undefined): string {
-  return (name ?? '')
+  const letters = (name ?? '')
     .trim()
     .replace(/@.*$/, '') // an email: use the part before @
     .split(/[\s._-]+/)
     .filter(Boolean)
     .slice(0, 2)
     .map(w => [...w][0] ?? '')
-    .join('')
-    .toUpperCase()
+  return letters.join(letters.some(l => /[؀-ۿ]/.test(l)) ? ' ' : '').toUpperCase()
 }
