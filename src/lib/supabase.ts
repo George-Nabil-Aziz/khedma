@@ -28,6 +28,7 @@ export const TEXT_FIELDS = [
   'apartment',
   'birth_date',
   'deacon',
+  'confession_father', // أب الاعتراف
   'notes',
   'national_id',
   'category', // الحالة: normal / hidden / brothers — see CATEGORIES

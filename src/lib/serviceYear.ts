@@ -37,6 +37,19 @@ export function serviceYearRange(label: string): { start: string; end: string } 
   return { start: iso(start), end: iso(yearEnd(from + 1)) }
 }
 
+/** Every Friday from `from` to `to` (both 'YYYY-MM-DD'). */
+export function fridays(from: string, to: string): Date[] {
+  const [fy, fm, fd] = from.split('-').map(Number)
+  const d = new Date(fy, fm - 1, fd)
+  d.setDate(d.getDate() + ((5 - d.getDay() + 7) % 7)) // first Friday on/after `from`
+  const out: Date[] = []
+  for (; iso(d) <= to; d.setDate(d.getDate() + 7)) out.push(new Date(d))
+  return out
+}
+
+/** Which Friday of its month a day is: 1 for the first, … 5 for a fifth. */
+export const weekOfMonth = (d: Date) => Math.ceil(d.getDate() / 7)
+
 const FIRST_YEAR = 2001
 const YEARS_AHEAD = 20
 

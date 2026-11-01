@@ -30,6 +30,18 @@ The Users page creates, edits and deletes accounts through the `khedma-admin-use
 2. Name it exactly `khedma-admin-users`.
 3. Paste `supabase/functions/khedma-admin-users/index.ts` and click **Deploy**.
 
+## Birthday notifications
+
+Each servant turns notifications on per device, then picks when reminders come (الإعدادات → التنبيهات). The `khedma-birthdays` Edge Function sends them, and pg_cron calls it every hour. Setup, once:
+
+1. Run `supabase/026_birthday_notifications.sql`.
+2. Make the keys: `npx web-push generate-vapid-keys`.
+3. Supabase → **Edge Functions → Secrets**: add `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `CRON_SECRET` (any long random text).
+4. Deploy `supabase/functions/khedma-birthdays/index.ts` the same way as above, named exactly `khedma-birthdays`, then turn **Verify JWT** off in the function's settings.
+5. Put your project ref and `CRON_SECRET` into `supabase/027_birthday_cron.sql`, run it, then remove the secret from the file again.
+
+iPhone: notifications work only in the installed app (iOS 16.4+).
+
 ## Run locally
 
 1. `cp .env.example .env`, then fill in the URL and the anon (publishable) key.

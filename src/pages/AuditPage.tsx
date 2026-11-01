@@ -36,6 +36,7 @@ const FIELD_LABEL: Record<string, TKey> = {
   apartment: 'apartmentLabel',
   birth_date: 'birthDate',
   deacon: 'deacon',
+  confession_father: 'confessionFather',
   category: 'category',
   notes: 'notes',
   national_id: 'nationalId',

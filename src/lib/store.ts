@@ -511,6 +511,22 @@ export function cycleDay(date: string) {
   scheduleSync()
 }
 
+/**
+ * الإعدادات → أيام التناول والنادي: marks (or clears) `kind` on many Fridays of the class on
+ * screen at once — `on(date)` says which. Only days that change are sent. Works offline.
+ */
+export function setDays(kind: DayKind, dates: string[], on: (date: string) => boolean) {
+  const classId = state.currentClass
+  if (!classId) return
+  const now = new Date().toISOString()
+  const changes = dates.filter(d => isDay(state, d, kind) !== on(d))
+  if (!changes.length) return
+  const dayOutbox = state.dayOutbox.filter(o => !(o.classId === classId && o.kind === kind && changes.includes(o.date)))
+  for (const date of changes) dayOutbox.push({ classId, date, kind, on: on(date), queued_at: now })
+  set({ dayOutbox })
+  scheduleSync()
+}
+
 // Ticking many boxes quickly should send one request, not one per click.
 let syncTimer: ReturnType<typeof setTimeout> | undefined
 function scheduleSync() {

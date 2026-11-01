@@ -46,6 +46,8 @@ export function SettingsTabs({ admin }: { admin: boolean }) {
           <span className="rounded-full bg-amber-500 px-2 text-xs font-bold text-white">{pending}</span>
         ) : null,
       )}
+      {tab('days', '/days', 'daysTitle')}
+      {tab('notifications', '/notifications', 'notifications')}
       {tab('help', '/help', 'howToUse')}
       {tab('install', '/install', 'installApp')}
       {admin && tab('settings', '/settings', 'yearEndTitle')}
@@ -268,6 +270,7 @@ export function HelpPage({ admin }: { admin: boolean }) {
         ['joinHelp', TONE.indigo],
       ])}
       {section('customize', [['customFieldsHelp', TONE.grey], ...(admin ? ([['columnDefaultsHelp', TONE.grey]] as [TKey, string][]) : [])])}
+      {section('notifications', [['notificationsHint', TONE.indigo]])}
       {section('installApp', [['installHelp', TONE.green]])}
       {admin && section('users', [['usersHelp', TONE.indigo]])}
       {admin && section('yearEndTitle', [['yearEndHelp', TONE.amber]])}

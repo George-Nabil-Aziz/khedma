@@ -5,6 +5,7 @@ import { useI18n } from '../lib/i18n'
 import { useTheme } from '../lib/theme'
 import { go, useRoute, type Path } from '../lib/router'
 import { activeClasses, resetStore, setCurrentClass, useStore } from '../lib/store'
+import { disablePush } from '../lib/push'
 import { Avatar } from './Avatar'
 import { confirmDialog } from './ConfirmDialog'
 import {
@@ -31,6 +32,15 @@ export function Layout({ email, admin, title, children }: { email: string; admin
   const { t } = useI18n()
   const route = useRoute()
   const { outbox, conflicts, attOutbox, dayOutbox, attError, classes, currentClass, profile } = useStore()
+  const main = useRef<HTMLElement>(null)
+
+  // A new page starts at its top: the same <main> stays on screen between pages, so it would
+  // otherwise keep the scroll of the page before (on a phone, the bottom of a long list).
+  useEffect(() => {
+    main.current?.scrollTo(0, 0)
+    window.scrollTo(0, 0)
+  }, [location.hash])
+
   const issues = conflicts.length + outbox.filter(o => o.error).length + (attError ? 1 : 0)
   const pending = outbox.length + attOutbox.length + dayOutbox.length
 
@@ -45,6 +55,9 @@ export function Layout({ email, admin, title, children }: { email: string; admin
       () => {},
       () => {},
     )
+    // signing out on purpose: this device stops getting my birthday notifications (the 12-hour
+    // idle sign-out keeps them — it is still my phone)
+    await disablePush()
     await resetStore()
     await supabase.auth.signOut()
   }
@@ -118,7 +131,7 @@ export function Layout({ email, admin, title, children }: { email: string; admin
           {/* الإعدادات, last: its tabs hold the columns, sync and (admins) the service year.
               The sync count shows here, since sync lives inside it. */}
           {!admin && <div className="mx-3 my-2 border-t border-slate-200 dark:border-slate-800" />}
-          <button className={item(route.name === 'settings' || route.name === 'fields' || route.name === 'sync' || route.name === 'install' || route.name === 'help')} onClick={() => nav('/fields')}>
+          <button className={item(route.name === 'settings' || route.name === 'fields' || route.name === 'sync' || route.name === 'install' || route.name === 'help' || route.name === 'notifications' || route.name === 'days')} onClick={() => nav('/fields')}>
             <SettingsIcon />
             <span className="flex-1">{t('settings')}</span>
             {issues > 0 ? (
@@ -161,7 +174,7 @@ export function Layout({ email, admin, title, children }: { email: string; admin
       {/* main */}
       <div className="flex min-w-0 flex-1 flex-col">
         <Header title={title} email={email} onMenu={() => setOpen(true)} onSignOut={signOut} />
-        <main className="min-h-0 flex-1 overflow-auto p-4 lg:p-6">
+        <main ref={main} className="min-h-0 flex-1 overflow-auto p-4 lg:p-6">
           {children}
         </main>
       </div>

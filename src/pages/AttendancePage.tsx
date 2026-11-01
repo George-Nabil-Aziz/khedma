@@ -8,7 +8,7 @@ import { NoChildren } from '../components/NoChildren'
 import { Loading } from '../components/Loading'
 import { HomeIcon, PhoneIcon } from '../components/Icons'
 import { ClassTitle } from '../components/ClassTitle'
-import { currentServiceYear, iso, serviceYearRange } from '../lib/serviceYear'
+import { currentServiceYear, fridays, iso, serviceYearRange } from '../lib/serviceYear'
 
 // Two rows per child, each with its own colour so they are easy to tell apart.
 const KINDS: { kind: FollowUpKind; label: TKey; on: string; hover: string }[] = [
@@ -22,22 +22,25 @@ const DAY: Record<DayKind, { label: TKey; sign: string; text: string }> = {
   club: { label: 'clubDay', sign: '⚽', text: 'text-sky-600 dark:text-sky-300' },
 }
 
-/** Background of a Friday's column, header and rows alike: amber for تناول, sky for نادي, both when it is both. */
-function dayBg(communion: boolean, club: boolean) {
-  if (communion && club) return 'bg-linear-to-b from-amber-200/60 to-sky-200/60 dark:from-amber-500/20 dark:to-sky-500/20'
-  if (communion) return 'bg-amber-200/60 dark:bg-amber-500/20'
-  if (club) return 'bg-sky-200/60 dark:bg-sky-500/20'
-  return ''
+/**
+ * Background of a Friday's column: amber for تناول, sky for نادي, both when it is both.
+ * The date itself (head) one step darker than the rows under it.
+ */
+function dayBg(communion: boolean, club: boolean, head = false) {
+  if (communion && club)
+    return head
+      ? 'bg-linear-to-b from-amber-300/70 to-sky-300/70 dark:from-amber-500/35 dark:to-sky-500/35'
+      : 'bg-linear-to-b from-amber-200/60 to-sky-200/60 dark:from-amber-500/20 dark:to-sky-500/20'
+  if (communion) return head ? 'bg-amber-300/70 dark:bg-amber-500/35' : 'bg-amber-200/60 dark:bg-amber-500/20'
+  if (club) return head ? 'bg-sky-300/70 dark:bg-sky-500/35' : 'bg-sky-200/60 dark:bg-sky-500/20'
+  return head ? 'bg-slate-100 dark:bg-slate-800' : ''
 }
 
-function fridays(from: string, to: string): Date[] {
-  const [fy, fm, fd] = from.split('-').map(Number)
-  const d = new Date(fy, fm - 1, fd)
-  d.setDate(d.getDate() + ((5 - d.getDay() + 7) % 7)) // first Friday on/after `from`
-  const out: Date[] = []
-  for (; iso(d) <= to; d.setDate(d.getDate() + 7)) out.push(new Date(d))
-  return out
-}
+// The coming Friday (or today's): a rose frame drawn inside its cells, so its own colour still shows.
+const THIS_FRIDAY = 'shadow-[inset_2px_0_0_var(--color-rose-500),inset_-2px_0_0_var(--color-rose-500)]'
+// the very last row also closes the frame at the bottom
+const THIS_FRIDAY_LAST = 'shadow-[inset_2px_0_0_var(--color-rose-500),inset_-2px_0_0_var(--color-rose-500),inset_0_-2px_0_var(--color-rose-500)]'
+const THIS_FRIDAY_HEAD = 'shadow-[inset_2px_0_0_var(--color-rose-500),inset_-2px_0_0_var(--color-rose-500),inset_0_2px_0_var(--color-rose-500)] text-rose-700 dark:text-rose-300'
 
 export function AttendancePage() {
   const { t, lang } = useI18n()
@@ -84,17 +87,21 @@ export function AttendancePage() {
     return stillInClassFirst(sortRows(q ? all.filter(r => r.full_name.toLowerCase().includes(q)) : all, columns, sort, lang))
   }, [store, columns, sort, lang, query])
 
-  // Open with this Friday's whole month in view, starting right after the sticky name columns.
-  useEffect(() => {
-    const month = currentMonthCell.current
+  /** Scrolls the grid so `cell` starts right after the sticky name columns. */
+  function scrollTo(cell: HTMLElement | null, smooth = false) {
     const box = scroller.current
-    if (!month || !box) return
+    if (!cell || !box) return
     const stickyWidth = (nameHeader.current?.offsetWidth ?? 0) + (kindHeader.current?.offsetWidth ?? 0)
-    const m = month.getBoundingClientRect()
+    const c = cell.getBoundingClientRect()
     const b = box.getBoundingClientRect()
     // Measured on screen, so it works the same in Arabic (right-to-left) and English.
-    const delta = document.documentElement.dir === 'rtl' ? m.right - (b.right - stickyWidth) : m.left - (b.left + stickyWidth)
-    box.scrollLeft += delta
+    const delta = document.documentElement.dir === 'rtl' ? c.right - (b.right - stickyWidth) : c.left - (b.left + stickyWidth)
+    box.scrollBy({ left: delta, behavior: smooth ? 'smooth' : 'auto' })
+  }
+
+  // Open with this Friday's whole month in view.
+  useEffect(() => {
+    scrollTo(currentMonthCell.current)
   }, [rows.length > 0, lang])
 
   // Name and row label stay in view while scrolling across the Fridays.
@@ -131,6 +138,13 @@ export function AttendancePage() {
         <span className="shrink-0 rounded-full bg-indigo-50 px-3 py-1 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
           {t('total')}: {rows.length}
         </span>
+        {/* back to the coming Friday after scrolling away from it */}
+        <button
+          onClick={() => scrollTo(currentCell.current, true)}
+          className="shrink-0 rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-sm font-semibold text-rose-700 hover:bg-rose-50 dark:border-rose-500/40 dark:bg-slate-900 dark:text-rose-300 dark:hover:bg-rose-500/10"
+        >
+          {t('today')}
+        </button>
       </div>
 
       <div ref={scroller} className="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
@@ -161,8 +175,8 @@ export function AttendancePage() {
                   key={d.date}
                   ref={d.date === currentDate ? currentCell : undefined}
                   className={`border-b border-e border-slate-200 p-0.5 text-xs font-semibold dark:border-slate-800 ${firstOfMonth.has(d.date) ? 'border-s' : ''} ${
-                    dayBg(isDay(store, d.date, 'communion'), isDay(store, d.date, 'club'))
-                  }`}
+                    dayBg(isDay(store, d.date, 'communion'), isDay(store, d.date, 'club'), true)
+                  } ${d.date === currentDate ? THIS_FRIDAY_HEAD : ''}`}
                 >
                   {/* each tap on a date, for the whole class: nothing → ✝ تناول → ⚽ نادي → both → nothing */}
                   <button
@@ -234,7 +248,7 @@ export function AttendancePage() {
                             key={d.date}
                             className={`${bottom} border-e border-e-slate-100 p-1 text-center dark:border-e-slate-800 ${firstOfMonth.has(d.date) ? 'border-s border-s-slate-200 dark:border-s-slate-700' : ''} ${
                               dayBg(isDay(store, d.date, 'communion'), isDay(store, d.date, 'club'))
-                            }`}
+                            } ${d.date === currentDate ? (last && ri === rows.length - 1 ? THIS_FRIDAY_LAST : THIS_FRIDAY) : ''}`}
                           >
                             <button
                               onClick={() => (kind === 'visit' ? cycleVisit(r.client_id, d.date) : toggleFollowUp(r.client_id, d.date, kind))}

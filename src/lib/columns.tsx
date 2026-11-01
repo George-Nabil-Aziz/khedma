@@ -6,7 +6,17 @@ import { classFields, useStore, type ColumnLayout, type ViewRow } from './store'
 import { OWNER_LABEL, OWNER_PHONES_LABEL, telLink, whatsappLink } from './phones'
 import { formatNationalId } from './nationalId'
 import { NO, YES, parseDeacon } from './deacon'
-import { StarIcon, WhatsAppIcon } from '../components/Icons'
+import { CopyIcon, PhoneIcon, StarIcon, WhatsAppIcon } from '../components/Icons'
+import { toast } from '../components/Toast'
+
+async function copyText(text: string, done: string) {
+  try {
+    await navigator.clipboard.writeText(text)
+    toast(done)
+  } catch {
+    /* clipboard blocked — the number is on screen anyway */
+  }
+}
 
 export type SortValue = string | number | null
 
@@ -96,8 +106,15 @@ export function useColumns(): Column[] {
                 <a dir="ltr" href={telLink(p.number)} className="hover:text-indigo-600 hover:underline dark:hover:text-indigo-300">
                   {p.number}
                 </a>
+                {/* call and copy as their own buttons — easier to hit on a phone than the number itself */}
+                <a href={telLink(p.number)} title={t('call')} aria-label={t('call')} className="grid size-7 place-items-center rounded-md text-sky-600 hover:bg-sky-50 dark:text-sky-400 dark:hover:bg-sky-500/10">
+                  <PhoneIcon className="size-4" />
+                </a>
+                <button type="button" onClick={() => copyText(p.number, t('copied'))} title={t('copy')} aria-label={t('copy')} className="grid size-7 place-items-center rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
+                  <CopyIcon className="size-4" />
+                </button>
                 {p.whatsapp && (
-                  <a href={whatsappLink(p.number)} target="_blank" rel="noreferrer" title="WhatsApp" className="text-emerald-500 hover:text-emerald-600">
+                  <a href={whatsappLink(p.number)} target="_blank" rel="noreferrer" title="WhatsApp" className="grid size-7 place-items-center rounded-md text-emerald-500 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-500/10">
                     <WhatsAppIcon className="size-4" />
                   </a>
                 )}
@@ -166,6 +183,7 @@ export function useColumns(): Column[] {
           return d.is === null ? null : `${d.is ? 0 : 1}${d.note.trim()}`
         },
       },
+      { id: 'confession_father', label: t('confessionFather'), render: r => r.confession_father, sort: r => r.confession_father },
       { id: 'notes', label: t('notes'), render: r => r.notes, sort: r => r.notes },
       { id: 'national_id', label: t('nationalId'), render: r => r.national_id && <span dir="ltr">{formatNationalId(r.national_id)}</span>, sort: r => r.national_id, nowrap: true },
     ]

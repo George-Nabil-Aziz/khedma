@@ -21,6 +21,8 @@ import { UsersPage } from './pages/UsersPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { HelpPage, InstallPage, SettingsPage, SettingsTabs } from './pages/SettingsPage'
 import { TripPage, TripsPage } from './pages/TripsPage'
+import { NotificationsPage } from './pages/NotificationsPage'
+import { DaysPage } from './pages/DaysPage'
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -79,6 +81,7 @@ function Routes({ email, userId, admin }: { email: string; userId: string; admin
   if (route.name === 'sync') return settings(<SyncPage />)
   if (route.name === 'install') return settings(<InstallPage />)
   if (route.name === 'help') return settings(<HelpPage admin={admin} />)
+  if (route.name === 'notifications') return settings(<NotificationsPage />)
   if (route.name === 'profile') return page('profile', <ProfilePage email={email} admin={admin} />)
   if (admin && route.name === 'users') return page('users', <UsersPage myId={userId} />)
   if (admin && route.name === 'audit') return page('audit', <AuditPage />)
@@ -100,6 +103,8 @@ function Routes({ email, userId, admin }: { email: string; userId: string; admin
       return page('trips', <TripsPage />)
     case 'trip':
       return page('trips', <TripPage id={route.id} />)
+    case 'days':
+      return settings(<DaysPage />)
     case 'fields':
       return settings(<FieldsPage admin={admin} />)
     default:
