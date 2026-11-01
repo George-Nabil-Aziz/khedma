@@ -175,8 +175,11 @@ export function ChildrenPage() {
                   {/* the line above the first child who left the class */}
                   {r.moved_out_on && !pageRows[i - 1]?.moved_out_on && (
                     <tr>
-                      <td colSpan={colSpan} className="border-t-2 border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-500 dark:border-slate-600 dark:bg-slate-800/60">
-                        {t('movedOut')} ({movedOutCount})
+                      <td colSpan={colSpan} className="border-t-2 border-slate-300 bg-slate-50 py-1.5 text-xs font-bold text-slate-500 dark:border-slate-600 dark:bg-slate-800/60">
+                        {/* stays in view with the names while scrolling across */}
+                        <span className="sticky inset-s-0 inline-block px-3">
+                          {t('movedOut')} ({movedOutCount})
+                        </span>
                       </td>
                     </tr>
                   )}

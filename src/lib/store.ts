@@ -186,7 +186,8 @@ function pick(input: ChildInput): ChildInput {
 
 // ---- lifecycle -------------------------------------------------------------
 
-let started = false
+let started = false // this account's data is loaded (or loading); sign-out clears it
+let listening = false
 
 export async function startStore(userId: string) {
   if (started) return
@@ -235,13 +236,17 @@ export async function startStore(userId: string) {
     false,
   )
 
-  window.addEventListener('online', () => {
-    set({ online: true }, false)
-    sync()
-  })
-  window.addEventListener('offline', () => set({ online: false }, false))
-  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && sync())
-  setInterval(sync, 60_000)
+  // once per page: they outlive a sign-out, and sync() does nothing until the next account is loaded
+  if (!listening) {
+    listening = true
+    window.addEventListener('online', () => {
+      set({ online: true }, false)
+      sync()
+    })
+    window.addEventListener('offline', () => set({ online: false }, false))
+    document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && sync())
+    setInterval(sync, 60_000)
+  }
   sync()
 }
 
@@ -252,8 +257,12 @@ export async function resetStore() {
   save('lastActive', '') // the idle sign-out clock (idle.ts) starts again at the next sign-in
   resetTrips()
   openedDefault = false // the next user to sign in gets their own ⭐ class
+  // The next account signing in without a refresh loads its own data again. Until then nothing
+  // syncs (loaded: false): signed out, a sync would store an empty class list, and the next
+  // account would open on "no class yet".
+  started = false
   set(
-    { rows: [], fields: [], classes: [], profile: null, currentClass: null, outbox: [], conflicts: [], lastSyncAt: null, syncError: null, classLoading: false, attendance: {}, visitTypes: {}, attOutbox: [], attError: null, dayMarks: {}, dayOutbox: [], yearEndWeeks: setWeeks(0), columnDefaults: null },
+    { loaded: false, rows: [], fields: [], classes: [], profile: null, currentClass: null, outbox: [], conflicts: [], lastSyncAt: null, syncError: null, classLoading: false, attendance: {}, visitTypes: {}, attOutbox: [], attError: null, dayMarks: {}, dayOutbox: [], yearEndWeeks: setWeeks(0), columnDefaults: null },
     false,
   )
 }

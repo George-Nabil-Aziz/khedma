@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useI18n } from '../lib/i18n'
 import { go } from '../lib/router'
 import { DAY_KINDS, childrenLoading, cycleDay, cycleVisit, isChecked, visitOf, isDay, stillInClassFirst, toggleFollowUp, useStore, viewRows, type DayKind, type FollowUpKind } from '../lib/store'
@@ -48,19 +48,22 @@ export function AttendancePage() {
   const columns = useColumns()
   const { sort } = useSort()
   const [query, setQuery] = useState('')
-  const scroller = useRef<HTMLDivElement>(null)
-  const currentCell = useRef<HTMLTableCellElement>(null)
-  const currentMonthCell = useRef<HTMLTableCellElement>(null)
-  const nameHeader = useRef<HTMLTableCellElement>(null)
-  const kindHeader = useRef<HTMLTableCellElement>(null)
 
   // The Fridays of the class's own service year, so older classes show their own year.
   const year = store.classes.find(c => c.id === store.currentClass)?.service_year ?? currentServiceYear()
-  const days = useMemo(() => {
+  const allDays = useMemo(() => {
     const { start, end } = serviceYearRange(year)
     return fridays(start, end).map(d => ({ date: iso(d), day: d.getDate(), month: `${d.getFullYear()}-${d.getMonth()}`, d }))
     // the range also moves with the admin's year-end setting (الإعدادات)
   }, [year, store.yearEndWeeks])
+
+  // Today if it is Friday, otherwise the coming Friday.
+  const today = iso(new Date())
+  const currentDate = allDays.find(d => d.date >= today)?.date ?? allDays[allDays.length - 1].date
+
+  // "النهاردة": only the coming Friday's column; "الكل" brings every Friday back (the start)
+  const [onlyToday, setOnlyToday] = useState(false)
+  const days = useMemo(() => (onlyToday ? allDays.filter(d => d.date === currentDate) : allDays), [allDays, onlyToday, currentDate])
 
   // Months as header groups: 4 or 5 Fridays each.
   const months = useMemo(() => {
@@ -74,10 +77,6 @@ export function AttendancePage() {
     return out
   }, [days, lang])
 
-  // Today if it is Friday, otherwise the coming Friday.
-  const today = iso(new Date())
-  const currentDate = days.find(d => d.date >= today)?.date ?? days[days.length - 1].date
-  const currentMonth = days.find(d => d.date === currentDate)?.month
   const firstOfMonth = new Set(days.filter((d, i) => i === 0 || days[i - 1].month !== d.month).map(d => d.date))
 
   const rows = useMemo(() => {
@@ -86,23 +85,6 @@ export function AttendancePage() {
     // same order as the Children page: those who left the class at the bottom
     return stillInClassFirst(sortRows(q ? all.filter(r => r.full_name.toLowerCase().includes(q)) : all, columns, sort, lang))
   }, [store, columns, sort, lang, query])
-
-  /** Scrolls the grid so `cell` starts right after the sticky name columns. */
-  function scrollTo(cell: HTMLElement | null, smooth = false) {
-    const box = scroller.current
-    if (!cell || !box) return
-    const stickyWidth = (nameHeader.current?.offsetWidth ?? 0) + (kindHeader.current?.offsetWidth ?? 0)
-    const c = cell.getBoundingClientRect()
-    const b = box.getBoundingClientRect()
-    // Measured on screen, so it works the same in Arabic (right-to-left) and English.
-    const delta = document.documentElement.dir === 'rtl' ? c.right - (b.right - stickyWidth) : c.left - (b.left + stickyWidth)
-    box.scrollBy({ left: delta, behavior: smooth ? 'smooth' : 'auto' })
-  }
-
-  // Open with this Friday's whole month in view.
-  useEffect(() => {
-    scrollTo(currentMonthCell.current)
-  }, [rows.length > 0, lang])
 
   // Name and row label stay in view while scrolling across the Fridays.
   // Narrow on a phone, so the Fridays still get most of the screen.
@@ -138,30 +120,30 @@ export function AttendancePage() {
         <span className="shrink-0 rounded-full bg-indigo-50 px-3 py-1 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
           {t('total')}: {rows.length}
         </span>
-        {/* back to the coming Friday after scrolling away from it */}
+        {/* النهاردة ⇄ الكل: just the coming Friday, or every Friday of the year */}
         <button
-          onClick={() => scrollTo(currentCell.current, true)}
+          onClick={() => setOnlyToday(v => !v)}
+          aria-pressed={onlyToday}
           className="shrink-0 rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-sm font-semibold text-rose-700 hover:bg-rose-50 dark:border-rose-500/40 dark:bg-slate-900 dark:text-rose-300 dark:hover:bg-rose-500/10"
         >
-          {t('today')}
+          {t(onlyToday ? 'all' : 'today')}
         </button>
       </div>
 
-      <div ref={scroller} className="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         <table className="border-separate border-spacing-0 text-sm">
           <thead className="text-slate-600 dark:text-slate-300">
             <tr>
-              <th ref={nameHeader} rowSpan={2} className={`${stickyName} ${headBg} border-b border-slate-200 px-2 py-2 text-start font-semibold sm:px-3 dark:border-slate-800`}>
+              <th rowSpan={2} className={`${stickyName} ${headBg} border-b border-slate-200 px-2 py-2 text-start font-semibold sm:px-3 dark:border-slate-800`}>
                 {t('name')}
               </th>
-              <th ref={kindHeader} rowSpan={2} className={`${stickyKind} ${headBg} border-b border-e border-slate-200 dark:border-slate-800`} />
+              <th rowSpan={2} className={`${stickyKind} ${headBg} border-b border-e border-slate-200 dark:border-slate-800`} />
               <th rowSpan={2} className="border-b border-e border-slate-200 px-2 py-2 font-semibold dark:border-slate-800" title={t('attendanceTotal')}>
                 ∑
               </th>
               {months.map(m => (
                 <th
                   key={m.key}
-                  ref={m.key === currentMonth ? currentMonthCell : undefined}
                   colSpan={m.count}
                   className="whitespace-nowrap border-b border-e border-slate-200 bg-slate-50 px-2 py-1.5 font-semibold dark:border-slate-800 dark:bg-slate-800/60"
                 >
@@ -173,7 +155,6 @@ export function AttendancePage() {
               {days.map(d => (
                 <th
                   key={d.date}
-                  ref={d.date === currentDate ? currentCell : undefined}
                   className={`border-b border-e border-slate-200 p-0.5 text-xs font-semibold dark:border-slate-800 ${firstOfMonth.has(d.date) ? 'border-s' : ''} ${
                     dayBg(isDay(store, d.date, 'communion'), isDay(store, d.date, 'club'), true)
                   } ${d.date === currentDate ? THIS_FRIDAY_HEAD : ''}`}
@@ -211,7 +192,8 @@ export function AttendancePage() {
                 r.moved_out_on && !rows[ri - 1]?.moved_out_on && (
                   <tr key="moved-out">
                     <td colSpan={days.length + 3} className="border-y-2 border-slate-300 bg-slate-50 py-1.5 text-xs font-bold text-slate-500 dark:border-slate-600 dark:bg-slate-800/60">
-                      <span className="sticky inset-s-0 px-3">
+                      {/* a block, or sticky does nothing: stays in view with the names while scrolling across */}
+                      <span className="sticky inset-s-0 inline-block px-3">
                         {t('movedOut')} ({rows.filter(x => x.moved_out_on).length})
                       </span>
                     </td>
@@ -221,7 +203,8 @@ export function AttendancePage() {
                   const last = i === KINDS.length - 1
                   // A thicker line closes each child's pair of rows.
                   const bottom = last ? 'border-b-2 border-slate-200 dark:border-slate-700' : 'border-b border-slate-100 dark:border-slate-800'
-                  const total = days.filter(d => isChecked(store, r.client_id, d.date, kind)).length
+                  // the whole year, even while only the coming Friday is shown
+                  const total = allDays.filter(d => isChecked(store, r.client_id, d.date, kind)).length
                   return (
                     <tr key={`${r.client_id}-${kind}`} className={`${band(ri)} ${r.moved_out_on ? 'opacity-60' : ''}`}>
                       {i === 0 && (

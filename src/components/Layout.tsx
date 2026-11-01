@@ -6,6 +6,7 @@ import { useTheme } from '../lib/theme'
 import { go, useRoute, type Path } from '../lib/router'
 import { activeClasses, resetStore, setCurrentClass, useStore } from '../lib/store'
 import { disablePush } from '../lib/push'
+import { settingsTabs } from '../pages/SettingsPage'
 import { Avatar } from './Avatar'
 import { confirmDialog } from './ConfirmDialog'
 import {
@@ -43,6 +44,13 @@ export function Layout({ email, admin, title, children }: { email: string; admin
 
   const issues = conflicts.length + outbox.filter(o => o.error).length + (attError ? 1 : 0)
   const pending = outbox.length + attOutbox.length + dayOutbox.length
+
+  // الإعدادات in the sidebar opens to show its tabs; open by itself while on one of them
+  const inSettings = settingsTabs(admin).some(s => s.name === route.name)
+  const [settingsOpen, setSettingsOpen] = useState(inSettings)
+  useEffect(() => {
+    if (inSettings) setSettingsOpen(true)
+  }, [inSettings])
 
   function nav(path: Path) {
     go(path)
@@ -128,10 +136,10 @@ export function Layout({ email, admin, title, children }: { email: string; admin
               </button>
             </>
           )}
-          {/* الإعدادات, last: its tabs hold the columns, sync and (admins) the service year.
-              The sync count shows here, since sync lives inside it. */}
+          {/* الإعدادات, last: a tap opens its tabs right under it. The sync count shows on it
+              (and on مزامنة), since sync lives inside it. */}
           {!admin && <div className="mx-3 my-2 border-t border-slate-200 dark:border-slate-800" />}
-          <button className={item(route.name === 'settings' || route.name === 'fields' || route.name === 'sync' || route.name === 'install' || route.name === 'help' || route.name === 'notifications' || route.name === 'days')} onClick={() => nav('/fields')}>
+          <button className={item(inSettings && !settingsOpen)} onClick={() => setSettingsOpen(v => !v)} aria-expanded={settingsOpen}>
             <SettingsIcon />
             <span className="flex-1">{t('settings')}</span>
             {issues > 0 ? (
@@ -139,7 +147,23 @@ export function Layout({ email, admin, title, children }: { email: string; admin
             ) : pending > 0 ? (
               <span className="rounded-full bg-amber-500 px-2 text-xs font-bold text-white">{pending}</span>
             ) : null}
+            <ChevronDownIcon className={`size-4 shrink-0 text-slate-400 transition-transform ${settingsOpen ? 'rotate-180' : ''}`} />
           </button>
+          {settingsOpen && (
+            <div className="ms-5 space-y-0.5 border-s border-slate-200 ps-2 dark:border-slate-800">
+              {settingsTabs(admin).map(s => (
+                <button key={s.name} className={item(route.name === s.name) + ' py-1.5 text-sm'} onClick={() => nav(s.path)}>
+                  <span className="flex-1">{t(s.label)}</span>
+                  {s.name === 'sync' &&
+                    (issues > 0 ? (
+                      <span className="rounded-full bg-red-500 px-2 text-xs font-bold text-white">{issues}</span>
+                    ) : pending > 0 ? (
+                      <span className="rounded-full bg-amber-500 px-2 text-xs font-bold text-white">{pending}</span>
+                    ) : null)}
+                </button>
+              ))}
+            </div>
+          )}
         </nav>
 
         <div className="border-t border-slate-200 p-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">

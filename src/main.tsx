@@ -8,6 +8,10 @@ import { I18nProvider } from './lib/i18n'
 import { ThemeProvider } from './lib/theme'
 import './lib/install' // catch the browser's install offer early, for الإعدادات
 
+// The app always opens on الأولاد, whatever page it was left on — except a birthday
+// notification's link to one child (push-sw.js).
+if (!/^#\/child\/[\w-]+$/.test(location.hash)) history.replaceState(null, '', location.pathname + location.search)
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider>

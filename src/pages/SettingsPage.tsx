@@ -6,6 +6,19 @@ import { saveYearEndWeeks, useStore } from '../lib/store'
 import { MAX_EXTRA_WEEKS, currentServiceYear, iso, yearEnd } from '../lib/serviceYear'
 import { CalendarCheckIcon, CloudOffIcon, PlusIcon } from '../components/Icons'
 
+/** The tabs of الإعدادات, in order — shown on top of its pages and under it in the sidebar. */
+export function settingsTabs(admin: boolean): { name: Route['name']; path: Path; label: TKey }[] {
+  return [
+    { name: 'notifications', path: '/notifications', label: 'notifications' },
+    { name: 'fields', path: '/fields', label: 'customize' },
+    { name: 'days', path: '/days', label: 'daysTitle' },
+    ...(admin ? [{ name: 'settings', path: '/settings', label: 'yearEndTitle' } as const] : []),
+    { name: 'install', path: '/install', label: 'installApp' },
+    { name: 'help', path: '/help', label: 'howToUse' },
+    { name: 'sync', path: '/sync', label: 'sync' },
+  ]
+}
+
 /**
  * الإعدادات: three tabs, each its own page (#/fields, #/sync, #/settings) under this one bar —
  * columns and sync for everyone, the end of the service year for admins only.
@@ -19,6 +32,7 @@ export function SettingsTabs({ admin }: { admin: boolean }) {
 
   const tab = (name: Route['name'], path: Path, label: TKey, badge?: ReactNode) => (
     <button
+      key={name}
       onClick={() => go(path)}
       aria-current={route.name === name ? 'page' : undefined}
       // a phone: boxes, the open one filled; wider screens: tabs underlined
@@ -35,22 +49,18 @@ export function SettingsTabs({ admin }: { admin: boolean }) {
 
   return (
     <nav className="mx-auto mb-5 grid max-w-4xl grid-cols-2 gap-2 sm:flex sm:gap-0 sm:overflow-x-auto sm:border-b sm:border-slate-200 dark:sm:border-slate-800">
-      {tab('fields', '/fields', 'customize')}
-      {tab(
-        'sync',
-        '/sync',
-        'sync',
-        issues > 0 ? (
-          <span className="rounded-full bg-red-500 px-2 text-xs font-bold text-white">{issues}</span>
-        ) : pending > 0 ? (
-          <span className="rounded-full bg-amber-500 px-2 text-xs font-bold text-white">{pending}</span>
-        ) : null,
+      {settingsTabs(admin).map(s =>
+        tab(
+          s.name,
+          s.path,
+          s.label,
+          s.name !== 'sync' ? null : issues > 0 ? (
+            <span className="rounded-full bg-red-500 px-2 text-xs font-bold text-white">{issues}</span>
+          ) : pending > 0 ? (
+            <span className="rounded-full bg-amber-500 px-2 text-xs font-bold text-white">{pending}</span>
+          ) : null,
+        ),
       )}
-      {tab('days', '/days', 'daysTitle')}
-      {tab('notifications', '/notifications', 'notifications')}
-      {tab('help', '/help', 'howToUse')}
-      {tab('install', '/install', 'installApp')}
-      {admin && tab('settings', '/settings', 'yearEndTitle')}
     </nav>
   )
 }
