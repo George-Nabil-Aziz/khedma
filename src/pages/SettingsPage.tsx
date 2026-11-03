@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { useI18n, type TKey } from '../lib/i18n'
 import { go, useRoute, type Path, type Route } from '../lib/router'
 import { useInstall } from '../lib/install'
-import { activeClasses, saveYearEndWeeks, setServiceDay, useStore } from '../lib/store'
+import { activeClasses, pendingFields, saveYearEndWeeks, setServiceDay, useStore } from '../lib/store'
 import { currentServiceYear, dmy, FRIDAY, MAX_EXTRA_WEEKS, yearEnd } from '../lib/serviceYear'
 import { CalendarCheckIcon, CloudOffIcon, PlusIcon } from '../components/Icons'
 
@@ -26,9 +26,12 @@ export function settingsTabs(admin: boolean): { name: Route['name']; path: Path;
 export function SettingsTabs({ admin }: { admin: boolean }) {
   const { t } = useI18n()
   const route = useRoute()
-  const { outbox, conflicts, attOutbox, dayOutbox, attError } = useStore()
+  const store = useStore()
+  const { outbox, conflicts, attOutbox, dayOutbox, attError } = store
   const issues = conflicts.length + outbox.filter(o => o.error).length + (attError ? 1 : 0)
   const pending = outbox.length + attOutbox.length + dayOutbox.length
+  // admins: extra columns servants added, waiting for approval
+  const waitingFields = admin ? pendingFields(store).length : 0
 
   const tab = (name: Route['name'], path: Path, label: TKey, badge?: ReactNode) => (
     <button
@@ -54,7 +57,9 @@ export function SettingsTabs({ admin }: { admin: boolean }) {
           s.name,
           s.path,
           s.label,
-          s.name !== 'sync' ? null : issues > 0 ? (
+          s.name === 'fields' ? (
+            waitingFields > 0 && <span className="rounded-full bg-amber-500 px-2 text-xs font-bold text-white">{waitingFields}</span>
+          ) : s.name !== 'sync' ? null : issues > 0 ? (
             <span className="rounded-full bg-red-500 px-2 text-xs font-bold text-white">{issues}</span>
           ) : pending > 0 ? (
             <span className="rounded-full bg-amber-500 px-2 text-xs font-bold text-white">{pending}</span>
