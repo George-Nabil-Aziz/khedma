@@ -238,7 +238,11 @@ export function AttendancePage() {
         <span className="shrink-0 rounded-full bg-indigo-50 px-3 py-1 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
           {t('total')}: {rows.length}
         </span>
-        {/* الكل / النهاردة / الشهر: the whole year, just the coming Friday, or this month — الكل first (on the right in Arabic) */}
+      </div>
+
+      {/* الكل / النهاردة / الشهر on a line of their own: the whole year, just the coming Friday, or
+          this month — الكل first (on the right in Arabic) */}
+      <div className="flex flex-wrap items-center gap-2">
         {(['all', 'today', 'month'] as const).map(k => (
           <button
             key={k}
