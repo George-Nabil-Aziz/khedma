@@ -41,7 +41,7 @@ export function ReorderList({ rows, onClose }: { rows: ViewRow[]; onClose: () =>
           }}
           className="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700"
         >
-          {t('reorderDone')}
+          {t('save')}
         </button>
       </div>
 

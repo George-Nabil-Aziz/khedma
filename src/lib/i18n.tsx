@@ -262,7 +262,6 @@ const dict = {
   // ترتيبي — the class's own order of its children
   myOrder: { ar: "ترتيبي", en: "My order" },
   reorder: { ar: "رتّب", en: "Reorder" },
-  reorderDone: { ar: "خلصت", en: "Done" },
   // a child who left the class
   movedOutOn: { ar: "خرج من الفصل يوم", en: "Left the class on" },
   movedOut: { ar: "خرجوا من الفصل", en: "Left the class" },
