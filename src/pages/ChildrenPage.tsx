@@ -64,7 +64,8 @@ export function ChildrenPage() {
   const colSpan = prefs.visible.length + 2
   // the # and name columns stay put when the table scrolls sideways; opaque, the rows pass under them
   const stickyNum = 'sticky inset-s-0 z-10 w-12 min-w-12'
-  const stickyName = 'sticky inset-s-12 z-10'
+  // its own line on the far side: the table's shared borders stay behind while the column is stuck in place
+  const stickyName = "sticky inset-s-12 z-10 after:pointer-events-none after:absolute after:inset-y-0 after:inset-e-0 after:w-px after:bg-slate-300 after:content-[''] dark:after:bg-slate-600"
 
   const top = (
     <>

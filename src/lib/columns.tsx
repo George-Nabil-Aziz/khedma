@@ -98,27 +98,32 @@ export function useColumns(): Column[] {
         return (
           <div className="space-y-1">
             {list.map((p, i) => (
-              <div key={i} className="flex items-center gap-1.5">
-                {r.primary_contacts.includes(owner) && i === 0 && (
-                  <span title={t('primaryContact')} className="text-amber-500">
-                    <StarIcon className="size-3.5" />
-                  </span>
-                )}
-                <a dir="ltr" href={telLink(p.number)} className="hover:text-indigo-600 hover:underline dark:hover:text-indigo-300">
-                  {p.number}
-                </a>
-                {/* call and copy as their own buttons — easier to hit on a phone than the number itself */}
-                <a href={telLink(p.number)} title={t('call')} aria-label={t('call')} className="grid size-7 place-items-center rounded-md text-sky-600 hover:bg-sky-50 dark:text-sky-400 dark:hover:bg-sky-500/10">
-                  <PhoneIcon className="size-4" />
-                </a>
-                <button type="button" onClick={() => copyText(p.number, t('copied'))} title={t('copy')} aria-label={t('copy')} className="grid size-7 place-items-center rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
-                  <CopyIcon className="size-4" />
-                </button>
-                {p.whatsapp && (
-                  <a href={whatsappLink(p.number)} target="_blank" rel="noreferrer" title="WhatsApp" className="grid size-7 place-items-center rounded-md text-emerald-500 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-500/10">
-                    <WhatsAppIcon className="size-4" />
+              // the number on its line, its buttons on the line under it — side by side they made the column wide
+              <div key={i}>
+                <div className="flex items-center gap-1.5">
+                  {r.primary_contacts.includes(owner) && i === 0 && (
+                    <span title={t('primaryContact')} className="text-amber-500">
+                      <StarIcon className="size-3.5" />
+                    </span>
+                  )}
+                  <a dir="ltr" href={telLink(p.number)} className="hover:text-indigo-600 hover:underline dark:hover:text-indigo-300">
+                    {p.number}
                   </a>
-                )}
+                </div>
+                {/* call and copy as their own buttons — easier to hit on a phone than the number itself */}
+                <div className="-ms-1.5 flex items-center">
+                  <a href={telLink(p.number)} title={t('call')} aria-label={t('call')} className="grid size-7 place-items-center rounded-md text-sky-600 hover:bg-sky-50 dark:text-sky-400 dark:hover:bg-sky-500/10">
+                    <PhoneIcon className="size-4" />
+                  </a>
+                  <button type="button" onClick={() => copyText(p.number, t('copied'))} title={t('copy')} aria-label={t('copy')} className="grid size-7 place-items-center rounded-md text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <CopyIcon className="size-4" />
+                  </button>
+                  {p.whatsapp && (
+                    <a href={whatsappLink(p.number)} target="_blank" rel="noreferrer" title="WhatsApp" className="grid size-7 place-items-center rounded-md text-emerald-500 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-500/10">
+                      <WhatsAppIcon className="size-4" />
+                    </a>
+                  )}
+                </div>
               </div>
             ))}
           </div>
