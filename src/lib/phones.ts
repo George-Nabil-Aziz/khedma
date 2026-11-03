@@ -1,3 +1,4 @@
+import { createContext } from 'react'
 import type { Owner } from './supabase'
 import type { TKey } from './i18n'
 
@@ -21,6 +22,9 @@ export function phoneKey(n: string) {
 
 /** True when the text is a phone number (or a piece of one) rather than a name. */
 export const looksLikePhone = (q: string) => /^[\s+\-()\d٠-٩۰-۹]+$/.test(q) && phoneKey(q).length >= 3
+
+/** The number being searched for (as a phoneKey), so the table can mark the one that matched. */
+export const SearchedPhone = createContext<string | null>(null)
 
 export function telLink(number: string) {
   return `tel:${digits(number)}`

@@ -1,9 +1,9 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useContext, useMemo, useState, type ReactNode } from 'react'
 import { OWNERS, type Address, type CustomField, type OtherAddress, type Owner } from './supabase'
 import { useI18n, type TKey } from './i18n'
 import { load, save } from './storage'
 import { classFields, useStore, type ColumnLayout, type ViewRow } from './store'
-import { OWNER_LABEL, OWNER_PHONES_LABEL, telLink, whatsappLink } from './phones'
+import { OWNER_LABEL, OWNER_PHONES_LABEL, SearchedPhone, phoneKey, telLink, whatsappLink } from './phones'
 import { formatNationalId } from './nationalId'
 import { NO, YES, parseDeacon } from './deacon'
 import { CopyIcon, PhoneIcon, StarIcon, WhatsAppIcon } from '../components/Icons'
@@ -19,7 +19,22 @@ async function copyText(text: string, done: string) {
   }
 }
 
-export type SortValue = string | number | null
+/** A number to call — marked when it is the one the search found, since a child can have several. */
+function PhoneNumber({ number }: { number: string }) {
+  const searched = useContext(SearchedPhone)
+  const found = searched != null && phoneKey(number).includes(searched)
+  return (
+    <a
+      dir="ltr"
+      href={telLink(number)}
+      className={`hover:text-indigo-600 hover:underline dark:hover:text-indigo-300 ${found ? '-mx-1 rounded bg-amber-200 px-1 font-semibold text-amber-950 dark:bg-amber-400/30 dark:text-amber-100' : ''}`}
+    >
+      {number}
+    </a>
+  )
+}
+
+export type SortValue =string | number | null
 
 export type Column = {
   id: string
@@ -106,9 +121,7 @@ export function useColumns(): Column[] {
                       <StarIcon className="size-3.5" />
                     </span>
                   )}
-                  <a dir="ltr" href={telLink(p.number)} className="hover:text-indigo-600 hover:underline dark:hover:text-indigo-300">
-                    {p.number}
-                  </a>
+                  <PhoneNumber number={p.number} />
                 </div>
                 {/* call and copy as their own buttons — easier to hit on a phone than the number itself */}
                 <div className="-ms-1.5 flex items-center">

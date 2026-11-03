@@ -10,7 +10,7 @@ import { NoChildren } from '../components/NoChildren'
 import { ReorderList } from '../components/ReorderList'
 import { Loading } from '../components/Loading'
 import { ClassTitle } from '../components/ClassTitle'
-import { looksLikePhone, phoneKey } from '../lib/phones'
+import { SearchedPhone, looksLikePhone, phoneKey } from '../lib/phones'
 import { AlertIcon, ChevronDownIcon, ChevronUpIcon, CloudOffIcon, ColumnsIcon, PlusIcon, SortIcon } from '../components/Icons'
 
 export function ChildrenPage() {
@@ -38,10 +38,11 @@ export function ChildrenPage() {
     sync()
   }, [])
 
+  // a number matches however it was typed: +20 12 …, 0020…, 012…, Arabic digits
+  const phone = looksLikePhone(query.trim()) ? phoneKey(query.trim()) : null
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    // a number matches however it was typed: +20 12 …, 0020…, 012…, Arabic digits
-    const phone = looksLikePhone(q) ? phoneKey(q) : null
     const list = !q
       ? rows
       : rows.filter(r =>
@@ -57,7 +58,7 @@ export function ChildrenPage() {
         )
     // sorted as asked, but those who left the class always come after the rest
     return stillInClassFirst(sortRows(list, columns, sort, lang))
-  }, [rows, query, columns, sort, lang])
+  }, [rows, query, phone, columns, sort, lang])
   const movedOutCount = filtered.filter(r => r.moved_out_on).length
 
   // Back to a page that exists when the search or page size shrinks the list.
@@ -155,6 +156,8 @@ export function ChildrenPage() {
         </div>
       </div>
 
+      {/* the number the search found is marked among the child's other numbers */}
+      <SearchedPhone.Provider value={phone}>
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         <table className="table-grid w-full text-sm">
           <thead className="bg-slate-50 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
@@ -218,6 +221,7 @@ export function ChildrenPage() {
           </tbody>
         </table>
       </div>
+      </SearchedPhone.Provider>
 
       {filtered.length > 0 && (
         <Pagination
