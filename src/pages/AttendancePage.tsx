@@ -115,6 +115,16 @@ export function AttendancePage() {
 
   const firstOfMonth = new Set(days.filter((d, i) => i === 0 || days[i - 1].month !== d.month).map(d => d.date))
 
+  // The الرحلات row: side-by-side days with the same trips make one cell, so a trip of several
+  // days is written once across them.
+  const tripsKey = (d: (typeof days)[number]) => d.trips.map(x => x.trip.id).join()
+  const tripCells: { d: (typeof days)[number]; span: number }[] = []
+  for (const d of days) {
+    const prev = tripCells[tripCells.length - 1]
+    if (prev && d.trips.length && tripsKey(prev.d) === tripsKey(d)) prev.span++
+    else tripCells.push({ d, span: 1 })
+  }
+
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
     const all = viewRows(store)
@@ -190,11 +200,11 @@ export function AttendancePage() {
             <tr>
               {days.map(d =>
                 !d.friday ? (
-                  // a trip's own day: no تناول / نادي marks to set
+                  // a trip's own day: no تناول / نادي marks to set (the 🚌 is in the الرحلات row)
                   <th key={d.date} className={`border-b border-e border-slate-200 p-0.5 text-xs font-semibold dark:border-slate-800 ${firstOfMonth.has(d.date) ? 'border-s' : ''} ${TRIP_HEAD}`}>
                     <span className="flex flex-col items-center px-1 py-0.5">
                       {d.day}
-                      <span className="flex h-3 items-center text-[11px] leading-none">🚌</span>
+                      <span className="h-3" />
                     </span>
                   </th>
                 ) : (
@@ -224,28 +234,30 @@ export function AttendancePage() {
                 ),
               )}
             </tr>
-            {/* الرحلات: name and gathering time under the trip's day — tap it for the trip */}
+            {/* الرحلات: name and gathering time under the trip's days, written once across all of
+                them — tap it for the trip */}
             {tripsByDate.size > 0 && (
               <tr>
                 <th colSpan={2} className={`sticky inset-s-0 z-10 ${headBg} border-b border-e border-slate-200 px-2 py-1 text-start text-xs font-semibold sm:px-3 dark:border-slate-800`}>
-                  🚌 {t('trips')}
+                  {t('trips')}
                 </th>
                 <th className="border-b border-e border-slate-200 dark:border-slate-800" />
-                {days.map(d => (
+                {tripCells.map(({ d, span }) => (
                   <th
                     key={d.date}
+                    colSpan={span}
                     className={`border-b border-e border-slate-200 p-0.5 align-top text-[11px] font-semibold dark:border-slate-800 ${firstOfMonth.has(d.date) ? 'border-s' : ''} ${
                       d.trips.length ? TRIP_HEAD : ''
-                    } ${d.date === currentDate ? THIS_FRIDAY : ''}`}
+                    } ${span === 1 && d.date === currentDate ? THIS_FRIDAY : ''}`}
                   >
                     {d.trips.map(({ trip: tr, first }) => (
                       <button
                         key={tr.id}
                         onClick={() => go(`/trip/${tr.id}`)}
                         title={[tr.name, tr.place, tr.gather_time && `${t('gathering')}: ${time(tr.gather_time)}`, tr.gather_place].filter(Boolean).join(' — ')}
-                        className="block w-full max-w-20 rounded px-1 py-0.5 hover:bg-black/5 dark:hover:bg-white/10"
+                        className={`block w-full rounded px-1 py-0.5 hover:bg-black/5 dark:hover:bg-white/10 ${span === 1 ? 'max-w-20' : ''}`}
                       >
-                        <span className="block truncate">{tr.name}</span>
+                        <span className="block truncate">🚌 {tr.name}</span>
                         {/* the gathering is on the first day only */}
                         {first && tr.gather_time && <span className="block font-normal text-slate-500 dark:text-slate-400">{time(tr.gather_time)}</span>}
                       </button>
@@ -281,21 +293,26 @@ export function AttendancePage() {
                   const bottom = last ? 'border-b-2 border-slate-200 dark:border-slate-700' : 'border-b border-slate-100 dark:border-slate-800'
                   // the whole year, even while only the coming Friday is shown
                   const total = allDays.filter(d => isChecked(store, r.client_id, d.date, kind)).length
+                  // Left the class: faded — the contents only, never a whole row or cell, or the name
+                  // cells (sticky) turn see-through and the scrolled Fridays show behind them.
+                  const dim = r.moved_out_on ? 'opacity-60' : ''
                   return (
-                    <tr key={`${r.client_id}-${kind}`} className={`${band(ri)} ${r.moved_out_on ? 'opacity-60' : ''}`}>
+                    <tr key={`${r.client_id}-${kind}`} className={band(ri)}>
                       {i === 0 && (
                         <td rowSpan={KINDS.length} className={`${stickyName} ${band(ri)} border-b-2 border-slate-200 px-2 py-1.5 align-middle sm:px-3 dark:border-slate-700`}>
                           <button
                             onClick={() => go(`/child/${r.client_id}`)}
-                            className="text-start text-xs font-semibold leading-snug hover:text-indigo-600 sm:text-sm dark:hover:text-indigo-300"
+                            className={`text-start text-xs font-semibold leading-snug hover:text-indigo-600 sm:text-sm dark:hover:text-indigo-300 ${dim}`}
                           >
                             {r.full_name}
                           </button>
                         </td>
                       )}
-                      <td className={`${stickyKind} ${band(ri)} ${bottom} border-e px-1.5 py-1 text-xs font-semibold text-slate-500 sm:px-2 dark:text-slate-400`}>{t(label)}</td>
+                      <td className={`${stickyKind} ${band(ri)} ${bottom} border-e px-1.5 py-1 text-xs font-semibold text-slate-500 sm:px-2 dark:text-slate-400`}>
+                        <span className={dim}>{t(label)}</span>
+                      </td>
                       <td className={`${bottom} border-e px-2 text-center font-bold text-slate-700 dark:text-slate-200`} title={t('attendanceTotal')}>
-                        {total}
+                        <span className={dim}>{total}</span>
                       </td>
                       {days.map(d => {
                         // a trip's own day: nothing to tick for الحضور / الافتقاد
@@ -318,7 +335,7 @@ export function AttendancePage() {
                               aria-checked={on}
                               aria-label={`${r.full_name} — ${t(label)} — ${d.date}${visitLabel ? ` — ${visitLabel}` : ''}`}
                               title={kind === 'visit' ? (visitLabel ?? t('visitHint')) : undefined}
-                              className={`grid size-7 place-items-center rounded-md border-2 transition-colors ${
+                              className={`grid size-7 place-items-center rounded-md border-2 transition-colors ${dim} ${
                                 on ? onClass : `border-slate-300 dark:border-slate-600 ${hover}`
                               }`}
                             >

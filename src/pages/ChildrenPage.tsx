@@ -183,14 +183,20 @@ export function ChildrenPage() {
                       </td>
                     </tr>
                   )}
-                  <tr className={`align-top hover:bg-indigo-50 dark:hover:bg-slate-800 ${i % 2 ? 'bg-[#f1f4f8] dark:bg-[#1a2435]' : 'bg-white dark:bg-slate-900'} ${r.moved_out_on ? 'opacity-60' : ''}`}>
+                  {/* left the class: faded — but not the sticky # and name cells themselves, or they turn
+                      see-through and the scrolled columns show behind them; only what is in them */}
+                  <tr
+                    className={`align-top hover:bg-indigo-50 dark:hover:bg-slate-800 ${i % 2 ? 'bg-[#f1f4f8] dark:bg-[#1a2435]' : 'bg-white dark:bg-slate-900'} ${
+                      r.moved_out_on ? '[&>td:not(.sticky)]:opacity-60' : ''
+                    }`}
+                  >
                     <td className={`${stickyNum} bg-inherit px-3 py-2 text-slate-400`}>
-                    {(current - 1) * pageSize + i + 1}
-                  </td>
+                      <span className={r.moved_out_on ? 'opacity-60' : ''}>{(current - 1) * pageSize + i + 1}</span>
+                    </td>
                     <td className={`${stickyName} min-w-40 bg-inherit px-3 py-2`}>
                       <button
                         onClick={() => go(`/child/${r.client_id}`)}
-                        className="flex items-center gap-2 text-start font-semibold text-indigo-700 hover:underline dark:text-indigo-300"
+                        className={`flex items-center gap-2 text-start font-semibold text-indigo-700 hover:underline dark:text-indigo-300 ${r.moved_out_on ? 'opacity-60' : ''}`}
                       >
                         {r.photo && <Avatar photo={r.photo} name={r.full_name} />}
                         {r.full_name}
