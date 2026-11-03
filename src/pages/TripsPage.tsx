@@ -18,7 +18,7 @@ import {
   tripDays,
 } from '../lib/trips'
 import { dmy, iso } from '../lib/serviceYear'
-import { CATEGORIES } from '../lib/columns'
+import { CATEGORIES, sortRows, useColumns, useSort } from '../lib/columns'
 import { openPicker } from '../lib/picker'
 import { ClassTitle } from '../components/ClassTitle'
 import { Loading } from '../components/Loading'
@@ -268,7 +268,9 @@ function TripForm({ title, initial = EMPTY, onSave, onCancel }: { title: string;
 
 /** A trip's details, who is going, and what each of them has paid. */
 export function TripPage({ id }: { id: string }) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
+  const columns = useColumns()
+  const { sort } = useSort()
   const f = useFormat()
   const store = useStore()
   const { trips, going, payments, loaded } = useTrips()
@@ -286,9 +288,9 @@ export function TripPage({ id }: { id: string }) {
     if (trip && store.currentClass && trip.class_id !== store.currentClass) go('/trips')
   }, [trip, store.currentClass])
   const children = useMemo(
-    // by name; those who left the class at the bottom, under their own heading
-    () => stillInClassFirst((trip ? viewRows(store).filter(r => r.class_id === trip.class_id) : []).sort((a, b) => a.full_name.localeCompare(b.full_name, 'ar'))),
-    [store, trip],
+    // in the Children page's order; those who left the class at the bottom, under their own heading
+    () => stillInClassFirst(sortRows(trip ? viewRows(store).filter(r => r.class_id === trip.class_id) : [], columns, sort, lang)),
+    [store, trip, columns, sort, lang],
   )
 
   if (!loaded) return <Loading />
