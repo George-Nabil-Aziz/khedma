@@ -291,6 +291,7 @@ const dict = {
   },
   howToUse: { ar: 'طريقة الاستخدام', en: 'How to use' },
   today: { ar: 'النهاردة', en: 'Today' },
+  thisMonth: { ar: 'الشهر', en: 'This month' },
   all: { ar: 'الكل', en: 'All' },
   daysTitle: { ar: 'أيام التناول والنادي', en: 'Communion & club days' },
   daysHelp: { ar: 'اختار أنهي يوم خدمة في الشهر (الأول، التاني…) بيكون فيه تناول وأنهي فيه نادي، للفصل ده بس. كل واحد ليه زرار لوحده. هيتعلّموا في المتابعة من يوم الخدمة الجاي لآخر السنة، والأيام اللي فاتت مش هتتغير. وتقدر تغيّر أي يوم لوحده بدوسة على تاريخه في المتابعة', en: 'Pick which service days of the month have communion and which have club, for this class only, each with its own button. They are marked in the attendance grid from the coming service day to the end of the year; past days stay as they are. Any single day can still be changed by tapping its date there' },
