@@ -122,7 +122,7 @@ export function ChildrenPage() {
           }}
         />
         <span className="rounded-full bg-indigo-50 px-3 py-1 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
-          {t('total')}: {filtered.length}
+          {t('count')}: {filtered.length - movedOutCount}
         </span>
         {/* a phone: the three buttons on their own line, full width; wider: at the end of the row */}
         <div className="flex w-full items-center gap-2 sm:ms-auto sm:w-auto">

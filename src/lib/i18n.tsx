@@ -64,7 +64,6 @@ const dict = {
     en: "Add the first child to see them here and in Follow-up",
   },
   noResults: { ar: "لا توجد نتائج", en: "No results" },
-  total: { ar: "العدد الأساسي", en: "Total" },
   count: { ar: "العدد", en: "Count" },
   menu: { ar: "القائمة", en: "Menu" },
   toggleTheme: { ar: "تغيير المظهر", en: "Toggle theme" },
