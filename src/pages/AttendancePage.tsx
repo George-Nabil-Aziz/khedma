@@ -9,7 +9,7 @@ import { Loading } from '../components/Loading'
 import { HomeIcon, PhoneIcon } from '../components/Icons'
 import { ClassTitle } from '../components/ClassTitle'
 import { currentServiceYear, fridays, iso, serviceYearRange } from '../lib/serviceYear'
-import { loadTrips, useTrips, type Trip } from '../lib/trips'
+import { lastDay, loadTrips, useTrips, type Trip } from '../lib/trips'
 
 // Two rows per child, each with its own colour so they are easy to tell apart.
 const KINDS: { kind: FollowUpKind; label: TKey; on: string; hover: string }[] = [
@@ -62,16 +62,22 @@ export function AttendancePage() {
     // the range also moves with the admin's year-end setting (الإعدادات)
   }, [year, store.yearEndWeeks])
 
-  // الرحلات of this class in this service year, by their first day
+  // الرحلات of this class in this service year, on every one of their days
   const { trips } = useTrips()
   useEffect(() => {
     loadTrips()
   }, [store.currentClass])
   const tripsByDate = useMemo(() => {
     const { start, end } = serviceYearRange(year)
-    const out = new Map<string, Trip[]>()
-    for (const tr of trips)
-      if (tr.class_id === store.currentClass && tr.trip_date && tr.trip_date >= start && tr.trip_date <= end) out.set(tr.trip_date, [...(out.get(tr.trip_date) ?? []), tr])
+    const out = new Map<string, { trip: Trip; first: boolean }[]>()
+    for (const trip of trips) {
+      if (trip.class_id !== store.currentClass || !trip.trip_date) continue
+      const last = lastDay(trip)!
+      for (const d = new Date(trip.trip_date + 'T00:00'); iso(d) <= last; d.setDate(d.getDate() + 1)) {
+        const date = iso(d)
+        if (date >= start && date <= end) out.set(date, [...(out.get(date) ?? []), { trip, first: date === trip.trip_date }])
+      }
+    }
     return out
   }, [trips, store.currentClass, year, store.yearEndWeeks])
 
@@ -232,7 +238,7 @@ export function AttendancePage() {
                       d.trips.length ? TRIP_HEAD : ''
                     } ${d.date === currentDate ? THIS_FRIDAY : ''}`}
                   >
-                    {d.trips.map(tr => (
+                    {d.trips.map(({ trip: tr, first }) => (
                       <button
                         key={tr.id}
                         onClick={() => go(`/trip/${tr.id}`)}
@@ -240,7 +246,8 @@ export function AttendancePage() {
                         className="block w-full max-w-20 rounded px-1 py-0.5 hover:bg-black/5 dark:hover:bg-white/10"
                       >
                         <span className="block truncate">{tr.name}</span>
-                        {tr.gather_time && <span className="block font-normal text-slate-500 dark:text-slate-400">{time(tr.gather_time)}</span>}
+                        {/* the gathering is on the first day only */}
+                        {first && tr.gather_time && <span className="block font-normal text-slate-500 dark:text-slate-400">{time(tr.gather_time)}</span>}
                       </button>
                     ))}
                   </th>
