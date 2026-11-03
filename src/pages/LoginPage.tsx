@@ -12,7 +12,7 @@ const primary = 'w-full rounded-lg bg-indigo-600 py-2 font-semibold text-white h
 
 export function LoginPage() {
   const { t } = useI18n()
-  const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn')
+  const [mode, setMode] = useState<'signIn' | 'signUp' | 'forgot'>('signIn')
 
   return (
     <div className="flex h-full flex-col text-slate-900 dark:text-slate-100">
@@ -28,7 +28,9 @@ export function LoginPage() {
             {mode === 'signUp' && <p className="mt-1 text-sm text-slate-500">{t('createAccount')}</p>}
           </div>
 
-          {mode === 'signIn' ? <SignIn /> : <SignUp />}
+          {/* trial version: making an account and resetting a password wait for real emails (SMTP) —
+              until then they only say to ask an admin. <SignUp /> stays below for when they come. */}
+          {mode === 'signIn' ? <SignIn onForgot={() => setMode('forgot')} /> : <TrialNotice text={t(mode === 'signUp' ? 'trialSignUp' : 'trialForgot')} />}
 
           {/* switch between the two */}
           <p className="border-t border-slate-100 pt-4 text-center text-sm text-slate-500 dark:border-slate-800">
@@ -47,7 +49,7 @@ export function LoginPage() {
   )
 }
 
-function SignIn() {
+function SignIn({ onForgot }: { onForgot: () => void }) {
   const { t } = useI18n()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -87,6 +89,9 @@ function SignIn() {
           onChange={e => setPassword(e.target.value)}
         />
       </Labeled>
+      <button type="button" onClick={onForgot} className="-mt-2 text-sm font-semibold text-indigo-700 hover:underline dark:text-indigo-300">
+        {t('forgotPassword')}
+      </button>
       <Message error={error} />
       <button disabled={busy} className={primary}>
         {busy ? t('signingIn') : t('signIn')}
@@ -170,6 +175,17 @@ function SignUp() {
         {busy ? t('loading') : t('createAccount')}
       </button>
     </form>
+  )
+}
+
+/** Trial version: what to do instead of signing up / resetting the password here. */
+function TrialNotice({ text }: { text: string }) {
+  const { t } = useI18n()
+  return (
+    <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+      <p className="font-bold">{t('trialTitle')}</p>
+      <p>{text}</p>
+    </div>
   )
 }
 

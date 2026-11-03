@@ -34,6 +34,10 @@ const dict = {
   createAccount: { ar: "إنشاء حساب", en: "Create account" },
   noAccount: { ar: "معندكش حساب؟", en: "No account?" },
   haveAccount: { ar: "عندك حساب؟", en: "Have an account?" },
+  forgotPassword: { ar: "نسيت كلمة السر؟", en: "Forgot your password?" },
+  trialTitle: { ar: "دي نسخة تجريبية", en: "This is a trial version" },
+  trialSignUp: { ar: "إنشاء حساب جديد مش متاح لسه. كلّم الأدمن وهو يعملك حساب.", en: "Making a new account is not open yet. Ask an admin to make one for you." },
+  trialForgot: { ar: "تغيير كلمة السر من هنا مش متاح لسه. كلّم الأدمن وهو يغيّرهالك.", en: "Resetting the password here is not open yet. Ask an admin to change it for you." },
   checkYourEmail: {
     ar: "اتعمل الحساب ✓ بعتنالك إيميل على {email}، افتحه ودوس على اللينك اللي فيه، وبعدين ارجع سجّل دخول.",
     en: "Account created ✓ We sent an email to {email}. Open it and click the link, then come back and sign in.",
