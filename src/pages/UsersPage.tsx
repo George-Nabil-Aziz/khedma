@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useI18n } from '../lib/i18n'
 import { PasswordInput } from '../components/PasswordInput'
 import { confirmDialog } from '../components/ConfirmDialog'
+import { toast } from '../components/Toast'
 import { sync, useStore } from '../lib/store'
 import { CloudOffIcon, PencilIcon, PlusIcon, ShieldIcon, SyncIcon, TrashIcon, XIcon } from '../components/Icons'
 
@@ -140,7 +141,11 @@ export function UsersPage({ myId }: { myId: string }) {
                     <button
                       onClick={async () => {
                         const ok = await confirmDialog({ title: t('deleteUser'), message: t('deleteUserConfirm').replace('{email}', u.email), confirmLabel: t('deleteUser'), danger: true })
-                        if (ok) run(() => callAdmin({ action: 'delete', id: u.id }))
+                        if (!ok) return
+                        // a toast, not only the red line at the top — on a phone that is scrolled out of sight
+                        let err: string | null = null
+                        await run(async () => (err = await callAdmin({ action: 'delete', id: u.id })))
+                        toast(err ? t('userDeleteFailed').replace('{error}', err) : t('userDeleted').replace('{email}', u.email), err ? 6000 : 3000)
                       }}
                       disabled={!online}
                       title={t('deleteUser')}

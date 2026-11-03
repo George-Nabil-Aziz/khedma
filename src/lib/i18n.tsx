@@ -608,6 +608,8 @@ const dict = {
     ar: 'هيتمسح حساب "{email}" نهائياً. الأولاد والبيانات اللي ضافها هتفضل موجودة. متأكد؟',
     en: 'The account "{email}" will be deleted for good. Children and data they added stay. Sure?',
   },
+  userDeleted: { ar: "اتمسح {email} ✓", en: "{email} deleted ✓" },
+  userDeleteFailed: { ar: "المسح ما نجحش: {error}", en: "Couldn't delete: {error}" },
   sharedAccount: {
     ar: "حساب مشترك مع مشروع تاني",
     en: "Shared with another app",
