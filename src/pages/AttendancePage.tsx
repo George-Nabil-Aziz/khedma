@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useI18n } from '../lib/i18n'
 import { go } from '../lib/router'
 import { DAY_KINDS, childrenLoading, cycleDay, cycleVisit, isChecked, visitOf, isDay, stillInClassFirst, toggleFollowUp, useStore, viewRows, type DayKind, type FollowUpKind } from '../lib/store'
@@ -9,6 +9,7 @@ import { Loading } from '../components/Loading'
 import { HomeIcon, PhoneIcon } from '../components/Icons'
 import { ClassTitle } from '../components/ClassTitle'
 import { currentServiceYear, fridays, iso, serviceYearRange } from '../lib/serviceYear'
+import { loadTrips, useTrips, type Trip } from '../lib/trips'
 
 // Two rows per child, each with its own colour so they are easy to tell apart.
 const KINDS: { kind: FollowUpKind; label: TKey; on: string; hover: string }[] = [
@@ -42,6 +43,10 @@ const THIS_FRIDAY = 'shadow-[inset_2px_0_0_var(--color-rose-500),inset_-2px_0_0_
 const THIS_FRIDAY_LAST = 'shadow-[inset_2px_0_0_var(--color-rose-500),inset_-2px_0_0_var(--color-rose-500),inset_0_-2px_0_var(--color-rose-500)]'
 const THIS_FRIDAY_HEAD = 'shadow-[inset_2px_0_0_var(--color-rose-500),inset_-2px_0_0_var(--color-rose-500),inset_0_2px_0_var(--color-rose-500)] text-rose-700 dark:text-rose-300'
 
+// A trip's day: violet, in the الرحلات row and down the whole column when it is not a Friday.
+const TRIP_HEAD = 'bg-violet-200/70 dark:bg-violet-500/30'
+const TRIP_COL = 'bg-violet-100/60 dark:bg-violet-500/10'
+
 export function AttendancePage() {
   const { t, lang } = useI18n()
   const store = useStore()
@@ -57,13 +62,38 @@ export function AttendancePage() {
     // the range also moves with the admin's year-end setting (الإعدادات)
   }, [year, store.yearEndWeeks])
 
+  // الرحلات of this class in this service year, by their first day
+  const { trips } = useTrips()
+  useEffect(() => {
+    loadTrips()
+  }, [store.currentClass])
+  const tripsByDate = useMemo(() => {
+    const { start, end } = serviceYearRange(year)
+    const out = new Map<string, Trip[]>()
+    for (const tr of trips)
+      if (tr.class_id === store.currentClass && tr.trip_date && tr.trip_date >= start && tr.trip_date <= end) out.set(tr.trip_date, [...(out.get(tr.trip_date) ?? []), tr])
+    return out
+  }, [trips, store.currentClass, year, store.yearEndWeeks])
+
+  // The Fridays, plus a column of its own for a trip on another day. ∑ still counts Fridays only.
+  const allCols = useMemo(() => {
+    const cols = allDays.map(d => ({ ...d, friday: true, trips: tripsByDate.get(d.date) ?? [] }))
+    for (const [date, list] of tripsByDate)
+      if (!cols.some(c => c.date === date)) {
+        const d = new Date(date + 'T00:00')
+        cols.push({ date, day: d.getDate(), month: `${d.getFullYear()}-${d.getMonth()}`, d, friday: false, trips: list })
+      }
+    return cols.sort((a, b) => a.date.localeCompare(b.date))
+  }, [allDays, tripsByDate])
+  const time = (t: string) => new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { hour: 'numeric', minute: '2-digit' }).format(new Date(`2000-01-01T${t}`))
+
   // Today if it is Friday, otherwise the coming Friday.
   const today = iso(new Date())
   const currentDate = allDays.find(d => d.date >= today)?.date ?? allDays[allDays.length - 1].date
 
   // "النهاردة": only the coming Friday's column; "الكل" brings every Friday back (the start)
   const [onlyToday, setOnlyToday] = useState(false)
-  const days = useMemo(() => (onlyToday ? allDays.filter(d => d.date === currentDate) : allDays), [allDays, onlyToday, currentDate])
+  const days = useMemo(() => (onlyToday ? allCols.filter(d => d.date === currentDate) : allCols), [allCols, onlyToday, currentDate])
 
   // Months as header groups: 4 or 5 Fridays each.
   const months = useMemo(() => {
@@ -152,7 +182,16 @@ export function AttendancePage() {
               ))}
             </tr>
             <tr>
-              {days.map(d => (
+              {days.map(d =>
+                !d.friday ? (
+                  // a trip's own day: no تناول / نادي marks to set
+                  <th key={d.date} className={`border-b border-e border-slate-200 p-0.5 text-xs font-semibold dark:border-slate-800 ${firstOfMonth.has(d.date) ? 'border-s' : ''} ${TRIP_HEAD}`}>
+                    <span className="flex flex-col items-center px-1 py-0.5">
+                      {d.day}
+                      <span className="flex h-3 items-center text-[11px] leading-none">🚌</span>
+                    </span>
+                  </th>
+                ) : (
                 <th
                   key={d.date}
                   className={`border-b border-e border-slate-200 p-0.5 text-xs font-semibold dark:border-slate-800 ${firstOfMonth.has(d.date) ? 'border-s' : ''} ${
@@ -176,8 +215,38 @@ export function AttendancePage() {
                     </span>
                   </button>
                 </th>
-              ))}
+                ),
+              )}
             </tr>
+            {/* الرحلات: name and gathering time under the trip's day — tap it for the trip */}
+            {tripsByDate.size > 0 && (
+              <tr>
+                <th colSpan={2} className={`sticky inset-s-0 z-10 ${headBg} border-b border-e border-slate-200 px-2 py-1 text-start text-xs font-semibold sm:px-3 dark:border-slate-800`}>
+                  🚌 {t('trips')}
+                </th>
+                <th className="border-b border-e border-slate-200 dark:border-slate-800" />
+                {days.map(d => (
+                  <th
+                    key={d.date}
+                    className={`border-b border-e border-slate-200 p-0.5 align-top text-[11px] font-semibold dark:border-slate-800 ${firstOfMonth.has(d.date) ? 'border-s' : ''} ${
+                      d.trips.length ? TRIP_HEAD : ''
+                    } ${d.date === currentDate ? THIS_FRIDAY : ''}`}
+                  >
+                    {d.trips.map(tr => (
+                      <button
+                        key={tr.id}
+                        onClick={() => go(`/trip/${tr.id}`)}
+                        title={[tr.name, tr.place, tr.gather_time && `${t('gathering')}: ${time(tr.gather_time)}`, tr.gather_place].filter(Boolean).join(' — ')}
+                        className="block w-full max-w-20 rounded px-1 py-0.5 hover:bg-black/5 dark:hover:bg-white/10"
+                      >
+                        <span className="block truncate">{tr.name}</span>
+                        {tr.gather_time && <span className="block font-normal text-slate-500 dark:text-slate-400">{time(tr.gather_time)}</span>}
+                      </button>
+                    ))}
+                  </th>
+                ))}
+              </tr>
+            )}
           </thead>
           <tbody>
             {rows.length === 0 ? (
@@ -222,6 +291,9 @@ export function AttendancePage() {
                         {total}
                       </td>
                       {days.map(d => {
+                        // a trip's own day: nothing to tick for الحضور / الافتقاد
+                        if (!d.friday)
+                          return <td key={d.date} className={`${bottom} border-e border-e-slate-100 dark:border-e-slate-800 ${firstOfMonth.has(d.date) ? 'border-s border-s-slate-200 dark:border-s-slate-700' : ''} ${TRIP_COL}`} />
                         const on = isChecked(store, r.client_id, d.date, kind)
                         // الافتقاد: 📞 phone or 🏠 home — each tap moves to the next (then back to empty)
                         const visit = kind === 'visit' ? visitOf(store, r.client_id, d.date) : null
