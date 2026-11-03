@@ -6,6 +6,7 @@ import { Avatar } from './Avatar'
 import { confirmDialog } from './ConfirmDialog'
 import { PlusIcon, XIcon } from './Icons'
 import { go } from '../lib/router'
+import { dmy } from '../lib/serviceYear'
 
 // Roles are not shown here — only who "you" are.
 type Servant = { user_id: string; email: string; display_name: string | null; photo: string | null; joined_at: string }
@@ -60,8 +61,6 @@ export function ClassServants({ classId, className, admin }: { classId: string; 
   // upsert: also brings back someone who had left this class
   const add = (userId: string) => change(() => supabase.from('class_members').upsert({ class_id: classId, user_id: userId, left_at: null }))
 
-  const date = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { dateStyle: 'medium' })
-
   if (!list) {
     if (error) return <ErrorText>{error}</ErrorText>
     return <p className="px-1 text-sm text-slate-500">{t('loading')}</p>
@@ -87,7 +86,7 @@ export function ClassServants({ classId, className, admin }: { classId: string; 
               )}
             </div>
             <span className="shrink-0 text-xs text-slate-400">
-              {t('joinedOn')} {date.format(new Date(s.joined_at))}
+              {t('joinedOn')} {dmy(s.joined_at)}
             </span>
             {admin && (
               <button

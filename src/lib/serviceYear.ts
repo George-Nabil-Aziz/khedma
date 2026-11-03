@@ -6,6 +6,23 @@
 const pad = (n: number) => String(n).padStart(2, '0')
 export const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 
+/** Every date the app shows: dd-mm-yyyy, in عربي and English alike. Takes a Date, "yyyy-mm-dd" or a timestamp. */
+export function dmy(d: Date | string): string {
+  if (typeof d === 'string') {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d.split('-').reverse().join('-') // a plain date: no time zone to shift it
+    const text = d
+    d = new Date(d)
+    if (isNaN(d.getTime())) return text // not a date after all: shown as typed
+  }
+  return `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}`
+}
+
+/** A moment: dd-mm-yyyy and the time, e.g. "02-11-2026 3:05 م". */
+export function dmyTime(d: Date | string, lang: string): string {
+  const date = typeof d === 'string' ? new Date(d) : d
+  return `${dmy(date)} ${new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { hour: 'numeric', minute: '2-digit' }).format(date)}`
+}
+
 export const MAX_EXTRA_WEEKS = 3
 let extraWeeks = 0
 

@@ -6,6 +6,7 @@ import { formatAddress, useColumns } from '../lib/columns'
 import { Avatar } from '../components/Avatar'
 import { AlertIcon, ArrowBackIcon, DoorIcon, PencilIcon, TrashIcon } from '../components/Icons'
 import { confirmDialog } from '../components/ConfirmDialog'
+import { dmy } from '../lib/serviceYear'
 
 /**
  * A child's data, read only — what a tap on a name opens. Every column of the table is listed
@@ -74,7 +75,7 @@ export function ChildViewPage({ clientId }: { clientId: string }) {
           <div className="flex flex-wrap items-center gap-3">
             <DoorIcon className="size-5 text-slate-500" />
             <span className="flex-1 font-semibold">
-              {t('movedOutBanner').replace('{date}', new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { dateStyle: 'long' }).format(new Date(child.moved_out_on + 'T00:00')))}
+              {t('movedOutBanner').replace('{date}', dmy(child.moved_out_on))}
             </span>
             <button
               onClick={async () => {

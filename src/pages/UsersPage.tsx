@@ -8,6 +8,7 @@ import { confirmDialog } from '../components/ConfirmDialog'
 import { toast } from '../components/Toast'
 import { sync, useStore } from '../lib/store'
 import { CloudOffIcon, PencilIcon, PlusIcon, ShieldIcon, SyncIcon, TrashIcon, XIcon } from '../components/Icons'
+import { dmyTime } from '../lib/serviceYear'
 
 type User = { id: string; email: string; display_name: string | null; created_at: string; last_sign_in_at: string | null; is_admin: boolean; shared: boolean; class_ids: string[] }
 
@@ -76,7 +77,6 @@ export function UsersPage({ myId }: { myId: string }) {
     run(async () => (await supabase.from('class_members').delete().eq('class_id', classId).eq('user_id', userId)).error?.message ?? null)
 
   const className = (id: string) => classes.find(c => c.id === id)?.name ?? id.slice(0, 8)
-  const time = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' })
 
   return (
     <div className="mx-auto max-w-4xl space-y-5">
@@ -139,7 +139,7 @@ export function UsersPage({ myId }: { myId: string }) {
                     </span>
                   )}
                   <span className="ms-auto text-xs text-slate-500">
-                    {t('lastSignIn')}: {u.last_sign_in_at ? time.format(new Date(u.last_sign_in_at)) : t('neverSignedIn')}
+                    {t('lastSignIn')}: {u.last_sign_in_at ? dmyTime(u.last_sign_in_at, lang) : t('neverSignedIn')}
                   </span>
                   <button
                     onClick={() => setEditing(u.id)}

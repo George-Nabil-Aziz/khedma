@@ -109,8 +109,8 @@ export const updateTrip = (id: string, input: TripInput) => run(supabase.from('t
 export const deleteTrip = (id: string) => run(supabase.from('trips').delete().eq('id', id))
 
 /**
- * Going or not. A child whose الحالة is إخوة الرب starts on the إخوة الرب price (can be changed
- * per trip). Taking a child off the trip also removes what they paid.
+ * Going or not. Taking a child off the trip also removes what they paid. (`brothers` is only kept
+ * as a record — the price follows the child's الحالة, see balance().)
  */
 export const setGoing = (tripId: string, child: string, going: boolean, brothers = false) =>
   run(
@@ -118,9 +118,6 @@ export const setGoing = (tripId: string, child: string, going: boolean, brothers
       ? supabase.from('trip_children').upsert({ trip_id: tripId, child_client_id: child, brothers })
       : supabase.from('trip_children').delete().eq('trip_id', tripId).eq('child_client_id', child),
   )
-
-export const setBrothers = (tripId: string, child: string, brothers: boolean) =>
-  run(supabase.from('trip_children').update({ brothers }).eq('trip_id', tripId).eq('child_client_id', child))
 
 export const addPayment = (tripId: string, child: string, amount: number) =>
   run(supabase.from('trip_payments').insert({ trip_id: tripId, child_client_id: child, amount }))
@@ -137,9 +134,12 @@ export function tripDays(trip: Pick<Trip, 'trip_date' | 'end_date'>): number | n
   return Math.round((Date.parse(trip.end_date) - Date.parse(trip.trip_date)) / 86_400_000) + 1
 }
 
-/** What a child going on the trip owes, has paid, and still has to pay. */
-export function balance(trip: Trip, going: TripChild, payments: TripPayment[]) {
-  const due = (going.brothers ? trip.brothers_price : trip.price) ?? 0
-  const paid = payments.filter(p => p.trip_id === trip.id && p.child_client_id === going.child_client_id).reduce((s, p) => s + p.amount, 0)
+/**
+ * What a child going on the trip owes, has paid, and still has to pay. The price follows the child's
+ * الحالة in their data (إخوة الرب → the إخوة الرب price), not anything set on the trip.
+ */
+export function balance(trip: Trip, childId: string, brothers: boolean, payments: TripPayment[]) {
+  const due = (brothers ? trip.brothers_price : trip.price) ?? 0
+  const paid = payments.filter(p => p.trip_id === trip.id && p.child_client_id === childId).reduce((s, p) => s + p.amount, 0)
   return { due, paid, left: Math.max(0, due - paid) }
 }

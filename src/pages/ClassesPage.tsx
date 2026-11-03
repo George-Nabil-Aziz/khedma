@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useI18n } from '../lib/i18n'
 import { go } from '../lib/router'
 import { activeClasses, createClass, deleteClass, leaveClass, rejoinClass, renameClass, setCurrentClass, setDefaultClass, useStore } from '../lib/store'
-import { currentServiceYear, serviceYearOptions } from '../lib/serviceYear'
+import { currentServiceYear, dmy, serviceYearOptions } from '../lib/serviceYear'
 import type { ClassInfo } from '../lib/supabase'
 import { confirmDialog } from '../components/ConfirmDialog'
 import { ClassServants } from '../components/ClassServants'
@@ -129,7 +129,7 @@ function LeftClassCard({ c }: { c: ClassInfo }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const until = new Date(new Date(c.left_at!).getTime() + 7 * 24 * 60 * 60 * 1000)
-  const date = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { dateStyle: 'medium' }).format(until)
+  const date = dmy(until)
 
   async function rejoin() {
     setBusy(true)

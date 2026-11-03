@@ -6,6 +6,7 @@ import { go } from '../lib/router'
 import { discardOp, flatGet, resolveConflict, retryOp, sync, useStore, X, type Conflict, type Op } from '../lib/store'
 import { OWNER_LABEL } from '../lib/phones'
 import { AlertIcon, SyncIcon } from '../components/Icons'
+import { dmy, dmyTime } from '../lib/serviceYear'
 
 const FIELD_LABEL: Record<CoreField, TKey> = {
   full_name: 'name',
@@ -53,6 +54,7 @@ function useFieldText() {
     if (key === 'primary_contacts') return (v as Phone['owner'][]).map(o => t(OWNER_LABEL[o])).join(lang === 'ar' ? '، ' : ', ') || '—'
     if (key === 'other_address') return otherAddressText(v as OtherAddress, t, lang) || '—'
     if (typeof v === 'boolean') return v ? t('yes') : t('no')
+    if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return dmy(v)
     return String(v)
   }
 
@@ -74,7 +76,7 @@ export function SyncPage() {
         <div className="flex-1">
           <div className="font-bold">{syncing ? t('syncing') : online ? t('online') : t('offline')}</div>
           <div className="text-sm text-slate-500">
-            {t('lastSync')}: {lastSyncAt ? new Date(lastSyncAt).toLocaleString(lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB') : t('never')}
+            {t('lastSync')}: {lastSyncAt ? dmyTime(lastSyncAt, lang) : t('never')}
           </div>
         </div>
         <button

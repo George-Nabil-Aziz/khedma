@@ -8,8 +8,8 @@ import { NoChildren } from '../components/NoChildren'
 import { Loading } from '../components/Loading'
 import { HomeIcon, PhoneIcon } from '../components/Icons'
 import { ClassTitle } from '../components/ClassTitle'
-import { currentServiceYear, fridays, iso, serviceYearRange } from '../lib/serviceYear'
-import { lastDay, loadTrips, useTrips, type Trip } from '../lib/trips'
+import { currentServiceYear, dmy, fridays, iso, serviceYearRange } from '../lib/serviceYear'
+import { balance, lastDay, loadTrips, useTrips, type Trip } from '../lib/trips'
 
 // Two rows per child, each with its own colour so they are easy to tell apart.
 const KINDS: { kind: FollowUpKind; label: TKey; on: string; hover: string }[] = [
@@ -63,7 +63,7 @@ export function AttendancePage() {
   }, [year, store.yearEndWeeks])
 
   // الرحلات of this class in this service year, on every one of their days
-  const { trips } = useTrips()
+  const { trips, going, payments } = useTrips()
   useEffect(() => {
     loadTrips()
   }, [store.currentClass])
@@ -125,12 +125,32 @@ export function AttendancePage() {
     else tripCells.push({ d, span: 1 })
   }
 
+  // الفلتر: who missed the last Friday (for الافتقاد), or — per trip — who is going, who is not,
+  // who still owes. "absent", or "going" / "notGoing" / "owes" + ":" + the trip's id.
+  const [filter, setFilter] = useState('all')
+  useEffect(() => setFilter('all'), [store.currentClass])
+  const lastFriday = [...allDays].reverse().find(d => d.date <= today)?.date
+  const classTrips = useMemo(
+    () => trips.filter(tr => tr.class_id === store.currentClass).sort((a, b) => (b.trip_date ?? '9999').localeCompare(a.trip_date ?? '9999')),
+    [trips, store.currentClass],
+  )
+
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
+    const [what, id] = filter.split(':')
+    const trip = classTrips.find(tr => tr.id === id)
+    const keep = (r: (typeof all)[number]) => {
+      if (what === 'absent') return !!lastFriday && !r.moved_out_on && !isChecked(store, r.client_id, lastFriday, 'attendance')
+      if (!trip) return true // "all", or a trip deleted meanwhile
+      const g = going.find(x => x.trip_id === trip.id && x.child_client_id === r.client_id)
+      if (what === 'going') return !!g
+      if (what === 'notGoing') return !g && !r.moved_out_on
+      return !!g && balance(trip, r.client_id, r.category === 'brothers', payments).left > 0 // owes
+    }
     const all = viewRows(store)
     // same order as the Children page: those who left the class at the bottom
-    return stillInClassFirst(sortRows(q ? all.filter(r => r.full_name.toLowerCase().includes(q)) : all, columns, sort, lang))
-  }, [store, columns, sort, lang, query])
+    return stillInClassFirst(sortRows(all.filter(r => (!q || r.full_name.toLowerCase().includes(q)) && keep(r)), columns, sort, lang))
+  }, [store, columns, sort, lang, query, filter, classTrips, going, payments, lastFriday])
 
   // Name and row label stay in view while scrolling across the Fridays.
   // Narrow on a phone, so the Fridays still get most of the screen.
@@ -159,10 +179,32 @@ export function AttendancePage() {
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <input
           className="min-w-40 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 sm:max-w-xs dark:border-slate-700 dark:bg-slate-900"
-          placeholder={t('search')}
+          placeholder={t('searchName')}
           value={query}
           onChange={e => setQuery(e.target.value)}
         />
+        <select
+          value={filter}
+          onChange={e => setFilter(e.target.value)}
+          aria-label={t('filter')}
+          className={`min-w-0 max-w-full shrink rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500/20 dark:bg-slate-900 ${
+            filter === 'all' ? 'border-slate-300 bg-white dark:border-slate-700' : 'border-indigo-500 bg-indigo-50 font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300'
+          }`}
+        >
+          <option value="all">{t('filterAll')}</option>
+          {lastFriday && (
+            <option value="absent">
+              {t('filterAbsent').replace('{date}', dmy(lastFriday))}
+            </option>
+          )}
+          {classTrips.map(tr => (
+            <optgroup key={tr.id} label={`🚌 ${tr.name}`}>
+              <option value={`going:${tr.id}`}>{t('filterGoing')}</option>
+              <option value={`notGoing:${tr.id}`}>{t('filterNotGoing')}</option>
+              {(tr.price || tr.brothers_price) && <option value={`owes:${tr.id}`}>{t('filterOwes')}</option>}
+            </optgroup>
+          ))}
+        </select>
         <span className="shrink-0 rounded-full bg-indigo-50 px-3 py-1 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
           {t('total')}: {rows.length}
         </span>
@@ -333,7 +375,7 @@ export function AttendancePage() {
                               onClick={() => (kind === 'visit' ? cycleVisit(r.client_id, d.date) : toggleFollowUp(r.client_id, d.date, kind))}
                               role="checkbox"
                               aria-checked={on}
-                              aria-label={`${r.full_name} — ${t(label)} — ${d.date}${visitLabel ? ` — ${visitLabel}` : ''}`}
+                              aria-label={`${r.full_name} — ${t(label)} — ${dmy(d.date)}${visitLabel ? ` — ${visitLabel}` : ''}`}
                               title={kind === 'visit' ? (visitLabel ?? t('visitHint')) : undefined}
                               className={`grid size-7 place-items-center rounded-md border-2 transition-colors ${dim} ${
                                 on ? onClass : `border-slate-300 dark:border-slate-600 ${hover}`

@@ -8,6 +8,7 @@ import { formatNationalId } from './nationalId'
 import { NO, YES, parseDeacon } from './deacon'
 import { CopyIcon, PhoneIcon, StarIcon, WhatsAppIcon } from '../components/Icons'
 import { toast } from '../components/Toast'
+import { dmy } from './serviceYear'
 
 async function copyText(text: string, done: string) {
   try {
@@ -134,7 +135,7 @@ export function useColumns(): Column[] {
         sort: r => [r.street, r.branch_of_street, r.house_number].map(p => p?.trim() ?? '').join('\u0001').replace(/^\u0001+$/, '') || address(r) || null,
       },
       { id: 'landmark', label: t('landmark'), render: r => r.landmark, sort: r => r.landmark },
-      { id: 'birth_date', label: t('birthDate'), render: r => r.birth_date && <span dir="ltr">{r.birth_date}</span>, sort: r => r.birth_date, nowrap: true },
+      { id: 'birth_date', label: t('birthDate'), render: r => r.birth_date && <span dir="ltr">{dmy(r.birth_date)}</span>, sort: r => r.birth_date, nowrap: true },
       {
         id: 'age',
         label: t('age'),
@@ -201,7 +202,7 @@ function customColumn(f: CustomField, t: (k: TKey) => string): Column {
     case 'number':
       return { id, label: f.label, nowrap: true, render: r => get(r) as ReactNode, sort: r => (get(r) == null || get(r) === '' ? null : Number(get(r))) }
     case 'date':
-      return { id, label: f.label, nowrap: true, render: r => get(r) != null && <span dir="ltr">{String(get(r))}</span>, sort: r => (get(r) as string) ?? null }
+      return { id, label: f.label, nowrap: true, render: r => get(r) != null && <span dir="ltr">{dmy(String(get(r)))}</span>, sort: r => (get(r) as string) ?? null }
     default:
       return { id, label: f.label, render: r => get(r) as ReactNode, sort: r => (get(r) as string) || null }
   }

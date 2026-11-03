@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useI18n, type TKey } from '../lib/i18n'
 import { isDay, setDays, useStore, type DayKind } from '../lib/store'
-import { currentServiceYear, fridays, iso, serviceYearRange, weekOfMonth } from '../lib/serviceYear'
+import { currentServiceYear, dmy, fridays, iso, serviceYearRange, weekOfMonth } from '../lib/serviceYear'
 import { ClassTitle } from '../components/ClassTitle'
 import { confirmDialog } from '../components/ConfirmDialog'
 import { toast } from '../components/Toast'
@@ -80,10 +80,8 @@ function KindCard({ kind, coming }: { kind: DayKind; coming: Date[] }) {
   )
   const toggle = (n: number) => setPicked(p => (p.includes(n) ? p.filter(x => x !== n) : [...p, n]))
 
-  const fmt = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { day: 'numeric', month: 'long' })
-
   async function apply() {
-    const ok = await confirmDialog({ title: t(k.label), message: t(k.confirm).replace('{from}', fmt.format(coming[0])), confirmLabel: t(k.apply) })
+    const ok = await confirmDialog({ title: t(k.label), message: t(k.confirm).replace('{from}', dmy(coming[0])), confirmLabel: t(k.apply) })
     if (!ok) return
     const week = new Map(coming.map(d => [iso(d), weekOfMonth(d)]))
     setDays(kind, coming.map(iso), date => picked.includes(week.get(date)!))
@@ -121,7 +119,7 @@ function KindCard({ kind, coming }: { kind: DayKind; coming: Date[] }) {
         <ul className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
           {coming.slice(0, PREVIEW).map(d => (
             <li key={iso(d)} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-2.5 py-1.5 text-sm dark:bg-slate-800/60">
-              <span>{fmt.format(d)}</span>
+              <span dir="ltr">{dmy(d)}</span>
               {picked.includes(weekOfMonth(d)) && <span className={k.text}>{k.sign}</span>}
             </li>
           ))}

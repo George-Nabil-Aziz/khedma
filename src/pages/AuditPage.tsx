@@ -5,6 +5,7 @@ import { useI18n, type TKey } from '../lib/i18n'
 import { useStore } from '../lib/store'
 import { OWNER_LABEL } from '../lib/phones'
 import { CloudOffIcon, SyncIcon } from '../components/Icons'
+import { dmy, dmyTime } from '../lib/serviceYear'
 
 type Entry = {
   id: number
@@ -105,7 +106,6 @@ export function AuditPage() {
   const nameOf = useMemo(() => new Map(rows.map(r => [r.client_id, r.full_name])), [rows])
   const fieldLabel = (k: string) => (FIELD_LABEL[k] ? t(FIELD_LABEL[k]) : k)
   const customLabel = (k: string) => fields.find(f => f.key === k)?.label ?? k
-  const dateFmt = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' })
 
   function show(k: string, v: unknown): string {
     if (v == null || v === '') return '—'
@@ -117,6 +117,7 @@ export function AuditPage() {
     if (k === 'other_address') return otherAddressText(v as OtherAddress, t, lang) || '—'
     if (typeof v === 'boolean') return v ? '✓' : '✗'
     if (typeof v === 'object') return JSON.stringify(v)
+    if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return dmy(v)
     return String(v)
   }
 
@@ -145,7 +146,7 @@ export function AuditPage() {
     if (e.table_name === 'follow_up') {
       const child = String(row?.child_client_id ?? '')
       const kind = row?.kind === 'visit' ? t('rowVisit') : t('rowAttendance')
-      return `${nameOf.get(child) ?? child.slice(0, 8)} — ${kind} — ${row?.date}`
+      return `${nameOf.get(child) ?? child.slice(0, 8)} — ${kind} — ${row?.date ? dmy(String(row.date)) : ''}`
     }
     if (e.table_name === 'custom_fields') return String(row?.label ?? e.record_id ?? '')
     if (e.table_name === 'classes') return `${t('classLabel')}: ${row?.name ?? ''}`
@@ -156,7 +157,7 @@ export function AuditPage() {
     if (e.table_name === 'users') return String(row?.email ?? e.record_id ?? '')
     if (e.table_name === 'class_day_marks') {
       const kinds = dayKindsChanged(e).map(k => t(k === 'club' ? 'clubDay' : 'communionDay'))
-      return (kinds.join(' + ') || t('communionDay')) + ' — ' + String(row?.date ?? '')
+      return (kinds.join(' + ') || t('communionDay')) + ' — ' + (row?.date ? dmy(String(row.date)) : '')
     }
     if (e.table_name === 'trips') return `${t('trips')}: ${row?.name ?? ''}`
     if (e.table_name === 'trip_children' || e.table_name === 'trip_payments') {
@@ -232,7 +233,7 @@ export function AuditPage() {
                 <span className="ms-auto text-xs text-slate-500" dir="ltr">
                   {e.user_email ?? t('auditDashboard')}
                 </span>
-                <span className="text-xs text-slate-400">{dateFmt.format(new Date(e.at))}</span>
+                <span className="text-xs text-slate-400">{dmyTime(e.at, lang)}</span>
               </div>
               {lines.length > 0 && (
                 <div className="mt-2 space-y-1 border-t border-slate-100 pt-2 text-sm dark:border-slate-800">

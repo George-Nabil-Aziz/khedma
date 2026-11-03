@@ -42,6 +42,13 @@ const dict = {
   hidePassword: { ar: "إخفاء كلمة المرور", en: "Hide password" },
   signingIn: { ar: "جاري الدخول…", en: "Signing in…" },
   search: { ar: "بحث بالاسم أو الرقم…", en: "Search by name or number…" },
+  searchName: { ar: "بحث بالاسم…", en: "Search by name…" }, // المتابعة: names only
+  filter: { ar: "فلتر", en: "Filter" },
+  filterAll: { ar: "كل الأولاد", en: "All children" },
+  filterAbsent: { ar: "غابوا يوم {date}", en: "Absent on {date}" },
+  filterGoing: { ar: "طالعين", en: "Going" },
+  filterNotGoing: { ar: "مش طالعين", en: "Not going" },
+  filterOwes: { ar: "لسه عليهم فلوس", en: "Still owe money" },
   loading: { ar: "جاري التحميل…", en: "Loading…" },
   noChildrenTitle: {
     ar: "مفيش أولاد في الفصل ده لسه",

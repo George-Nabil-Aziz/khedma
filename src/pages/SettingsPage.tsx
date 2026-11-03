@@ -3,7 +3,7 @@ import { useI18n, type TKey } from '../lib/i18n'
 import { go, useRoute, type Path, type Route } from '../lib/router'
 import { useInstall } from '../lib/install'
 import { saveYearEndWeeks, useStore } from '../lib/store'
-import { MAX_EXTRA_WEEKS, currentServiceYear, iso, yearEnd } from '../lib/serviceYear'
+import { currentServiceYear, dmy, iso, MAX_EXTRA_WEEKS, yearEnd } from '../lib/serviceYear'
 import { CalendarCheckIcon, CloudOffIcon, PlusIcon } from '../components/Icons'
 
 /** The tabs of الإعدادات, in order — shown on top of its pages and under it in the sidebar. */
@@ -86,7 +86,7 @@ function YearEndSetting() {
   // the year this change matters for: the one running now
   const year = currentServiceYear()
   const end = yearEnd(Number(year.slice(5)), weeks)
-  const date = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(end)
+  const date = dmy(end)
 
   const label = weeks === 0 ? t('yearEndNormal') : (weeks > 0 ? t('yearEndAdd') : t('yearEndRemove')).replace('{n}', String(Math.abs(weeks)))
 

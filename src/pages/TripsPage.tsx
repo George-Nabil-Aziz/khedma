@@ -9,7 +9,6 @@ import {
   deletePayment,
   deleteTrip,
   loadTrips,
-  setBrothers,
   setGoing,
   updateTrip,
   useTrips,
@@ -18,7 +17,7 @@ import {
   lastDay,
   tripDays,
 } from '../lib/trips'
-import { iso } from '../lib/serviceYear'
+import { dmy, iso } from '../lib/serviceYear'
 import { openPicker } from '../lib/picker'
 import { ClassTitle } from '../components/ClassTitle'
 import { Loading } from '../components/Loading'
@@ -34,15 +33,11 @@ function useFormat() {
   const { lang, t } = useI18n()
   const locale = lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB'
   return {
-    date: (d: string | null) => (d ? new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(d + 'T00:00')) : null),
-    short: (d: string) => new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(new Date(d + 'T00:00')),
-    // one day: "الخميس 5 نوفمبر 2026"; more: "الخميس 5 نوفمبر ← السبت 7 نوفمبر 2026 (3 أيام)"
+    // one day: "05-11-2026"; more: "05-11-2026 ← 07-11-2026 (3 أيام)"
     range(trip: Pick<Trip, 'trip_date' | 'end_date'>) {
       if (!trip.trip_date) return null
-      const full = (d: string) => new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(d + 'T00:00'))
-      if (!trip.end_date) return full(trip.trip_date)
-      const first = new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(trip.trip_date + 'T00:00'))
-      return `${first} ← ${full(trip.end_date)} (${t('tripDaysCount').replace('{n}', String(tripDays(trip)))})`
+      if (!trip.end_date) return dmy(trip.trip_date)
+      return `${dmy(trip.trip_date)} ← ${dmy(trip.end_date)} (${t('tripDaysCount').replace('{n}', String(tripDays(trip)))})`
     },
     // "14:30:00" → "2:30 م"
     time: (t: string | null) => (t ? new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(new Date(`2000-01-01T${t}`)) : null),
@@ -279,7 +274,7 @@ export function TripPage({ id }: { id: string }) {
   const goingHere = going.filter(g => g.trip_id === trip.id)
   const totals = goingHere.reduce(
     (s, g) => {
-      const b = balance(trip, g, payments)
+      const b = balance(trip, g.child_client_id, children.find(c => c.client_id === g.child_client_id)?.category === 'brothers', payments)
       return { due: s.due + b.due, paid: s.paid + b.paid, left: s.left + b.left }
     },
     { due: 0, paid: 0, left: 0 },
@@ -409,7 +404,7 @@ function ChildRow({ trip, childId, name, brothers, onError }: { trip: Trip; chil
 
   const g = going.find(x => x.trip_id === trip.id && x.child_client_id === childId)
   const mine = payments.filter(p => p.trip_id === trip.id && p.child_client_id === childId)
-  const b = g ? balance(trip, g, payments) : null
+  const b = g ? balance(trip, childId, brothers, payments) : null
 
   async function act(change: () => Promise<string | null>) {
     setBusy(true)
@@ -424,7 +419,7 @@ function ChildRow({ trip, childId, name, brothers, onError }: { trip: Trip; chil
       const ok = await confirmDialog({ title: t('notGoing'), message: t('notGoingConfirm').replace('{name}', name), confirmLabel: t('notGoing'), danger: true })
       if (!ok) return
     }
-    // الحالة إخوة الرب → starts on the إخوة الرب price
+    // the price follows the child's الحالة (إخوة الرب or not); kept on the row as a record
     act(() => setGoing(trip.id, childId, !g, brothers))
   }
 
@@ -446,16 +441,12 @@ function ChildRow({ trip, childId, name, brothers, onError }: { trip: Trip; chil
         </label>
         {g && (
           <>
-            <button
-              onClick={() => act(() => setBrothers(trip.id, childId, !g.brothers))}
-              disabled={!online || busy}
-              aria-pressed={g.brothers}
-              className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold disabled:opacity-50 ${
-                g.brothers ? 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300' : 'border-slate-200 text-slate-400 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800'
-              }`}
-            >
-              {t('brothers')}
-            </button>
+            {/* from the child's الحالة — on the إخوة الرب price */}
+            {brothers && (
+              <span className="rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
+                {t('brothers')}
+              </span>
+            )}
             {status === 'paid' && <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">✅ {t('paidAll')}</span>}
             {/* how much so far, out of what this child owes */}
             {b!.paid > 0 && (
@@ -485,7 +476,7 @@ function ChildRow({ trip, childId, name, brothers, onError }: { trip: Trip; chil
           {mine.map(p => (
             <span key={p.id} className="flex items-center gap-1 rounded-full bg-emerald-50 py-0.5 ps-2.5 pe-1 text-sm text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200">
               <b dir="ltr">{money(p.amount)}</b>
-              <span className="text-xs opacity-70">{f.short(p.paid_on)}</span>
+              <span className="text-xs opacity-70">{dmy(p.paid_on)}</span>
               <button
                 onClick={async () => {
                   const ok = await confirmDialog({ title: t('deletePayment'), message: t('deletePaymentConfirm').replace('{amount}', money(p.amount)).replace('{name}', name), confirmLabel: t('deletePayment'), danger: true })
