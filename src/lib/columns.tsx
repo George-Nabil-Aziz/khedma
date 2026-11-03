@@ -205,6 +205,9 @@ export function useColumns(): Column[] {
       { id: 'confession_father', label: t('confessionFather'), render: r => r.confession_father, sort: r => r.confession_father },
       { id: 'notes', label: t('notes'), render: r => r.notes, sort: r => r.notes },
       { id: 'national_id', label: t('nationalId'), render: r => r.national_id && <span dir="ltr">{formatNationalId(r.national_id)}</span>, sort: r => r.national_id, nowrap: true },
+      // where a child who left the class went (empty for the others)
+      { id: 'moved_to_church', label: t('movedToChurch'), render: r => r.moved_to_church, sort: r => r.moved_to_church },
+      { id: 'moved_to_servant', label: t('movedToServant'), render: r => r.moved_to_servant, sort: r => r.moved_to_servant },
     ]
 
     return [...builtIn, ...fields.map(f => customColumn(f, t))]
