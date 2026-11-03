@@ -34,11 +34,21 @@ function useFormat() {
   const { lang, t } = useI18n()
   const locale = lang === 'ar' ? 'ar-EG-u-nu-latn' : 'en-GB'
   return {
-    // one day: "05-11-2026"; more: "05-11-2026 ← 07-11-2026 (3 أيام)"
-    range(trip: Pick<Trip, 'trip_date' | 'end_date'>) {
+    // one day: "05-11-2026"; more, each on its own line: "من: 05-11-2026" / "إلى: 07-11-2026" / "3 أيام"
+    range(trip: Pick<Trip, 'trip_date' | 'end_date'>): ReactNode {
       if (!trip.trip_date) return null
       if (!trip.end_date) return dmy(trip.trip_date)
-      return `${dmy(trip.trip_date)} ← ${dmy(trip.end_date)} (${t('tripDaysCount').replace('{n}', String(tripDays(trip)))})`
+      return (
+        <span className="inline-flex flex-col">
+          <span>
+            {t('rangeFrom')} {dmy(trip.trip_date)}
+          </span>
+          <span>
+            {t('rangeTo')} {dmy(trip.end_date)}
+          </span>
+          <span className="font-normal opacity-70">{t('tripDaysCount').replace('{n}', String(tripDays(trip)))}</span>
+        </span>
+      )
     },
     // "14:30:00" → "2:30 م"
     time: (t: string | null) => (t ? new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(new Date(`2000-01-01T${t}`)) : null),
@@ -151,7 +161,11 @@ function TripCard({ trip, past, goingCount, collected }: { trip: Trip; past?: bo
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600 dark:text-slate-300">
         {trip.place && <span>📍 {trip.place}</span>}
-        {trip.trip_date && <span>📅 {f.range(trip)}</span>}
+        {trip.trip_date && (
+          <span className="flex items-start gap-1">
+            📅 {f.range(trip)}
+          </span>
+        )}
         {(trip.gather_time || trip.gather_place) && (
           <span>
             🚏 {t('gathering')}: {[f.time(trip.gather_time), trip.gather_place].filter(Boolean).join(' — ')}

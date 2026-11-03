@@ -387,6 +387,8 @@ const dict = {
     en: "The last day must come after the first",
   },
   tripDaysCount: { ar: "{n} أيام", en: "{n} days" },
+  rangeFrom: { ar: "من:", en: "From:" },
+  rangeTo: { ar: "إلى:", en: "To:" },
   gathering: { ar: "التجمع", en: "Gathering" },
   gatherPlace: { ar: "مكان التجمع", en: "Gathering place" },
   phGatherPlace: {
