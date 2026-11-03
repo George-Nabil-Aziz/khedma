@@ -395,16 +395,7 @@ export function TripPage({ id }: { id: string }) {
       {/* children */}
       <section className="space-y-2">
         <div className="flex items-center gap-2 px-1">
-          <h2 className="font-bold">{t('tripChildren')}</h2>
-          {/* what the dots beside the names mean */}
-          <span className="flex flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-            {(['hidden', 'brothers'] as const).map(v => (
-              <span key={v} className="flex items-center gap-1">
-                <span className={`size-2.5 rounded-full ${CAT_DOT[v]}`} />
-                {t(CATEGORIES.find(c => c.value === v)!.key)}
-              </span>
-            ))}
-          </span>
+          <h2 className="flex-1 font-bold">{t('tripChildren')}</h2>
           <label className="flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
             <input type="checkbox" className="size-4 accent-indigo-600" checked={onlyGoing} onChange={e => setOnlyGoing(e.target.checked)} />
             {t('onlyGoing')}
@@ -486,8 +477,8 @@ function ChildRow({ trip, childId, name, category, onError }: { trip: Trip; chil
         <label className="flex min-w-0 flex-1 items-center gap-2">
           <input type="checkbox" className="size-5 accent-indigo-600" checked={!!g} onChange={toggleGoing} disabled={!online || busy} aria-label={`${name} — ${t('going')}`} />
           <span className={`truncate font-semibold ${g ? '' : 'text-slate-500'}`}>{name}</span>
-          {/* the child's الحالة as a coloured dot (which of the three prices they pay); the word is in the key above the list */}
-          {cat && cat.value !== 'normal' && <span title={t(cat.key)} aria-label={t(cat.key)} className={`size-2.5 shrink-0 rounded-full ${CAT_DOT[cat.value]}`} />}
+          {/* the child's الحالة as a coloured dot only (which of the three prices they pay) — no word, no tooltip */}
+          {cat && cat.value !== 'normal' && <span aria-label={t(cat.key)} className={`size-2.5 shrink-0 rounded-full ${CAT_DOT[cat.value]}`} />}
         </label>
         {g && (
           <>
