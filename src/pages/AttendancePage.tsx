@@ -238,17 +238,13 @@ export function AttendancePage() {
         <span className="shrink-0 rounded-full bg-indigo-50 px-3 py-1 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
           {t('total')}: {rows.length}
         </span>
-        {/* النهاردة / الشهر / الكل: just the coming Friday, this month, or the whole year — الكل always last (on the left in Arabic) */}
-        {(['today', 'month', 'all'] as const).map(k => (
+        {/* two buttons: the views we are not in — النهاردة (the coming Friday), الشهر (this month), الكل (the
+            whole year) — with الكل always last, on the left in Arabic */}
+        {(['today', 'month', 'all'] as const).filter(k => k !== only).map(k => (
           <button
             key={k}
             onClick={() => setOnly(k)}
-            aria-pressed={only === k}
-            className={`shrink-0 rounded-lg border border-rose-300 px-3 py-1.5 text-sm font-semibold dark:border-rose-500/40 ${
-              only === k
-                ? 'bg-rose-600 text-white hover:bg-rose-700 dark:bg-rose-500'
-                : 'bg-white text-rose-700 hover:bg-rose-50 dark:bg-slate-900 dark:text-rose-300 dark:hover:bg-rose-500/10'
-            }`}
+            className="shrink-0 rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-sm font-semibold text-rose-700 hover:bg-rose-50 dark:border-rose-500/40 dark:bg-slate-900 dark:text-rose-300 dark:hover:bg-rose-500/10"
           >
             {t(k === 'month' ? 'thisMonth' : k)}
           </button>
