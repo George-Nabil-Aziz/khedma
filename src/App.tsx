@@ -31,10 +31,14 @@ export default function App() {
   useEffect(() => {
     // The session is kept in localStorage, so a signed-in servant can open the app offline.
     supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) toChildren()
       setSession(data.session)
       setReady(true)
     })
-    const { data } = supabase.auth.onAuthStateChange((_event, s) => setSession(s))
+    const { data } = supabase.auth.onAuthStateChange((event, s) => {
+      if (event === 'SIGNED_OUT') toChildren()
+      setSession(s)
+    })
     return () => data.subscription.unsubscribe()
   }, [])
 
@@ -47,6 +51,11 @@ export default function App() {
       <Routes email={session.user.email ?? ''} userId={session.user.id} admin={admin} />
     </AccountGate>
   )
+}
+
+// A refresh stays on the same page; signing in again starts on الأولاد.
+function toChildren() {
+  history.replaceState(null, '', location.pathname + location.search)
 }
 
 function Routes({ email, userId, admin }: { email: string; userId: string; admin: boolean }) {
