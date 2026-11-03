@@ -190,9 +190,20 @@ const dict = {
   customize: { ar: "تعديل الأعمدة", en: "Edit columns" },
   extraFields: { ar: "حقول إضافية", en: "Extra fields" },
   customFieldsHelp: {
-    ar: "أي عمود تضيفه هنا هيظهر في جدول الأولاد وفي صفحة التعديل، ولكل الخدام.",
-    en: "Columns added here appear in the children table and the edit form, for every servant.",
+    ar: "أي عمود تضيفه هنا هيظهر في جدول الأولاد وفي صفحة التعديل. هيظهر ليك إنت بس لحد ما الأدمن يوافق عليه، وبعدها لكل الخدام.",
+    en: "Columns added here appear in the children table and the edit form — only to you until an admin approves them, then to every servant.",
   },
+  fieldPending: { ar: "مستني موافقة الأدمن", en: "Waiting for an admin" },
+  fieldPendingNote: {
+    ar: "العمود هيظهر ليك إنت بس لحد ما الأدمن يوافق عليه، وبعدها هيظهر لكل الخدام.",
+    en: "The column shows only to you until an admin approves it, then to every servant.",
+  },
+  pendingFieldsTitle: { ar: "أعمدة مستنية موافقتك", en: "Columns waiting for your approval" },
+  pendingFieldsHelp: {
+    ar: "خدام ضافوا الأعمدة دي، ومحدش شايفها غيرهم. لو وافقت هتظهر لكل الخدام، ولو حذفتها هتتمسح هي واللي اتكتب فيها.",
+    en: "Servants added these and only they see them. Approve to show a column to every servant, or delete it with what was typed in it.",
+  },
+  approveField: { ar: "موافقة", en: "Approve" },
   addField: { ar: "إضافة عمود", en: "Add column" },
   fieldLabel: { ar: "اسم العمود", en: "Column name" },
   fieldType: { ar: "نوع البيانات", en: "Data type" },
@@ -213,8 +224,8 @@ const dict = {
     en: 'Delete the "{name}" column. Sure?',
   },
   deleteFieldAdminOnly: {
-    ar: "حذف الأعمدة للأدمن بس.",
-    en: "Only admins can delete columns.",
+    ar: "حذف الأعمدة للأدمن بس، إلا عمودك اللي لسه مستني موافقة.",
+    en: "Only admins can delete columns — except your own while it waits for approval.",
   },
   onlineOnly: {
     ar: "تعديل الأعمدة محتاج نت",

@@ -345,7 +345,11 @@ export function setCurrentClass(id: string | null) {
 }
 
 /** Custom columns of the class on screen. */
-export const classFields = (s: State) => s.fields.filter(f => f.class_id === s.currentClass)
+/** The class's extra columns as the table and form show them: approved ones, and my own still waiting for an admin.
+ *  (Columns saved on this device before approval existed have no `approved` — they count as approved.) */
+export const classFields = (s: State) => s.fields.filter(f => f.class_id === s.currentClass && (f.approved !== false || f.mine))
+/** Admins: columns servants added that wait for approval (an admin's own never wait). */
+export const pendingFields = (s: State) => s.fields.filter(f => f.class_id === s.currentClass && f.approved === false && !f.mine)
 
 // The ⭐ class opens by itself once per app start; after that the user's own choice sticks.
 let openedDefault = false
@@ -712,9 +716,20 @@ export function resolveConflict(clientId: string, keep: 'mine' | 'server') {
 // ---- custom columns (need a connection) ------------------------------------
 
 async function pullFields() {
-  const { data, error } = await supabase.from('custom_fields').select('key,label,type,position,class_id').order('position').order('created_at')
+  const [{ data, error }, me] = await Promise.all([
+    supabase.from('custom_fields').select('key,label,type,position,class_id,approved,created_by').order('position').order('created_at'),
+    myId(),
+  ])
   if (error) throw isNetworkError(error.message) ? new Offline() : new Error(error.message)
-  set({ fields: data as CustomField[] })
+  set({ fields: (data ?? []).map(({ created_by, ...f }) => ({ ...f, mine: created_by != null && created_by === me }) as CustomField) })
+}
+
+/** Admins: the whole class sees a column a servant added. */
+export async function approveField(key: string): Promise<string | null> {
+  const { error } = await supabase.from('custom_fields').update({ approved: true }).eq('key', key)
+  if (error) return error.message
+  await pullFields().catch(() => {})
+  return null
 }
 
 export async function addField(label: string, type: FieldType): Promise<string | null> {
@@ -733,7 +748,7 @@ export async function renameField(key: string, label: string): Promise<string | 
   return null
 }
 
-/** Admins only: removes the column AND the values typed into it, for every child of the class. */
+/** Admins (or whoever added it, while it waits): removes the column AND the values typed into it, for every child of the class. */
 export async function deleteField(key: string): Promise<string | null> {
   const { error } = await supabase.rpc('delete_custom_field', { p_key: key })
   if (error) return error.message

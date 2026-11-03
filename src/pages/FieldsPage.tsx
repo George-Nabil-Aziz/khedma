@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from 'react'
 import type { CustomField, FieldType } from '../lib/supabase'
 import { useI18n, type TKey } from '../lib/i18n'
-import { addField, classFields, deleteField, renameField, saveColumnDefaults, useStore, viewRows } from '../lib/store'
+import { addField, approveField, classFields, deleteField, pendingFields, renameField, saveColumnDefaults, useStore, viewRows } from '../lib/store'
 import { useColumnDefaultsEditor, useColumns } from '../lib/columns'
 import { ColumnsList } from '../components/ColumnsMenu'
-import { CloudOffIcon, LockIcon, PlusIcon, TrashIcon } from '../components/Icons'
+import { CheckIcon, CloudOffIcon, LockIcon, PlusIcon, TrashIcon } from '../components/Icons'
 import { confirmDialog } from '../components/ConfirmDialog'
 
 const TYPES: { value: FieldType; key: TKey }[] = [
@@ -24,6 +24,7 @@ export function FieldsPage({ admin }: { admin: boolean }) {
   const store = useStore()
   const { online } = store
   const fields = classFields(store)
+  const pending = pendingFields(store)
   const [label, setLabel] = useState('')
   const [type, setType] = useState<FieldType>('text')
   const [busy, setBusy] = useState(false)
@@ -58,6 +59,56 @@ export function FieldsPage({ admin }: { admin: boolean }) {
       ? t('deleteFieldWithData').replace('{name}', f.label).replace('{count}', String(n))
       : t('deleteFieldEmpty').replace('{name}', f.label)
     if (await confirmDialog({ title: t('deleteField'), message, confirmLabel: t('deleteField'), danger: true })) run(() => deleteField(f.key))
+  }
+
+  /** A column: its name to rename in place, its type, and — when allowed — delete (and, waiting for an admin, approve). */
+  function fieldRow(f: CustomField, canDelete: boolean, approve = false) {
+    return (
+      <div key={f.key} className="flex flex-wrap items-center gap-2">
+        <input
+          className={`${input} min-w-40 flex-1`}
+          placeholder={t('phFieldLabel')}
+          defaultValue={f.label}
+          disabled={!online || busy}
+          aria-label={t('fieldLabel')}
+          onBlur={e => {
+            const v = e.target.value.trim()
+            if (v && v !== f.label) run(() => renameField(f.key, v))
+            else e.target.value = f.label
+          }}
+        />
+        <span className="shrink-0 whitespace-nowrap rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs dark:bg-slate-800">
+          <span className="text-slate-500">{t('fieldType')}: </span>
+          <span className="font-semibold">{t(TYPES.find(o => o.value === f.type)?.key ?? 'typeText')}</span>
+        </span>
+        {f.mine && f.approved === false && (
+          <span className="shrink-0 whitespace-nowrap rounded-lg bg-amber-100 px-2.5 py-1.5 text-xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">{t('fieldPending')}</span>
+        )}
+        {approve && (
+          <button
+            type="button"
+            disabled={!online || busy}
+            onClick={() => run(() => approveField(f.key))}
+            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+          >
+            <CheckIcon className="size-4" />
+            {t('approveField')}
+          </button>
+        )}
+        {canDelete && (
+          <button
+            type="button"
+            disabled={!online || busy}
+            onClick={() => remove(f)}
+            title={t('deleteField')}
+            aria-label={t('deleteField')}
+            className="grid size-9 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-500/10"
+          >
+            <TrashIcon />
+          </button>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -112,6 +163,7 @@ export function FieldsPage({ admin }: { admin: boolean }) {
           <PlusIcon className="size-4" />
           {t('addField')}
         </button>
+        {!admin && <p className="text-xs text-slate-500">{t('fieldPendingNote')}</p>}
         {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">{error}</p>}
       </form>
 
@@ -121,41 +173,24 @@ export function FieldsPage({ admin }: { admin: boolean }) {
         {fields.length === 0 ? (
           <p className="text-sm text-slate-500">{t('noCustomFields')}</p>
         ) : (
-          fields.map(f => (
-            <div key={f.key} className="flex items-center gap-2">
-              <input
-                className={input}
-                placeholder={t('phFieldLabel')}
-                defaultValue={f.label}
-                disabled={!online || busy}
-                aria-label={t('fieldLabel')}
-                onBlur={e => {
-                  const v = e.target.value.trim()
-                  if (v && v !== f.label) run(() => renameField(f.key, v))
-                  else e.target.value = f.label
-                }}
-              />
-              <span className="shrink-0 whitespace-nowrap rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs dark:bg-slate-800">
-                <span className="text-slate-500">{t('fieldType')}: </span>
-                <span className="font-semibold">{t(TYPES.find(o => o.value === f.type)?.key ?? 'typeText')}</span>
-              </span>
-              {admin && (
-                <button
-                  type="button"
-                  disabled={!online || busy}
-                  onClick={() => remove(f)}
-                  title={t('deleteField')}
-                  aria-label={t('deleteField')}
-                  className="grid size-9 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-500/10"
-                >
-                  <TrashIcon />
-                </button>
-              )}
-            </div>
-          ))
+          // a servant may still delete their own column while it waits — nobody else has it yet
+          fields.map(f => fieldRow(f, admin || (f.mine && f.approved === false)))
         )}
         {!admin && fields.length > 0 && <p className="text-xs text-slate-400">{t('deleteFieldAdminOnly')}</p>}
       </section>
+
+      {/* admins: what servants added, seen by nobody else until approved here */}
+      {admin && pending.length > 0 && (
+        <section className="space-y-3 rounded-xl border border-amber-300 bg-amber-50/60 p-4 dark:border-amber-500/40 dark:bg-amber-500/5">
+          <div>
+            <h2 className="font-bold">
+              {t('pendingFieldsTitle')} ({pending.length})
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">{t('pendingFieldsHelp')}</p>
+          </div>
+          {pending.map(f => fieldRow(f, true, true))}
+        </section>
+      )}
 
       {/* admins: the table's default look for everyone */}
       {admin && <ColumnDefaultsCard />}

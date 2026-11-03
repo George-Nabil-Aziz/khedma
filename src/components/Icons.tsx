@@ -74,6 +74,9 @@ export const TrashIcon = ({ className = 'size-4' }: P) => (
 export const LockIcon = ({ className = 'size-4' }: P) => (
   <svg {...base} className={className}><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
 )
+export const CheckIcon = ({ className = 'size-4' }: P) => (
+  <svg {...base} className={className}><path d="M20 6 9 17l-5-5" /></svg>
+)
 export const XIcon = ({ className = 'size-4' }: P) => (
   <svg {...base} className={className}><path d="M18 6 6 18M6 6l12 12" /></svg>
 )
