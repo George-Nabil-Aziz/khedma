@@ -716,12 +716,14 @@ export function resolveConflict(clientId: string, keep: 'mine' | 'server') {
 // ---- custom columns (need a connection) ------------------------------------
 
 async function pullFields() {
-  const [{ data, error }, me] = await Promise.all([
-    supabase.from('custom_fields').select('key,label,type,position,class_id,approved,created_by').order('position').order('created_at'),
-    myId(),
-  ])
+  const columns = 'key,label,type,position,class_id'
+  const query = (cols: string) => supabase.from('custom_fields').select(cols).order('position').order('created_at')
+  let [{ data, error }, me] = await Promise.all([query(`${columns},approved,created_by`), myId()])
+  // before 030 runs there is no approval yet: every column counts as approved
+  if (error?.code === '42703') ({ data, error } = await query(columns))
   if (error) throw isNetworkError(error.message) ? new Offline() : new Error(error.message)
-  set({ fields: (data ?? []).map(f => ({ ...f, mine: f.created_by != null && f.created_by === me }) as CustomField) })
+  const rows = (data ?? []) as unknown as (Omit<CustomField, 'mine'> & { approved?: boolean; created_by?: string | null })[]
+  set({ fields: rows.map(f => ({ ...f, approved: f.approved ?? true, created_by: f.created_by ?? null, mine: f.created_by != null && f.created_by === me })) })
 }
 
 /** Admins: the whole class sees a column a servant added. */

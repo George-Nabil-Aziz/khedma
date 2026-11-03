@@ -205,6 +205,7 @@ const dict = {
   },
   approveField: { ar: "موافقة", en: "Approve" },
   addedBy: { ar: "ضافه", en: "Added by" },
+  pendingFieldsCount: { ar: "فيه {count} عمود مستنيين موافقتك", en: "{count} column(s) waiting for your approval" },
   addField: { ar: "إضافة عمود", en: "Add column" },
   fieldLabel: { ar: "اسم العمود", en: "Column name" },
   fieldType: { ar: "نوع البيانات", en: "Data type" },

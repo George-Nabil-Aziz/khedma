@@ -5,7 +5,7 @@ import { useI18n, type TKey } from '../lib/i18n'
 import { addField, approveField, classFields, deleteField, pendingFields, renameField, saveColumnDefaults, useStore, viewRows } from '../lib/store'
 import { useColumnDefaultsEditor, useColumns } from '../lib/columns'
 import { ColumnsList } from '../components/ColumnsMenu'
-import { CheckIcon, CloudOffIcon, LockIcon, PlusIcon, TrashIcon } from '../components/Icons'
+import { AlertIcon, CheckIcon, ChevronDownIcon, CloudOffIcon, LockIcon, PlusIcon, TrashIcon } from '../components/Icons'
 import { confirmDialog } from '../components/ConfirmDialog'
 
 const TYPES: { value: FieldType; key: TKey }[] = [
@@ -128,6 +128,19 @@ export function FieldsPage({ admin }: { admin: boolean }) {
         </div>
       )}
 
+      {/* admins: how many columns wait, at the very top — a tap goes down to them */}
+      {admin && pending.length > 0 && (
+        <button
+          type="button"
+          onClick={() => document.getElementById('pending-fields')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          className="flex w-full items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-start text-sm font-semibold text-amber-800 hover:bg-amber-100 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/15"
+        >
+          <AlertIcon className="size-4 shrink-0" />
+          <span className="flex-1">{t('pendingFieldsCount').replace('{count}', String(pending.length))}</span>
+          <ChevronDownIcon className="size-4 shrink-0" />
+        </button>
+      )}
+
       {/* built-in — first of all */}
       <section className="space-y-2 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
         <h2 className="font-bold">{t('builtInColumns')}</h2>
@@ -189,7 +202,7 @@ export function FieldsPage({ admin }: { admin: boolean }) {
 
       {/* admins: what servants added, seen by nobody else until approved here */}
       {admin && pending.length > 0 && (
-        <section className="space-y-3 rounded-xl border border-amber-300 bg-amber-50/60 p-4 dark:border-amber-500/40 dark:bg-amber-500/5">
+        <section id="pending-fields" className="space-y-3 rounded-xl border border-amber-300 bg-amber-50/60 p-4 dark:border-amber-500/40 dark:bg-amber-500/5">
           <div>
             <h2 className="font-bold">
               {t('pendingFieldsTitle')} ({pending.length})
