@@ -412,13 +412,15 @@ function OtherAddressFields({ value, onChange }: { value: OtherAddress; onChange
   )
 }
 
-/** الحالة: one of عادي / مستتر / إخوة الرب. Tap the chosen one again to clear it. */
+/** الحالة: مستتر / إخوة الرب, or empty for عادي. Tap the chosen one again to clear it. */
 function CategoryField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const { t } = useI18n()
   return (
     // a div, not a <label>: a label would pass clicks on its text to the first button
     <div className="flex flex-col gap-2">
-      <span className="text-sm font-semibold">{t('category')}</span>
+      <span className="text-sm font-semibold">
+        {t('category')} <span className="text-xs font-normal text-slate-500">({t('categoryHint')})</span>
+      </span>
       <div className="flex gap-2">
         {CATEGORIES.map(c => {
           const on = value === c.value

@@ -376,7 +376,7 @@ const dict = {
   },
   // الحالة of a child
   category: { ar: "الحالة الاجتماعية", en: "Social status" },
-  catNormal: { ar: "عادي", en: "Normal" },
+  categoryHint: { ar: "سيبها فاضية لو حالته عادية", en: "Leave it empty if normal" },
   catHidden: { ar: "مستتر", en: "مستتر" },
   catBrothers: { ar: "إخوة الرب", en: "إخوة الرب" },
   // trips

@@ -497,7 +497,7 @@ function ChildRow({ trip, childId, name, category, onError }: { trip: Trip; chil
           <input type="checkbox" className="size-5 accent-indigo-600" checked={!!g} onChange={toggleGoing} disabled={!online || busy} aria-label={`${name} — ${t('going')}`} />
           <span className={`truncate font-semibold ${g ? '' : 'text-slate-500'}`}>{name}</span>
           {/* the child's الحالة as a coloured dot only (which of the three prices they pay) — no word, no tooltip */}
-          {cat && cat.value !== 'normal' && <span aria-label={t(cat.key)} className={`size-2.5 shrink-0 rounded-full ${CAT_DOT[cat.value]}`} />}
+          {cat &&<span aria-label={t(cat.key)} className={`size-2.5 shrink-0 rounded-full ${CAT_DOT[cat.value]}`} />}
         </label>
         {g && (
           <>

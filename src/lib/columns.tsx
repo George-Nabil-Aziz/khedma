@@ -75,9 +75,8 @@ export function otherAddressText(a: OtherAddress, t: (k: TKey) => string, lang: 
   return a.label?.trim() ? `${a.label.trim()}${where ? ': ' + where : ''}` : where
 }
 
-/** الحالة of a child, as stored in the `category` column, with its colours. */
+/** الحالة of a child, as stored in the `category` column, with its colours. Empty (or an old 'normal') = عادي. */
 export const CATEGORIES = [
-  { value: 'normal', key: 'catNormal', tone: 'border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200' },
   { value: 'hidden', key: 'catHidden', tone: 'border-violet-300 bg-violet-50 text-violet-800 dark:border-violet-500/40 dark:bg-violet-500/10 dark:text-violet-300' },
   { value: 'brothers', key: 'catBrothers', tone: 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300' },
 ] as const satisfies readonly { value: string; key: TKey; tone: string }[]
