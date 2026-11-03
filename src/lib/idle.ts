@@ -65,7 +65,13 @@ export async function signOutExpired() {
 
 /** Mounted while signed in. Starts counting once the local data is loaded (it holds the unsent changes). */
 export function useIdleSignOut() {
-  const { loaded } = useStore()
+  const { loaded, syncError } = useStore()
+
+  // A sync turned down because the sign-in is over: without signing out, new changes would only
+  // pile up on this device.
+  useEffect(() => {
+    if (syncError && /JWT|refresh token|session.*(expired|missing|not found)|not authenticated/i.test(syncError)) signOutExpired()
+  }, [syncError])
 
   useEffect(() => {
     if (!loaded) return

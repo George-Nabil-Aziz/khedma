@@ -4,7 +4,7 @@ import { supabase } from './lib/supabase'
 import { useI18n, type TKey } from './lib/i18n'
 import { useRoute } from './lib/router'
 import { useIdleSignOut } from './lib/idle'
-import { activeClasses, startStore, useStore } from './lib/store'
+import { activeClasses, getState, startStore, useStore } from './lib/store'
 import { Layout } from './components/Layout'
 import { AccountGate } from './components/AccountGate'
 import { LoginPage } from './pages/LoginPage'
@@ -36,7 +36,12 @@ export default function App() {
       setReady(true)
     })
     const { data } = supabase.auth.onAuthStateChange((event, s) => {
-      if (event === 'SIGNED_OUT') toChildren()
+      if (event === 'SIGNED_OUT') {
+        toChildren()
+        // Signed out by Supabase itself (the sign-in could not be renewed), not by our own sign-out,
+        // which empties the store first: start afresh. Unsent changes stay for the same account.
+        if (getState().loaded) location.reload()
+      }
       setSession(s)
     })
     return () => data.subscription.unsubscribe()
