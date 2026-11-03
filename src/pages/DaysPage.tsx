@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useI18n, type TKey } from '../lib/i18n'
 import { isDay, setDays, useStore, type DayKind } from '../lib/store'
-import { currentServiceYear, dmy, fridays, iso, serviceYearRange, weekOfMonth } from '../lib/serviceYear'
+import { currentServiceYear, dmy, serviceDays, iso, serviceYearRange, weekOfMonth } from '../lib/serviceYear'
+import { serviceDayOf } from '../lib/store'
 import { ClassTitle } from '../components/ClassTitle'
 import { confirmDialog } from '../components/ConfirmDialog'
 import { toast } from '../components/Toast'
@@ -47,11 +48,12 @@ export function DaysPage() {
 
   // the coming Fridays of the class's own service year (today too, if it is a Friday)
   const year = store.classes.find(c => c.id === store.currentClass)?.service_year ?? currentServiceYear()
+  const serviceDay = serviceDayOf(store.classes, store.currentClass) // the class's يوم الخدمة
   const coming = useMemo(() => {
     const { end } = serviceYearRange(year)
-    return fridays(iso(new Date()), end)
+    return serviceDays(iso(new Date()), end, serviceDay)
     // the end also moves with the admin's year-end setting
-  }, [year, store.yearEndWeeks])
+  }, [year, store.yearEndWeeks, serviceDay])
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">

@@ -2,8 +2,8 @@ import { useState, type ReactNode } from 'react'
 import { useI18n, type TKey } from '../lib/i18n'
 import { go, useRoute, type Path, type Route } from '../lib/router'
 import { useInstall } from '../lib/install'
-import { saveYearEndWeeks, useStore } from '../lib/store'
-import { currentServiceYear, dmy, iso, MAX_EXTRA_WEEKS, yearEnd } from '../lib/serviceYear'
+import { activeClasses, saveYearEndWeeks, setServiceDay, useStore } from '../lib/store'
+import { currentServiceYear, dmy, FRIDAY, MAX_EXTRA_WEEKS, yearEnd } from '../lib/serviceYear'
 import { CalendarCheckIcon, CloudOffIcon, PlusIcon } from '../components/Icons'
 
 /** The tabs of الإعدادات, in order — shown on top of its pages and under it in the sidebar. */
@@ -12,7 +12,7 @@ export function settingsTabs(admin: boolean): { name: Route['name']; path: Path;
     { name: 'notifications', path: '/notifications', label: 'notifications' },
     { name: 'fields', path: '/fields', label: 'customize' },
     { name: 'days', path: '/days', label: 'daysTitle' },
-    ...(admin ? [{ name: 'settings', path: '/settings', label: 'yearEndTitle' } as const] : []),
+    ...(admin ? [{ name: 'settings', path: '/settings', label: 'serviceSettings' } as const] : []),
     { name: 'install', path: '/install', label: 'installApp' },
     { name: 'help', path: '/help', label: 'howToUse' },
     { name: 'sync', path: '/sync', label: 'sync' },
@@ -65,12 +65,70 @@ export function SettingsTabs({ admin }: { admin: boolean }) {
   )
 }
 
-/** Admins only: the end of the service year. */
+/** Admins only — إعدادات الخدمة: each class's يوم الخدمة, and the end of the service year. */
 export function SettingsPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-5">
+      <ServiceDaySetting />
       <YearEndSetting />
     </div>
+  )
+}
+
+/** The day of the week each class meets; its متابعة grid and أيام التناول والنادي follow it. */
+function ServiceDaySetting() {
+  const { t, lang } = useI18n()
+  const { online, classes } = useStore()
+  const [busy, setBusy] = useState<string | null>(null)
+  const [error, setError] = useState('')
+
+  // Sunday … Saturday in the app's language (4-10 Jan 2026 is a Sunday-to-Saturday week)
+  const weekday = new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG' : 'en-GB', { weekday: 'long' })
+  const DAYS = [0, 1, 2, 3, 4, 5, 6].map(n => ({ n, label: weekday.format(new Date(2026, 0, 4 + n)) }))
+
+  async function change(id: string, day: number) {
+    setBusy(id)
+    setError('')
+    const r = await setServiceDay(id, day)
+    setBusy(null)
+    if (!r.ok) setError(r.error)
+  }
+
+  return (
+    <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+      <div>
+        <h2 className="flex items-center gap-2 font-bold">
+          <CalendarCheckIcon className="size-5 text-indigo-600 dark:text-indigo-300" />
+          {t('serviceDayTitle')}
+        </h2>
+        <p className="mt-1 text-sm text-slate-500">{t('serviceDayHelp')}</p>
+      </div>
+
+      {activeClasses(classes).length === 0 && <p className="text-sm text-slate-500">{t('noClassTitle')}</p>}
+      <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+        {activeClasses(classes).map(c => (
+          <li key={c.id} className="flex flex-wrap items-center gap-2 py-2">
+            <span className="min-w-0 flex-1 font-semibold">
+              {c.name} <span className="text-sm font-normal text-slate-500">({c.service_year})</span>
+            </span>
+            <select
+              value={c.service_day ?? FRIDAY}
+              onChange={e => change(c.id, Number(e.target.value))}
+              disabled={!online || busy === c.id}
+              aria-label={`${t('serviceDayTitle')} — ${c.name}`}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800"
+            >
+              {DAYS.map(d => (
+                <option key={d.n} value={d.n}>
+                  {d.label}
+                </option>
+              ))}
+            </select>
+          </li>
+        ))}
+      </ul>
+      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">{error}</p>}
+    </section>
   )
 }
 
@@ -151,16 +209,13 @@ function YearEndSetting() {
                 {year}
               </span>
             ) : part === '{date}' ? (
-              <span key={i} className="font-semibold">
+              <span key={i} dir="ltr" className="whitespace-nowrap font-semibold">
                 {date}
               </span>
             ) : (
               part
             ),
-          )}{' '}
-        <span className="whitespace-nowrap text-slate-400" dir="ltr">
-          ({iso(end)})
-        </span>
+          )}
       </p>
 
       {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">{error}</p>}

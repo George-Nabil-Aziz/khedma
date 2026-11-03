@@ -78,7 +78,8 @@ export type CustomField = { key: string; label: string; type: FieldType; positio
 
 /** A فصل. Every child belongs to one; servants see only the classes they are members of. */
 // left_at: I left this class (within the last 7 days) — shown greyed out with a "rejoin" button.
-export type ClassInfo = { id: string; name: string; service_year: string; is_default: boolean; is_member: boolean; left_at: string | null }
+/** service_day: the day of the week the class meets, 0 = Sunday … 5 = Friday; missing before 029 → Friday. */
+export type ClassInfo = { id: string; name: string; service_year: string; is_default: boolean; is_member: boolean; left_at: string | null; service_day?: number }
 
 /** A servant's own profile: the name and photo shown in the sidebar. */
 export type Profile = { display_name: string | null; photo: string | null }

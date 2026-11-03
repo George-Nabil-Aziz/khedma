@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react'
 import { clear, get, setMany } from 'idb-keyval'
 import { CORE_FIELDS, TEXT_FIELDS, supabase, type Child, type ChildInput, type ClassInfo, type CustomField, type FieldType, type Profile } from './supabase'
 import { load, save } from './storage'
-import { iso, setYearEndWeeks } from './serviceYear'
+import { FRIDAY, iso, setYearEndWeeks } from './serviceYear'
 import { resetTrips } from './trips'
 
 /*
@@ -373,6 +373,17 @@ export async function createClass(name: string, year: string): Promise<Result<st
   setCurrentClass(data as string)
   await sync()
   return { ok: true, value: data as string }
+}
+
+/** The class's يوم الخدمة (Friday until one is chosen). */
+export const serviceDayOf = (classes: ClassInfo[], id: string | null) => classes.find(c => c.id === id)?.service_day ?? FRIDAY
+
+/** Admins (الإعدادات → إعدادات الخدمة): the day a class meets. */
+export async function setServiceDay(id: string, day: number): Promise<Result<null>> {
+  const { error } = await supabase.from('classes').update({ service_day: day }).eq('id', id)
+  if (error) return { ok: false, error: error.message }
+  await sync()
+  return { ok: true, value: null }
 }
 
 export async function renameClass(id: string, name: string): Promise<Result<null>> {
