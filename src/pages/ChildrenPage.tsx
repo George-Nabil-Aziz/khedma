@@ -10,6 +10,7 @@ import { NoChildren } from '../components/NoChildren'
 import { ReorderList } from '../components/ReorderList'
 import { Loading } from '../components/Loading'
 import { ClassTitle } from '../components/ClassTitle'
+import { looksLikePhone, phoneKey } from '../lib/phones'
 import { AlertIcon, ChevronDownIcon, ChevronUpIcon, CloudOffIcon, ColumnsIcon, PlusIcon, SortIcon } from '../components/Icons'
 
 export function ChildrenPage() {
@@ -39,9 +40,12 @@ export function ChildrenPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
+    // a number matches however it was typed: +20 12 …, 0020…, 012…, Arabic digits
+    const phone = looksLikePhone(q) ? phoneKey(q) : null
     const list = !q
       ? rows
       : rows.filter(r =>
+          (phone != null && r.phones.some(p => phoneKey(p.number).includes(phone))) ||
           [
             r.full_name,
             r.street,

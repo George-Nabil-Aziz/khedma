@@ -6,6 +6,22 @@ export const OWNER_PHONES_LABEL: Record<Owner, TKey> = { mother: 'motherMobile',
 
 const digits = (n: string) => n.replace(/[^\d+]/g, '')
 
+/**
+ * A number reduced to its local Egyptian digits, so it can be matched however it was written:
+ * "+20 12 12040035", "0020 1212040035", "٠١٢١٢٠٤٠٠٣٥" → "01212040035".
+ */
+export function phoneKey(n: string) {
+  const western = n.replace(/[٠-٩]/g, c => String(c.charCodeAt(0) - 0x0660)).replace(/[۰-۹]/g, c => String(c.charCodeAt(0) - 0x06f0))
+  const international = /^\s*(\+|00)/.test(western)
+  let d = western.replace(/\D/g, '')
+  if (international) d = d.replace(/^00/, '')
+  if ((international || /^201\d{9}$/.test(d)) && d.startsWith('20')) d = '0' + d.slice(2)
+  return d
+}
+
+/** True when the text is a phone number (or a piece of one) rather than a name. */
+export const looksLikePhone = (q: string) => /^[\s+\-()\d٠-٩۰-۹]+$/.test(q) && phoneKey(q).length >= 3
+
 export function telLink(number: string) {
   return `tel:${digits(number)}`
 }
