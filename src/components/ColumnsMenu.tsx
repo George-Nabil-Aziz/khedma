@@ -71,8 +71,8 @@ export function ColumnsList({ ordered, onToggle, onReorder }: { ordered: Prefs['
     <div className="space-y-0.5">
       <div className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-400">
         <LockIcon className="size-4" />
-        <span className="flex-1 font-semibold text-slate-700 dark:text-slate-200">{t('name')}</span>
-        <span className="text-xs">{t('alwaysShown')}</span>
+        <span className="font-semibold text-slate-700 dark:text-slate-200">{t('name')}</span>
+        <span className="text-xs">({t('alwaysShown')})</span>
       </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis, restrictToParentElement]} onDragEnd={onDragEnd}>
