@@ -14,9 +14,17 @@ const input =
   'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800'
 
 /** Account changes go through the khedma-admin-users Edge Function — the browser never holds the service key. */
-async function callAdmin(body: Record<string, unknown>): Promise<string | null> {
+async function callAdmin(body: Record<string, unknown>, retried = false): Promise<string | null> {
   const { error } = await supabase.functions.invoke('khedma-admin-users', { body })
   if (!error) return null
+  // A phone app left in the background can hold a sign-in the server no longer accepts (the function
+  // then answers 401, or "Admins only" before it told the two apart): get a fresh one and try once more.
+  const status = error instanceof FunctionsHttpError ? error.context.status : 0
+  if (!retried && (status === 401 || status === 403)) {
+    const { error: refreshError } = await supabase.auth.refreshSession()
+    if (refreshError) return `${refreshError.message} — sign out and in again`
+    return callAdmin(body, true)
+  }
   if (error instanceof FunctionsHttpError) {
     try {
       return ((await error.context.json()) as { error?: string }).error ?? error.message

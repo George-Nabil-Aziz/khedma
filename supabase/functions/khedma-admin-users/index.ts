@@ -26,7 +26,9 @@ Deno.serve(async req => {
   // Who is calling? Only admins get past this point.
   const token = req.headers.get('Authorization')?.replace(/^Bearer\s+/i, '') ?? ''
   const { data: caller } = await admin.auth.getUser(token)
-  if (caller.user?.app_metadata?.role !== 'admin') return json({ error: 'Admins only' }, 403)
+  // no user: the sign-in itself was not accepted (expired / signed out) — not a missing admin role
+  if (!caller.user) return json({ error: 'Session expired' }, 401)
+  if (caller.user.app_metadata?.role !== 'admin') return json({ error: 'Admins only' }, 403)
 
   let body: { action?: string; id?: string; email?: string; password?: string; admin?: boolean; name?: string }
   try {

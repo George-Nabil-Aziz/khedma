@@ -67,7 +67,8 @@ export function Layout({ email, admin, title, children }: { email: string; admin
     // idle sign-out keeps them — it is still my phone)
     await disablePush()
     await resetStore()
-    await supabase.auth.signOut()
+    // 'local': only this device — the default ('global') also signs out the same account on every other phone
+    await supabase.auth.signOut({ scope: 'local' })
   }
 
   const item = (active: boolean) =>

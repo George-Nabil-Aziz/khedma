@@ -35,7 +35,7 @@ export function AccountGate({ userId, email, children }: { userId: string; email
 
   async function signOut() {
     await resetStore()
-    await supabase.auth.signOut()
+    await supabase.auth.signOut({ scope: 'local' })
   }
 
   return (

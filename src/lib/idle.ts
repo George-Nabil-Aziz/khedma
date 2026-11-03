@@ -41,7 +41,7 @@ async function check() {
       () => {},
     )
     await resetStore()
-    await supabase.auth.signOut()
+    await supabase.auth.signOut({ scope: 'local' })
   } finally {
     signingOut = false
   }
