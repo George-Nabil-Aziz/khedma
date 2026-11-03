@@ -43,6 +43,8 @@ export type Column = {
   sort: (r: ViewRow) => SortValue
   ltr?: boolean
   nowrap?: boolean
+  /** Only about a child who left the class: blank for the others, and not on the child's page (it has its own section there). */
+  movedOutOnly?: boolean
 }
 
 // Values of the "ي/ش/وسط" column in the Excel sheet.
@@ -206,8 +208,8 @@ export function useColumns(): Column[] {
       { id: 'notes', label: t('notes'), render: r => r.notes, sort: r => r.notes },
       { id: 'national_id', label: t('nationalId'), render: r => r.national_id && <span dir="ltr">{formatNationalId(r.national_id)}</span>, sort: r => r.national_id, nowrap: true },
       // where a child who left the class went (empty for the others)
-      { id: 'moved_to_church', label: t('movedToChurch'), render: r => r.moved_to_church, sort: r => r.moved_to_church },
-      { id: 'moved_to_servant', label: t('movedToServant'), render: r => r.moved_to_servant, sort: r => r.moved_to_servant },
+      { id: 'moved_to_church', label: t('movedToChurch'), render: r => r.moved_to_church, sort: r => r.moved_to_church, movedOutOnly: true },
+      { id: 'moved_to_servant', label: t('movedToServant'), render: r => r.moved_to_servant, sort: r => r.moved_to_servant, movedOutOnly: true },
     ]
 
     return [...builtIn, ...fields.map(f => customColumn(f, t))]

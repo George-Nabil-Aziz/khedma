@@ -240,6 +240,8 @@ export function ChildrenPage() {
 }
 
 function Cell({ column, row }: { column: Column; row: Parameters<Column['render']>[0] }) {
+  // a child still in the class: nothing at all under the columns about where a child who left went
+  if (column.movedOutOnly && !row.moved_out_on) return <td />
   const content = column.render(row)
   const empty = content == null || content === '' || content === false
   return (
