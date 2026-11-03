@@ -65,7 +65,7 @@ const dict = {
   },
   noResults: { ar: "لا توجد نتائج", en: "No results" },
   total: { ar: "العدد الأساسي", en: "Total" },
-  stillInClass: { ar: "اللي مخرجوش من الفصل", en: "Still in the class" },
+  count: { ar: "العدد", en: "Count" },
   menu: { ar: "القائمة", en: "Menu" },
   toggleTheme: { ar: "تغيير المظهر", en: "Toggle theme" },
   switchLang: { ar: "English", en: "العربية" },

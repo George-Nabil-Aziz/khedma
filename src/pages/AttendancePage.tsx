@@ -232,10 +232,7 @@ export function AttendancePage() {
           ))}
         </select>
         <span className="shrink-0 rounded-full bg-indigo-50 px-3 py-1 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
-          {t('total')}: {rows.length}
-        </span>
-        <span className="shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
-          {t('stillInClass')}: {rows.filter(r => !r.moved_out_on).length}
+          {t('count')}: {rows.filter(r => !r.moved_out_on).length}
         </span>
       </div>
 
@@ -309,8 +306,7 @@ export function AttendancePage() {
                         <span key={k} className={DAY[k].text}>
                           {DAY[k].sign}
                         </span>
-                      ))}
-                    </span>
+                      ))}                    </span>
                   </button>
                 </th>
                 ),
