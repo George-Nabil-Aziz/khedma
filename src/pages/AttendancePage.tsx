@@ -109,7 +109,7 @@ export function AttendancePage() {
   const currentDate = allDays.find(d => d.date >= today)?.date ?? allDays[allDays.length - 1].date
 
   // "النهاردة": only the coming Friday's column; "الشهر": every column of the month we are in;
-  // tapping the chosen one again brings every Friday back (the start)
+  // "الكل": every Friday (the start)
   const [only, setOnly] = useState<'all' | 'today' | 'month'>('all')
   const now = new Date()
   const thisMonth = `${now.getFullYear()}-${now.getMonth()}`
@@ -238,11 +238,11 @@ export function AttendancePage() {
         <span className="shrink-0 rounded-full bg-indigo-50 px-3 py-1 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
           {t('total')}: {rows.length}
         </span>
-        {/* النهاردة / الشهر: just the coming Friday, or this month; the chosen one reads الكل to go back to the whole year */}
-        {(['today', 'month'] as const).map(k => (
+        {/* النهاردة / الشهر / الكل: just the coming Friday, this month, or the whole year — الكل always last (on the left in Arabic) */}
+        {(['today', 'month', 'all'] as const).map(k => (
           <button
             key={k}
-            onClick={() => setOnly(v => (v === k ? 'all' : k))}
+            onClick={() => setOnly(k)}
             aria-pressed={only === k}
             className={`shrink-0 rounded-lg border border-rose-300 px-3 py-1.5 text-sm font-semibold dark:border-rose-500/40 ${
               only === k
@@ -250,7 +250,7 @@ export function AttendancePage() {
                 : 'bg-white text-rose-700 hover:bg-rose-50 dark:bg-slate-900 dark:text-rose-300 dark:hover:bg-rose-500/10'
             }`}
           >
-            {t(only === k ? 'all' : k === 'today' ? 'today' : 'thisMonth')}
+            {t(k === 'month' ? 'thisMonth' : k)}
           </button>
         ))}
       </div>
