@@ -240,9 +240,12 @@ function TripForm({ title, initial = EMPTY, onSave, onCancel }: { title: string;
         {field('gatherPlace', <input className={input} placeholder={t('phGatherPlace')} {...text('gather_place')} />)}
         {field('gatherTime', <input type="time" dir="ltr" className={input} {...text('gather_time')} />)}
         {field('returnTime', <input type="time" dir="ltr" className={input} {...text('return_time')} />)}
-        {field('tripPrice', <input type="number" min={0} step="any" dir="ltr" inputMode="decimal" className={input} {...text('price')} />)}
-        {field('hiddenPrice', <input type="number" min={0} step="any" dir="ltr" inputMode="decimal" className={input} placeholder={t('phHiddenPrice')} {...text('hidden_price')} />)}
-        {field('brothersPrice', <input type="number" min={0} step="any" dir="ltr" inputMode="decimal" className={input} {...text('brothers_price')} />)}
+        {/* the three prices side by side, on a row of their own */}
+        <div className="grid grid-cols-3 gap-3 sm:col-span-2">
+          {field('tripPrice', <input type="number" min={0} step="any" dir="ltr" inputMode="decimal" className={input} {...text('price')} />)}
+          {field('hiddenPrice', <input type="number" min={0} step="any" dir="ltr" inputMode="decimal" className={input} placeholder={t('phHiddenPrice')} {...text('hidden_price')} />)}
+          {field('brothersPrice', <input type="number" min={0} step="any" dir="ltr" inputMode="decimal" className={input} {...text('brothers_price')} />)}
+        </div>
         {field('notes', <textarea rows={2} className={input} {...text('notes')} />, true)}
       </div>
       {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">{error}</p>}
@@ -365,9 +368,14 @@ export function TripPage({ id }: { id: string }) {
             {info('gatherPlace', trip.gather_place)}
             {info('gatherTime', f.time(trip.gather_time))}
             {info('returnTime', f.time(trip.return_time))}
-            {info('tripPrice', trip.price != null && `${money(trip.price)} ${t('currency')}`)}
-            {info('hiddenPrice', trip.hidden_price != null && `${money(trip.hidden_price)} ${t('currency')}`)}
-            {info('brothersPrice', trip.brothers_price != null && `${money(trip.brothers_price)} ${t('currency')}`)}
+            {/* the prices side by side, on a row of their own (phone too) */}
+            {(trip.price != null || trip.hidden_price != null || trip.brothers_price != null) && (
+              <div className="grid grid-cols-3 gap-3 sm:col-span-3">
+                {info('tripPrice', trip.price != null && `${money(trip.price)} ${t('currency')}`)}
+                {info('hiddenPrice', trip.hidden_price != null && `${money(trip.hidden_price)} ${t('currency')}`)}
+                {info('brothersPrice', trip.brothers_price != null && `${money(trip.brothers_price)} ${t('currency')}`)}
+              </div>
+            )}
           </dl>
           {trip.notes && <p className="whitespace-pre-wrap rounded-lg bg-slate-50 px-3 py-2 text-sm dark:bg-slate-800/60">{trip.notes}</p>}
         </section>
