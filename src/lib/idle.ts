@@ -47,6 +47,22 @@ async function check() {
   }
 }
 
+/**
+ * The server no longer accepts this device's sign-in (e.g. Supabase reports "Session expired"):
+ * sign out on this device straight away. Changes not sent yet stay on the device — the same account
+ * signing in again sends them; another account finds the data cleared (startStore checks the owner).
+ */
+export async function signOutExpired() {
+  const s = getState()
+  if (s.outbox.length || s.attOutbox.length || s.dayOutbox.length) {
+    await supabase.auth.signOut({ scope: 'local' })
+    location.reload() // starts the store afresh for whoever signs in next
+    return
+  }
+  await resetStore()
+  await supabase.auth.signOut({ scope: 'local' })
+}
+
 /** Mounted while signed in. Starts counting once the local data is loaded (it holds the unsent changes). */
 export function useIdleSignOut() {
   const { loaded } = useStore()

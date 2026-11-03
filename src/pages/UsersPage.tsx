@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from
 import { FunctionsHttpError } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { useI18n } from '../lib/i18n'
+import { signOutExpired } from '../lib/idle'
 import { PasswordInput } from '../components/PasswordInput'
 import { confirmDialog } from '../components/ConfirmDialog'
 import { toast } from '../components/Toast'
@@ -22,8 +23,12 @@ async function callAdmin(body: Record<string, unknown>, retried = false): Promis
   const status = error instanceof FunctionsHttpError ? error.context.status : 0
   if (!retried && (status === 401 || status === 403)) {
     const { error: refreshError } = await supabase.auth.refreshSession()
-    if (refreshError) return `${refreshError.message} — sign out and in again`
-    return callAdmin(body, true)
+    if (!refreshError) return callAdmin(body, true)
+  }
+  // still not accepted: this device's sign-in is over — back to the sign-in page by itself
+  if (status === 401 || (status === 403 && !retried)) {
+    await signOutExpired()
+    return 'Session expired'
   }
   if (error instanceof FunctionsHttpError) {
     try {
