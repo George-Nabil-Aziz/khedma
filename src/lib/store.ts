@@ -721,7 +721,7 @@ async function pullFields() {
     myId(),
   ])
   if (error) throw isNetworkError(error.message) ? new Offline() : new Error(error.message)
-  set({ fields: (data ?? []).map(({ created_by, ...f }) => ({ ...f, mine: created_by != null && created_by === me }) as CustomField) })
+  set({ fields: (data ?? []).map(f => ({ ...f, mine: f.created_by != null && f.created_by === me }) as CustomField) })
 }
 
 /** Admins: the whole class sees a column a servant added. */

@@ -204,6 +204,7 @@ const dict = {
     en: "Servants added these and only they see them. Approve to show a column to every servant, or delete it with what was typed in it.",
   },
   approveField: { ar: "موافقة", en: "Approve" },
+  addedBy: { ar: "ضافه", en: "Added by" },
   addField: { ar: "إضافة عمود", en: "Add column" },
   fieldLabel: { ar: "اسم العمود", en: "Column name" },
   fieldType: { ar: "نوع البيانات", en: "Data type" },

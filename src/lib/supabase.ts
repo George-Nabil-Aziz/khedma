@@ -75,7 +75,7 @@ export type Child = ChildInput & {
 
 export type FieldType = 'text' | 'number' | 'date' | 'boolean'
 /** approved: seen by the whole class; until an admin approves, only by whoever added it (mine) and admins. */
-export type CustomField = { key: string; label: string; type: FieldType; position: number; class_id: string; approved: boolean; mine: boolean }
+export type CustomField = { key: string; label: string; type: FieldType; position: number; class_id: string; approved: boolean; created_by: string | null; mine: boolean }
 
 /** A فصل. Every child belongs to one; servants see only the classes they are members of. */
 // left_at: I left this class (within the last 7 days) — shown greyed out with a "rejoin" button.

@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
+import { supabase } from '../lib/supabase'
 import type { CustomField, FieldType } from '../lib/supabase'
 import { useI18n, type TKey } from '../lib/i18n'
 import { addField, approveField, classFields, deleteField, pendingFields, renameField, saveColumnDefaults, useStore, viewRows } from '../lib/store'
@@ -25,6 +26,7 @@ export function FieldsPage({ admin }: { admin: boolean }) {
   const { online } = store
   const fields = classFields(store)
   const pending = pendingFields(store)
+  const names = useServantNames(admin && pending.length > 0 ? store.currentClass : null)
   const [label, setLabel] = useState('')
   const [type, setType] = useState<FieldType>('text')
   const [busy, setBusy] = useState(false)
@@ -81,6 +83,12 @@ export function FieldsPage({ admin }: { admin: boolean }) {
           <span className="text-slate-500">{t('fieldType')}: </span>
           <span className="font-semibold">{t(TYPES.find(o => o.value === f.type)?.key ?? 'typeText')}</span>
         </span>
+        {approve && f.created_by && names[f.created_by] && (
+          <span className="shrink-0 whitespace-nowrap rounded-lg bg-white px-2.5 py-1.5 text-xs dark:bg-slate-800">
+            <span className="text-slate-500">{t('addedBy')}: </span>
+            <span className="font-semibold">{names[f.created_by]}</span>
+          </span>
+        )}
         {f.mine && f.approved === false && (
           <span className="shrink-0 whitespace-nowrap rounded-lg bg-amber-100 px-2.5 py-1.5 text-xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">{t('fieldPending')}</span>
         )}
@@ -196,6 +204,19 @@ export function FieldsPage({ admin }: { admin: boolean }) {
       {admin && <ColumnDefaultsCard />}
     </div>
   )
+}
+
+/** The class's servants by id → their name (or email when they set none). Nothing is fetched while classId is null. */
+function useServantNames(classId: string | null) {
+  const [names, setNames] = useState<Record<string, string>>({})
+  useEffect(() => {
+    if (!classId) return
+    supabase.rpc('class_servants', { p_class: classId }).then(({ data }) => {
+      const list = (data ?? []) as { user_id: string; email: string; display_name: string | null }[]
+      setNames(Object.fromEntries(list.map(s => [s.user_id, s.display_name || s.email])))
+    })
+  }, [classId])
+  return names
 }
 
 /**
