@@ -276,7 +276,8 @@ export function TripPage({ id }: { id: string }) {
   const { trips, going, payments, loaded } = useTrips()
   const [editing, setEditing] = useState(false)
   const [error, setError] = useState('')
-  const [onlyGoing, setOnlyGoing] = useState(false)
+  // who to show: everyone, going, not going, or going and still owing
+  const [filter, setFilter] = useState<'all' | 'going' | 'notGoing' | 'owes'>('all')
 
   useEffect(() => {
     loadTrips()
@@ -296,7 +297,14 @@ export function TripPage({ id }: { id: string }) {
   if (!loaded) return <Loading />
   if (!trip) return <p className="py-10 text-center text-slate-500">{t('notFound')}</p>
 
-  const shown = children.filter(c => !onlyGoing || going.some(g => g.trip_id === trip.id && g.child_client_id === c.client_id))
+  const priced = !!(trip.price || trip.hidden_price || trip.brothers_price)
+  const shown = children.filter(c => {
+    if (filter === 'all') return true
+    const g = going.some(x => x.trip_id === trip.id && x.child_client_id === c.client_id)
+    if (filter === 'going') return g
+    if (filter === 'notGoing') return !g && !c.moved_out_on
+    return g && balance(trip, c.client_id, c.category, payments).left > 0 // owes
+  })
 
   const goingHere = going.filter(g => g.trip_id === trip.id)
   const totals = goingHere.reduce(
@@ -398,10 +406,19 @@ export function TripPage({ id }: { id: string }) {
       <section className="space-y-2">
         <div className="flex items-center gap-2 px-1">
           <h2 className="flex-1 font-bold">{t('tripChildren')}</h2>
-          <label className="flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
-            <input type="checkbox" className="size-4 accent-indigo-600" checked={onlyGoing} onChange={e => setOnlyGoing(e.target.checked)} />
-            {t('onlyGoing')}
-          </label>
+          <select
+            value={filter}
+            onChange={e => setFilter(e.target.value as typeof filter)}
+            aria-label={t('filter')}
+            className={`min-w-0 shrink rounded-lg border px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 dark:bg-slate-900 ${
+              filter === 'all' ? 'border-slate-300 bg-white dark:border-slate-700' : 'border-indigo-500 bg-indigo-50 font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300'
+            }`}
+          >
+            <option value="all">{t('filterAll')}</option>
+            <option value="going">{t('filterGoing')}</option>
+            <option value="notGoing">{t('filterNotGoing')}</option>
+            {priced && <option value="owes">{t('filterOwes')}</option>}
+          </select>
         </div>
         {children.length === 0 && <p className="py-6 text-center text-sm text-slate-500">{t('noChildrenTitle')}</p>}
         <ul className="space-y-2">

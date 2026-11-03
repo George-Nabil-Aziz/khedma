@@ -10,7 +10,7 @@ import { HomeIcon, PhoneIcon } from '../components/Icons'
 import { ClassTitle } from '../components/ClassTitle'
 import { currentServiceYear, dmy, serviceDays, iso, serviceYearRange } from '../lib/serviceYear'
 import { serviceDayOf } from '../lib/store'
-import { balance, lastDay, loadTrips, useTrips, type Trip } from '../lib/trips'
+import { lastDay, loadTrips, useTrips, type Trip } from '../lib/trips'
 
 // Two rows per child, each with its own colour so they are easy to tell apart.
 const KINDS: { kind: FollowUpKind; label: TKey; on: string; hover: string }[] = [
@@ -66,7 +66,7 @@ export function AttendancePage() {
   }, [year, store.yearEndWeeks, serviceDay])
 
   // الرحلات of this class in this service year, on every one of their days
-  const { trips, going, payments } = useTrips()
+  const { trips, going } = useTrips()
   useEffect(() => {
     loadTrips()
   }, [store.currentClass])
@@ -155,8 +155,8 @@ export function AttendancePage() {
     } else tripSpan.set(d.key, 1)
   })
 
-  // الفلتر: who missed the last Friday (for الافتقاد), or — per trip — who is going, who is not,
-  // who still owes. "absent", or "going" / "notGoing" / "owes" + ":" + the trip's id.
+  // الفلتر: who missed the last Friday (for الافتقاد), or — per trip — who is going.
+  // "absent", or "going:" + the trip's id.
   const [filter, setFilter] = useState('all')
   useEffect(() => setFilter('all'), [store.currentClass])
   const lastFriday = [...allDays].reverse().find(d => d.date <= today)?.date
@@ -172,15 +172,12 @@ export function AttendancePage() {
     const keep = (r: (typeof all)[number]) => {
       if (what === 'absent') return !!lastFriday && !r.moved_out_on && !isChecked(store, r.client_id, lastFriday, 'attendance')
       if (!trip) return true // "all", or a trip deleted meanwhile
-      const g = going.find(x => x.trip_id === trip.id && x.child_client_id === r.client_id)
-      if (what === 'going') return !!g
-      if (what === 'notGoing') return !g && !r.moved_out_on
-      return !!g && balance(trip, r.client_id, r.category, payments).left > 0 // owes
+      return going.some(x => x.trip_id === trip.id && x.child_client_id === r.client_id)
     }
     const all = viewRows(store)
     // same order as the Children page: those who left the class at the bottom
     return stillInClassFirst(sortRows(all.filter(r => (!q || r.full_name.toLowerCase().includes(q)) && keep(r)), columns, sort, lang))
-  }, [store, columns, sort, lang, query, filter, classTrips, going, payments, lastFriday])
+  }, [store, columns, sort, lang, query, filter, classTrips, going, lastFriday])
 
   // Name and row label stay in view while scrolling across the Fridays.
   // Narrow on a phone, so the Fridays still get most of the screen.
@@ -227,16 +224,18 @@ export function AttendancePage() {
               {t('filterAbsent').replace('{date}', dmy(lastFriday))}
             </option>
           )}
+          {/* the rest (مش طالعين، لسه عليهم فلوس) is on the trip's own page */}
           {classTrips.map(tr => (
-            <optgroup key={tr.id} label={`🚌 ${tr.name}`}>
-              <option value={`going:${tr.id}`}>{t('filterGoing')}</option>
-              <option value={`notGoing:${tr.id}`}>{t('filterNotGoing')}</option>
-              {!!(tr.price || tr.hidden_price || tr.brothers_price) && <option value={`owes:${tr.id}`}>{t('filterOwes')}</option>}
-            </optgroup>
+            <option key={tr.id} value={`going:${tr.id}`}>
+              🚌 {t('filterGoingTo').replace('{name}', tr.name)}
+            </option>
           ))}
         </select>
         <span className="shrink-0 rounded-full bg-indigo-50 px-3 py-1 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
           {t('total')}: {rows.length}
+        </span>
+        <span className="shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+          {t('stillInClass')}: {rows.filter(r => !r.moved_out_on).length}
         </span>
       </div>
 
