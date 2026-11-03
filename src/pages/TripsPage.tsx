@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { Fragment, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { useI18n, type TKey } from '../lib/i18n'
 import { go } from '../lib/router'
-import { useStore, viewRows } from '../lib/store'
+import { stillInClassFirst, useStore, viewRows } from '../lib/store'
 import {
   addPayment,
   balance,
@@ -18,6 +18,7 @@ import {
   tripDays,
 } from '../lib/trips'
 import { dmy, iso } from '../lib/serviceYear'
+import { CATEGORIES } from '../lib/columns'
 import { openPicker } from '../lib/picker'
 import { ClassTitle } from '../components/ClassTitle'
 import { Loading } from '../components/Loading'
@@ -171,7 +172,7 @@ function TripCard({ trip, past, goingCount, collected }: { trip: Trip; past?: bo
 
 // ---- form ---------------------------------------------------------------------
 
-const EMPTY: TripInput = { name: '', place: null, trip_date: null, end_date: null, gather_time: null, gather_place: null, return_time: null, price: null, brothers_price: null, notes: null }
+const EMPTY: TripInput = { name: '', place: null, trip_date: null, end_date: null, gather_time: null, gather_place: null, return_time: null, price: null, hidden_price: null, brothers_price: null, notes: null }
 
 function TripForm({ title, initial = EMPTY, onSave, onCancel }: { title: string; initial?: TripInput; onSave: (d: TripInput) => Promise<string | null>; onCancel: () => void }) {
   const { t } = useI18n()
@@ -226,6 +227,7 @@ function TripForm({ title, initial = EMPTY, onSave, onCancel }: { title: string;
         {field('gatherTime', <input type="time" dir="ltr" className={input} {...text('gather_time')} />)}
         {field('returnTime', <input type="time" dir="ltr" className={input} {...text('return_time')} />)}
         {field('tripPrice', <input type="number" min={0} step="any" dir="ltr" inputMode="decimal" className={input} {...text('price')} />)}
+        {field('hiddenPrice', <input type="number" min={0} step="any" dir="ltr" inputMode="decimal" className={input} placeholder={t('phHiddenPrice')} {...text('hidden_price')} />)}
         {field('brothersPrice', <input type="number" min={0} step="any" dir="ltr" inputMode="decimal" className={input} {...text('brothers_price')} />)}
         {field('notes', <textarea rows={2} className={input} {...text('notes')} />, true)}
       </div>
@@ -264,17 +266,20 @@ export function TripPage({ id }: { id: string }) {
     if (trip && store.currentClass && trip.class_id !== store.currentClass) go('/trips')
   }, [trip, store.currentClass])
   const children = useMemo(
-    () => (trip ? viewRows(store).filter(r => r.class_id === trip.class_id) : []).sort((a, b) => a.full_name.localeCompare(b.full_name, 'ar')),
+    // by name; those who left the class at the bottom, under their own heading
+    () => stillInClassFirst((trip ? viewRows(store).filter(r => r.class_id === trip.class_id) : []).sort((a, b) => a.full_name.localeCompare(b.full_name, 'ar'))),
     [store, trip],
   )
 
   if (!loaded) return <Loading />
   if (!trip) return <p className="py-10 text-center text-slate-500">{t('notFound')}</p>
 
+  const shown = children.filter(c => !onlyGoing || going.some(g => g.trip_id === trip.id && g.child_client_id === c.client_id))
+
   const goingHere = going.filter(g => g.trip_id === trip.id)
   const totals = goingHere.reduce(
     (s, g) => {
-      const b = balance(trip, g.child_client_id, children.find(c => c.client_id === g.child_client_id)?.category === 'brothers', payments)
+      const b = balance(trip, g.child_client_id, children.find(c => c.client_id === g.child_client_id)?.category, payments)
       return { due: s.due + b.due, paid: s.paid + b.paid, left: s.left + b.left }
     },
     { due: 0, paid: 0, left: 0 },
@@ -317,6 +322,7 @@ export function TripPage({ id }: { id: string }) {
             gather_place: trip.gather_place,
             return_time: trip.return_time,
             price: trip.price,
+            hidden_price: trip.hidden_price,
             brothers_price: trip.brothers_price,
             notes: trip.notes,
           }}
@@ -346,6 +352,7 @@ export function TripPage({ id }: { id: string }) {
             {info('gatherTime', f.time(trip.gather_time))}
             {info('returnTime', f.time(trip.return_time))}
             {info('tripPrice', trip.price != null && `${money(trip.price)} ${t('currency')}`)}
+            {info('hiddenPrice', trip.hidden_price != null && `${money(trip.hidden_price)} ${t('currency')}`)}
             {info('brothersPrice', trip.brothers_price != null && `${money(trip.brothers_price)} ${t('currency')}`)}
           </dl>
           {trip.notes && <p className="whitespace-pre-wrap rounded-lg bg-slate-50 px-3 py-2 text-sm dark:bg-slate-800/60">{trip.notes}</p>}
@@ -371,11 +378,17 @@ export function TripPage({ id }: { id: string }) {
         </div>
         {children.length === 0 && <p className="py-6 text-center text-sm text-slate-500">{t('noChildrenTitle')}</p>}
         <ul className="space-y-2">
-          {children
-            .filter(c => !onlyGoing || goingHere.some(g => g.child_client_id === c.client_id))
-            .map(c => (
-              <ChildRow key={c.client_id} trip={trip} childId={c.client_id} name={c.full_name} brothers={c.category === 'brothers'} onError={setError} />
-            ))}
+          {shown.map((c, i) => (
+            <Fragment key={c.client_id}>
+              {/* the line above the first child who left the class */}
+              {c.moved_out_on && !shown[i - 1]?.moved_out_on && (
+                <li className="mt-5! border-t-2 border-slate-300 px-1 pt-3 text-sm font-bold text-slate-500 dark:border-slate-600 dark:text-slate-400">
+                  {t('movedOut')} ({shown.filter(x => x.moved_out_on).length})
+                </li>
+              )}
+              <ChildRow trip={trip} childId={c.client_id} name={c.full_name} category={c.category} onError={setError} />
+            </Fragment>
+          ))}
         </ul>
       </section>
     </div>
@@ -394,7 +407,7 @@ function Stat({ label, value, tone = '' }: { label: string; value: string; tone?
 }
 
 /** One child: going or not, إخوة الرب, the instalments paid, and a box to add one. */
-function ChildRow({ trip, childId, name, brothers, onError }: { trip: Trip; childId: string; name: string; brothers: boolean; onError: (e: string) => void }) {
+function ChildRow({ trip, childId, name, category, onError }: { trip: Trip; childId: string; name: string; category: string | null | undefined; onError: (e: string) => void }) {
   const { t } = useI18n()
   const f = useFormat()
   const { online } = useStore()
@@ -404,7 +417,8 @@ function ChildRow({ trip, childId, name, brothers, onError }: { trip: Trip; chil
 
   const g = going.find(x => x.trip_id === trip.id && x.child_client_id === childId)
   const mine = payments.filter(p => p.trip_id === trip.id && p.child_client_id === childId)
-  const b = g ? balance(trip, childId, brothers, payments) : null
+  const b = g ? balance(trip, childId, category, payments) : null
+  const cat = CATEGORIES.find(c => c.value === category)
 
   async function act(change: () => Promise<string | null>) {
     setBusy(true)
@@ -420,7 +434,7 @@ function ChildRow({ trip, childId, name, brothers, onError }: { trip: Trip; chil
       if (!ok) return
     }
     // the price follows the child's الحالة (إخوة الرب or not); kept on the row as a record
-    act(() => setGoing(trip.id, childId, !g, brothers))
+    act(() => setGoing(trip.id, childId, !g, category === 'brothers'))
   }
 
   async function pay(e: FormEvent) {
@@ -441,12 +455,8 @@ function ChildRow({ trip, childId, name, brothers, onError }: { trip: Trip; chil
         </label>
         {g && (
           <>
-            {/* from the child's الحالة — on the إخوة الرب price */}
-            {brothers && (
-              <span className="rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
-                {t('brothers')}
-              </span>
-            )}
+            {/* from the child's الحالة — which of the three prices this child pays */}
+            {cat && cat.value !== 'normal' && <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${cat.tone}`}>{t(cat.key)}</span>}
             {status === 'paid' && <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">✅ {t('paidAll')}</span>}
             {/* how much so far, out of what this child owes */}
             {b!.paid > 0 && (

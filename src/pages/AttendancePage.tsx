@@ -145,7 +145,7 @@ export function AttendancePage() {
       const g = going.find(x => x.trip_id === trip.id && x.child_client_id === r.client_id)
       if (what === 'going') return !!g
       if (what === 'notGoing') return !g && !r.moved_out_on
-      return !!g && balance(trip, r.client_id, r.category === 'brothers', payments).left > 0 // owes
+      return !!g && balance(trip, r.client_id, r.category, payments).left > 0 // owes
     }
     const all = viewRows(store)
     // same order as the Children page: those who left the class at the bottom
@@ -201,7 +201,7 @@ export function AttendancePage() {
             <optgroup key={tr.id} label={`🚌 ${tr.name}`}>
               <option value={`going:${tr.id}`}>{t('filterGoing')}</option>
               <option value={`notGoing:${tr.id}`}>{t('filterNotGoing')}</option>
-              {(tr.price || tr.brothers_price) && <option value={`owes:${tr.id}`}>{t('filterOwes')}</option>}
+              {!!(tr.price || tr.hidden_price || tr.brothers_price) && <option value={`owes:${tr.id}`}>{t('filterOwes')}</option>}
             </optgroup>
           ))}
         </select>

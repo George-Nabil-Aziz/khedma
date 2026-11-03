@@ -23,6 +23,8 @@ export type Trip = {
   price: number | null
   /** Price for إخوة الرب. */
   brothers_price: number | null
+  /** Price for مستتر; empty → the normal price. */
+  hidden_price: number | null
   notes: string | null
   created_at: string
 }
@@ -73,7 +75,7 @@ export async function refreshTrips() {
   const error = trips.error ?? going.error ?? payments.error
   if (error) return set({ loading: false, error: error.message })
   const data = {
-    trips: (trips.data as Trip[]).map(t => ({ ...t, price: num(t.price), brothers_price: num(t.brothers_price) })),
+    trips: (trips.data as Trip[]).map(t => ({ ...t, price: num(t.price), brothers_price: num(t.brothers_price), hidden_price: num(t.hidden_price) })),
     going: going.data as TripChild[],
     payments: (payments.data as TripPayment[]).map(p => ({ ...p, amount: Number(p.amount) })),
   }
@@ -135,11 +137,18 @@ export function tripDays(trip: Pick<Trip, 'trip_date' | 'end_date'>): number | n
 }
 
 /**
- * What a child going on the trip owes, has paid, and still has to pay. The price follows the child's
- * الحالة in their data (إخوة الرب → the إخوة الرب price), not anything set on the trip.
+ * The trip's price for a child's الحالة (in the child's data): عادي, مستتر or إخوة الرب.
+ * مستتر without a price of its own pays the normal one; إخوة الرب without one pays nothing.
  */
-export function balance(trip: Trip, childId: string, brothers: boolean, payments: TripPayment[]) {
-  const due = (brothers ? trip.brothers_price : trip.price) ?? 0
+export function priceFor(trip: Trip, category: string | null | undefined): number {
+  if (category === 'brothers') return trip.brothers_price ?? 0
+  if (category === 'hidden') return trip.hidden_price ?? trip.price ?? 0
+  return trip.price ?? 0
+}
+
+/** What a child going on the trip owes, has paid, and still has to pay. */
+export function balance(trip: Trip, childId: string, category: string | null | undefined, payments: TripPayment[]) {
+  const due = priceFor(trip, category)
   const paid = payments.filter(p => p.trip_id === trip.id && p.child_client_id === childId).reduce((s, p) => s + p.amount, 0)
   return { due, paid, left: Math.max(0, due - paid) }
 }

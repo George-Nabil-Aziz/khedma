@@ -397,6 +397,8 @@ const dict = {
   returnTime: { ar: "معاد الرجوع", en: "Return time" },
   tripPrice: { ar: "السعر", en: "Price" },
   brothersPrice: { ar: "سعر إخوة الرب", en: "Price for إخوة الرب" },
+  hiddenPrice: { ar: "سعر المستتر", en: "Price for مستتر" },
+  phHiddenPrice: { ar: "فاضي = السعر العادي", en: "Empty = the normal price" },
   brothers: { ar: "إخوة الرب", en: "إخوة الرب" },
   currency: { ar: "ج", en: "EGP" },
   goingCount: { ar: "رايحين", en: "Going" },
