@@ -136,6 +136,19 @@ export function AttendancePage() {
     else tripCells.push({ d, span: 1 })
   }
 
+  // A child's cell under a trip: one across the trip's side-by-side days, so one ✓ per trip.
+  // Days a trip's first cell covers get 0.
+  const tripSpan = new Map<string, number>()
+  days.forEach((d, j) => {
+    if (d.friday) return
+    let k = j - 1
+    if (k >= 0 && !days[k].friday && days[k].trips[0].trip.id === d.trips[0].trip.id) {
+      while (tripSpan.get(days[k].key) === 0) k--
+      tripSpan.set(days[k].key, tripSpan.get(days[k].key)! + 1)
+      tripSpan.set(d.key, 0)
+    } else tripSpan.set(d.key, 1)
+  })
+
   // الفلتر: who missed the last Friday (for الافتقاد), or — per trip — who is going, who is not,
   // who still owes. "absent", or "going" / "notGoing" / "owes" + ":" + the trip's id.
   const [filter, setFilter] = useState('all')
@@ -371,13 +384,15 @@ export function AttendancePage() {
                         // a trip's day: one cell over the child's two rows — going or not, as set on the
                         // trip's page (read only here)
                         if (!d.friday) {
-                          if (i > 0) return null
+                          const span = tripSpan.get(d.key)!
+                          if (i > 0 || span === 0) return null // under the cell of the row above / the trip's first day
                           const trip = d.trips[0].trip
                           const isGoing = going.some(g => g.trip_id === trip.id && g.child_client_id === r.client_id)
                           return (
                             <td
                               key={d.key}
                               rowSpan={KINDS.length}
+                              colSpan={span}
                               className={`border-b-2 border-e border-b-slate-200 border-e-slate-100 p-1 text-center align-middle dark:border-b-slate-700 dark:border-e-slate-800 ${firstOfMonth.has(d.key) ? 'border-s border-s-slate-200 dark:border-s-slate-700' : ''} ${TRIP_COL}`}
                             >
                               {isGoing && (
