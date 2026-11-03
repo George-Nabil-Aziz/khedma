@@ -31,7 +31,7 @@ export const TEXT_FIELDS = [
   'confession_father', // أب الاعتراف
   'notes',
   'national_id',
-  'category', // الحالة: normal / hidden / brothers — see CATEGORIES
+  'category', // الحالة الاجتماعية: normal / hidden / brothers — see CATEGORIES
   'address_label', // whose home the usual address is — only used when there is an other_address
   'moved_out_on', // the day the child left the class; null = still in it
   'moved_to_church', // where a child who left went (optional)

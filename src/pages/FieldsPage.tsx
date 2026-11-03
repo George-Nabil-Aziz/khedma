@@ -69,6 +69,52 @@ export function FieldsPage({ admin }: { admin: boolean }) {
         </div>
       )}
 
+      {/* built-in — first of all */}
+      <section className="space-y-2 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <h2 className="font-bold">{t('builtInColumns')}</h2>
+        <p className="text-sm text-slate-500">{t('builtInHelp')}</p>
+        <div className="flex flex-wrap gap-2">
+          {BUILT_IN.map(k => (
+            <span key={k} className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-sm dark:bg-slate-800">
+              <LockIcon className="size-3.5 text-slate-400" />
+              {t(k)}
+            </span>
+          ))}
+        </div>
+      </section>
+
+      {/* add — before the extra columns it adds to */}
+      <form onSubmit={add} className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <h2 className="flex items-center gap-2 font-bold">
+          <PlusIcon className="size-5 text-indigo-600 dark:text-indigo-300" />
+          {t('addField')}
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-[1fr_12rem]">
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-semibold">{t('fieldLabel')}</span>
+            <input className={input} placeholder={t('phFieldLabel')} value={label} onChange={e => setLabel(e.target.value)} disabled={!online || busy} />
+          </label>
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-semibold">{t('fieldType')}</span>
+            <select className={input} value={type} onChange={e => setType(e.target.value as FieldType)} disabled={!online || busy}>
+              {TYPES.map(o => (
+                <option key={o.value} value={o.value}>
+                  {t(o.key)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <button
+          disabled={!online || busy || !label.trim()}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 sm:w-auto"
+        >
+          <PlusIcon className="size-4" />
+          {t('addField')}
+        </button>
+        {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">{error}</p>}
+      </form>
+
       {/* custom */}
       <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
         <h2 className="font-bold">{t('extraFields')}</h2>
@@ -109,52 +155,6 @@ export function FieldsPage({ admin }: { admin: boolean }) {
           ))
         )}
         {!admin && fields.length > 0 && <p className="text-xs text-slate-400">{t('deleteFieldAdminOnly')}</p>}
-      </section>
-
-      {/* add — under the columns there already are */}
-      <form onSubmit={add} className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-        <h2 className="flex items-center gap-2 font-bold">
-          <PlusIcon className="size-5 text-indigo-600 dark:text-indigo-300" />
-          {t('addField')}
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-[1fr_12rem]">
-          <label className="flex flex-col gap-2">
-            <span className="text-sm font-semibold">{t('fieldLabel')}</span>
-            <input className={input} placeholder={t('phFieldLabel')} value={label} onChange={e => setLabel(e.target.value)} disabled={!online || busy} />
-          </label>
-          <label className="flex flex-col gap-2">
-            <span className="text-sm font-semibold">{t('fieldType')}</span>
-            <select className={input} value={type} onChange={e => setType(e.target.value as FieldType)} disabled={!online || busy}>
-              {TYPES.map(o => (
-                <option key={o.value} value={o.value}>
-                  {t(o.key)}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <button
-          disabled={!online || busy || !label.trim()}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 sm:w-auto"
-        >
-          <PlusIcon className="size-4" />
-          {t('addField')}
-        </button>
-        {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">{error}</p>}
-      </form>
-
-      {/* built-in */}
-      <section className="space-y-2 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-        <h2 className="font-bold">{t('builtInColumns')}</h2>
-        <p className="text-sm text-slate-500">{t('builtInHelp')}</p>
-        <div className="flex flex-wrap gap-2">
-          {BUILT_IN.map(k => (
-            <span key={k} className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-sm dark:bg-slate-800">
-              <LockIcon className="size-3.5 text-slate-400" />
-              {t(k)}
-            </span>
-          ))}
-        </div>
       </section>
 
       {/* admins: the table's default look for everyone */}

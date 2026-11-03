@@ -360,7 +360,7 @@ const dict = {
     en: "The other home’s details will be cleared. Continue?",
   },
   // الحالة of a child
-  category: { ar: "الحالة", en: "Status" },
+  category: { ar: "الحالة الاجتماعية", en: "Social status" },
   catNormal: { ar: "عادي", en: "Normal" },
   catHidden: { ar: "مستتر", en: "مستتر" },
   catBrothers: { ar: "إخوة الرب", en: "إخوة الرب" },
