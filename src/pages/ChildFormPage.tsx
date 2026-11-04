@@ -144,6 +144,7 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
         {text('national_id', 'nationalId', { ltr: true, inputMode: 'numeric', placeholder: 'phNationalId' })}
         <DeaconField value={texts.deacon} onChange={setText('deacon')} />
         {text('confession_father', 'confessionFather', { placeholder: 'phConfessionFather' })}
+        {text('school', 'school', { placeholder: 'phSchool' })}
         <CategoryField value={texts.category} onChange={setText('category')} />
       </Section>
 

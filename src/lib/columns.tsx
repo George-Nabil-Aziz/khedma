@@ -204,6 +204,7 @@ export function useColumns(): Column[] {
         },
       },
       { id: 'confession_father', label: t('confessionFather'), render: r => r.confession_father, sort: r => r.confession_father },
+      { id: 'school', label: t('school'), render: r => r.school, sort: r => r.school },
       { id: 'notes', label: t('notes'), render: r => r.notes, sort: r => r.notes },
       { id: 'national_id', label: t('nationalId'), render: r => r.national_id && <span dir="ltr">{formatNationalId(r.national_id)}</span>, sort: r => r.national_id, nowrap: true },
       // where a child who left the class went (empty for the others)

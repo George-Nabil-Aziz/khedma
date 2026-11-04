@@ -89,7 +89,9 @@ const dict = {
   childMobile: { ar: "موبايل الولد", en: "Child's mobile" },
   deacon: { ar: "شماس", en: "Deacon" },
   confessionFather: { ar: "أب الاعتراف", en: "Confession father" },
+  school: { ar: "المدرسة", en: "School" },
   phConfessionFather: { ar: "مثلاً: أبونا مرقس", en: "e.g. Fr. Mark" },
+  phSchool: { ar: "مثلاً: مدرسة الراهبات", en: "e.g. St. Mary's School" },
   call: { ar: "اتصال", en: "Call" },
   notes: { ar: "ملاحظات", en: "Notes" },
   nationalId: { ar: "الرقم القومي", en: "National ID" },
@@ -501,7 +503,7 @@ const dict = {
   phPassword: { ar: "كلمة المرور", en: "Your password" },
   phDisplayName: { ar: "اكتب اسمك", en: "Your name" },
   phClassName: { ar: "مثال: تالتة ابتدائي ولاد", en: "e.g. Grade 3 boys" },
-  phFieldLabel: { ar: "مثال: المدرسة", en: "e.g. School" },
+  phFieldLabel: { ar: "مثال: الهواية", en: "e.g. Hobby" },
   // photos & profile
   photo: { ar: "الصورة", en: "Photo" },
   addPhoto: { ar: "إضافة صورة", en: "Add photo" },

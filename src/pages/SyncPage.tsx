@@ -20,6 +20,7 @@ const FIELD_LABEL: Record<CoreField, TKey> = {
   birth_date: 'birthDate',
   deacon: 'deacon',
   confession_father: 'confessionFather',
+  school: 'school',
   category: 'category',
   notes: 'notes',
   national_id: 'nationalId',

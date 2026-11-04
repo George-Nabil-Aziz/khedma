@@ -29,6 +29,7 @@ export const TEXT_FIELDS = [
   'birth_date',
   'deacon',
   'confession_father', // أب الاعتراف
+  'school', // المدرسة
   'notes',
   'national_id',
   'category', // الحالة الاجتماعية: normal / hidden / brothers — see CATEGORIES
