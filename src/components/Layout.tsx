@@ -13,6 +13,7 @@ import {
   BusIcon,
   CalendarCheckIcon,
   ChevronDownIcon,
+  DownloadIcon,
   HistoryIcon,
   SchoolIcon,
   SettingsIcon,
@@ -114,6 +115,10 @@ export function Layout({ email, admin, title, children }: { email: string; admin
           <button className={item(route.name === 'trips' || route.name === 'trip')} onClick={() => nav('/trips')}>
             <BusIcon />
             {t('trips')}
+          </button>
+          <button className={item(route.name === 'export')} onClick={() => nav('/export')}>
+            <DownloadIcon />
+            {t('export')}
           </button>
           <div className="mx-3 my-2 border-t border-slate-200 dark:border-slate-800" />
           <button className={item(route.name === 'classes')} onClick={() => nav('/classes')}>

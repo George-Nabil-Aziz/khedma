@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { clear, get, setMany } from 'idb-keyval'
-import { CORE_FIELDS, TEXT_FIELDS, supabase, type Child, type ChildInput, type ClassInfo, type CustomField, type FieldType, type Profile } from './supabase'
+import { CORE_FIELDS, TEXT_FIELDS, supabase, type Child, type ChildInput, type ClassInfo, type CustomField, type FieldType, type Profile, type SheetInfo } from './supabase'
 import { load, save } from './storage'
 import { FRIDAY, iso, setYearEndWeeks } from './serviceYear'
 import { resetTrips } from './trips'
@@ -390,6 +390,14 @@ export async function setServiceDay(id: string, day: number): Promise<Result<nul
   return { ok: true, value: null }
 }
 
+/** بيانات الكشف of a class (التصدير). Any member can change it; needs a connection. */
+export async function saveSheetInfo(id: string, info: SheetInfo): Promise<Result<null>> {
+  const { error } = await supabase.from('classes').update({ sheet_info: info }).eq('id', id)
+  if (error) return { ok: false, error: error.message }
+  await sync()
+  return { ok: true, value: null }
+}
+
 export async function renameClass(id: string, name: string): Promise<Result<null>> {
   const { error } = await supabase.from('classes').update({ name }).eq('id', id)
   if (error) return { ok: false, error: error.message }
@@ -505,7 +513,7 @@ export type DayOp = { classId: string; date: string; kind: DayKind; on: boolean;
 
 export const dayKey = (classId: string, date: string, kind: DayKind) => `${classId}|${date}|${kind}`
 
-function dayMark(s: State, classId: string, date: string, kind: DayKind): boolean {
+export function dayMark(s: State, classId: string, date: string, kind: DayKind): boolean {
   for (let i = s.dayOutbox.length - 1; i >= 0; i--) {
     const o = s.dayOutbox[i]
     if (o.classId === classId && o.date === date && o.kind === kind) return o.on
@@ -565,6 +573,11 @@ export type ViewRow = Child & { status: RowStatus }
 
 /** Server rows with local, not-yet-synced changes applied on top. */
 export function viewRows(s: State): ViewRow[] {
+  return classRows(s, s.currentClass)
+}
+
+/** viewRows of any class, not only the one on screen (التصدير). */
+export function classRows(s: State, classId: string | null): ViewRow[] {
   const byId = new Map<string, ViewRow>(s.rows.map(r => [r.client_id, { ...normalize(r), status: 'synced' }]))
   for (const op of s.outbox) {
     const status: RowStatus = op.error ? 'error' : 'pending'
@@ -587,7 +600,7 @@ export function viewRows(s: State): ViewRow[] {
     const row = byId.get(c.client_id)
     if (row) row.status = 'conflict'
   }
-  return [...byId.values()].filter(r => r.class_id === s.currentClass)
+  return [...byId.values()].filter(r => r.class_id === classId)
 }
 
 /**

@@ -23,6 +23,7 @@ import { HelpPage, InstallPage, SettingsPage, SettingsTabs } from './pages/Setti
 import { TripPage, TripsPage } from './pages/TripsPage'
 import { NotificationsPage } from './pages/NotificationsPage'
 import { DaysPage } from './pages/DaysPage'
+import { ExportPage } from './pages/ExportPage'
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -115,6 +116,8 @@ function Routes({ email, userId, admin }: { email: string; userId: string; admin
       return page('attendance', <AttendancePage />)
     case 'trips':
       return page('trips', <TripsPage />)
+    case 'export':
+      return page('export', <ExportPage />)
     case 'trip':
       return page('trips', <TripPage id={route.id} />)
     case 'days':

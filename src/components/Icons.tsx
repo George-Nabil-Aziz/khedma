@@ -131,3 +131,12 @@ export const EyeIcon = ({ className = 'size-4' }: P) => (
 export const EyeOffIcon = ({ className = 'size-4' }: P) => (
   <svg {...base} className={className}><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24M10.73 5.08A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a13.2 13.2 0 0 1-1.67 2.68M6.61 6.61A13.5 13.5 0 0 0 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.39-1.61M2 2l20 20" /></svg>
 )
+export const DownloadIcon = ({ className = 'size-5' }: P) => (
+  <svg {...base} className={className}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" /></svg>
+)
+export const FileTextIcon = ({ className = 'size-5' }: P) => (
+  <svg {...base} className={className}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" /></svg>
+)
+export const SheetIcon = ({ className = 'size-5' }: P) => (
+  <svg {...base} className={className}><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M3 15h18M9 3v18" /></svg>
+)

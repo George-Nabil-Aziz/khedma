@@ -32,7 +32,7 @@ export default defineConfig({
       },
       workbox: {
         // App shell only — children data lives in IndexedDB, never in the service-worker cache.
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,jpg,svg,woff2}'],
         // birthday notifications: showing them, and opening the app when one is tapped
         importScripts: ['push-sw.js'],
       },
