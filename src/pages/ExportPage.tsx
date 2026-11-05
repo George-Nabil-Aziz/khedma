@@ -29,7 +29,7 @@ export function ExportPage() {
   const quarters = useMemo(() => (c ? classQuarters(c) : []), [c, store.yearEndWeeks])
 
   // كشف الأولاد columns: the paper sheet's by default; a change is kept on my account
-  const { all: allColumns, defaults } = useMemo(() => childColumns(c?.id ?? ''), [c?.id, store.fields])
+  const { all: allColumns, defaults, empty: emptyColumns } = useMemo(() => childColumns(c?.id ?? ''), [c?.id, store.fields, store.rows, store.outbox])
   const mine = c ? store.profile?.export_columns?.[c.id] : undefined
   const [picked, setPicked] = useState<string[]>(mine ?? defaults)
   const isDefault = picked.length === defaults.length && defaults.every(id => picked.includes(id))
@@ -41,11 +41,12 @@ export function ExportPage() {
     const err = await saveExportColumns(c.id, same ? null : next)
     setColumnsError(err ? t('exportColumnsNotSaved') : '')
   }
-  // my choice arriving from the account (first sync, another device) while the page is open
+  // my choice arriving from the account (first sync, another device) while the page is open;
+  // with no choice of mine, the defaults follow the children arriving (empty columns off)
   useEffect(() => {
-    if (mine) setPicked(mine)
+    setPicked(mine ?? defaults)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(mine)])
+  }, [JSON.stringify(mine), defaults.join()])
 
   const [servants, setServants] = useState('')
   useEffect(() => {
@@ -153,7 +154,14 @@ export function ExportPage() {
           <p className={`mb-3 rounded-lg px-3 py-2 text-sm ${isDefault ? 'bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300' : 'bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-200'}`}>
             {isDefault ? t('exportColumnsDefault') : t('exportColumnsChanged')}
           </p>
-          <div className="flex flex-wrap gap-2">{allColumns.map(chip)}</div>
+          <div className="flex flex-wrap gap-2">{allColumns.filter(col => !emptyColumns.includes(col.id)).map(chip)}</div>
+          {/* columns no child has anything in: on their own line, off unless picked */}
+          {emptyColumns.length > 0 && (
+            <div className="mt-4 border-t border-dashed border-slate-200 pt-3 dark:border-slate-700">
+              <div className="flex flex-wrap gap-2">{allColumns.filter(col => emptyColumns.includes(col.id)).map(chip)}</div>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t('exportColumnsEmpty')}</p>
+            </div>
+          )}
           {!isDefault && (
             <button onClick={() => pick(defaults)} className="mt-4 text-sm font-semibold text-indigo-600 hover:underline dark:text-indigo-300">
               {t('exportColumnsReset')}

@@ -152,10 +152,19 @@ function moreColumns(classId: string): ChildColumn[] {
   ]
 }
 
-/** Every column the كشف الأولاد can have for a class; all of them are on by default. */
-export function childColumns(classId: string): { all: ChildColumn[]; defaults: string[] } {
+/**
+ * Every column the كشف الأولاد can have for a class. `empty`: those no child of the class has
+ * anything in (e.g. المدرسة never filled) — off by default; every other column is on.
+ */
+export function childColumns(classId: string): { all: ChildColumn[]; defaults: string[]; empty: string[] } {
   const all = [...DEFAULT_COLUMNS, ...moreColumns(classId)]
-  return { all, defaults: all.map(c => c.id) }
+  const { inClass, left } = ordered(classId)
+  const everyone = [...inClass, ...left]
+  const filled = (v: Cell) => v !== null && v !== undefined && String(v).trim() !== ''
+  const hasData = (col: ChildColumn) => everyone.some(r => (col.owner ? phonesOf(r, col.owner).length > 0 : filled(col.value(r))))
+  // a class with no children yet: nothing is "empty", everything stays on
+  const empty = everyone.length ? all.filter(col => !hasData(col)).map(col => col.id) : []
+  return { all, defaults: all.filter(col => !empty.includes(col.id)).map(col => col.id), empty }
 }
 
 /** `picked`: column ids (م and the name are always there), in the order they will show. */

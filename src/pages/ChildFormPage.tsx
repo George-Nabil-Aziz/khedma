@@ -148,7 +148,8 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
         <CategoryField value={texts.category} onChange={setText('category')} />
       </Section>
 
-      <Section title={t('address')}>
+      {/* two homes: say which is in the class's area and which is outside it */}
+      <Section title={other ? t('addressInArea') : t('address')}>
         {other && <div className="sm:col-span-2">{text('address_label', 'addressLabel', { placeholder: 'phMainAddressLabel' })}</div>}
         {text('house_number', 'houseNumber', { placeholder: 'phHouse' })}
         {text('street', 'street', { placeholder: 'phStreet' })}
@@ -184,7 +185,7 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
       </Section>
 
       {other && (
-        <Section title={t('otherAddress')}>
+        <Section title={t('addressOutArea')}>
           <OtherAddressFields value={other} onChange={setOther} />
         </Section>
       )}

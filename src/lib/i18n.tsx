@@ -369,7 +369,9 @@ const dict = {
   addressLabel: { ar: "بيت مين؟", en: "Whose home?" },
   phMainAddressLabel: { ar: "مثال: بيت بابا وماما", en: "e.g. parents’ home" },
   phOtherAddressLabel: { ar: "مثال: بيت الجد", en: "e.g. grandparents’ home" },
-  otherAddress: { ar: "البيت التاني", en: "Other home" },
+  otherAddress: { ar: "البيت التاني (خارج المنطقة)", en: "Other home (outside the area)" },
+  addressInArea: { ar: "العنوان اللي داخل المنطقة", en: "Address inside the area" },
+  addressOutArea: { ar: "العنوان اللي خارج المنطقة", en: "Address outside the area" },
   removeOtherAddress: { ar: "شيل البيت التاني", en: "Remove the other home" },
   removeOtherAddressConfirm: {
     ar: "بيانات البيت التاني هتتمسح. تكمّل؟",
@@ -636,6 +638,16 @@ const dict = {
     ar: "سيبها فاضية لو مش عايز تغيّرها",
     en: "Leave empty to keep it",
   },
+  editingAccount: { ar: "تعديل حساب", en: "Editing account" },
+  adminHint: {
+    ar: "الأدمن يقدر يضيف ويعدّل الحسابات ويشوف كل الفصول",
+    en: "An admin can add and edit accounts and see every class",
+  },
+  adminSelfHint: {
+    ar: "مينفعش تشيل الأدمن من حسابك إنت",
+    en: "You can't remove admin from your own account",
+  },
+  userClasses: { ar: "فصوله:", en: "Classes:" },
   lastSignIn: { ar: "آخر دخول", en: "Last sign-in" },
   neverSignedIn: { ar: "لسه مدخلش", en: "Never" },
   editUser: { ar: "تعديل", en: "Edit" },
@@ -691,8 +703,12 @@ const dict = {
   exportEmpty: { ar: "الفصل ده مفيهوش أولاد لسه", en: "This class has no children yet" },
   exportColumns: { ar: "العواميد", en: "Columns" },
   exportColumnsDefault: {
-    ar: "كل العواميد متعلّم عليها، وده الشكل الافتراضي. شيل العلامة من أي عمود مش عايزه في الكشف.",
-    en: "Every column is ticked; that is the default. Untick any column you don't want in the sheet.",
+    ar: "كل العواميد اللي فيها بيانات متعلّم عليها، وده الشكل الافتراضي. شيل العلامة من أي عمود مش عايزه في الكشف.",
+    en: "Every column with data is ticked; that is the default. Untick any column you don't want in the sheet.",
+  },
+  exportColumnsEmpty: {
+    ar: "العواميد دي مفيش فيها بيانات لأي ولد في الفصل، علشان كده مش متعلّم عليها. لو عايزها في الكشف دوس عليها.",
+    en: "No child in the class has anything in these columns, so they are unticked. Tap one to add it to the sheet.",
   },
   exportColumnsChanged: {
     ar: "غيّرت العواميد. اختيارك ده هيتحفظ على حسابك، والمرة الجاية هتلاقيه زي ما سبته من أي جهاز.",
