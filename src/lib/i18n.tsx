@@ -687,9 +687,20 @@ const dict = {
   exporting: { ar: "بيجهز الملف…", en: "Preparing the file…" },
   exportFailed: { ar: "الملف ماطلعش", en: "The file could not be made" },
   exportEmpty: { ar: "الفصل ده مفيهوش أولاد لسه", en: "This class has no children yet" },
+  exportColumns: { ar: "العواميد", en: "Columns" },
+  exportColumnsDefault: {
+    ar: "اللي متعلّم عليه ده الشكل الافتراضي (زي الكشف الورقي). شيل العلامة من عمود عشان تشيله، أو علّم على عمود من «تقدر تزوّد» عشان يتضاف في الآخر.",
+    en: "What is ticked is the default (like the paper sheet). Untick a column to drop it, or tick one under “You can add” to add it at the end.",
+  },
+  exportColumnsChanged: { ar: "غيّرت العواميد، وده هيتفتكر على الجهاز ده.", en: "You changed the columns; this device remembers it." },
+  exportColumnsMore: { ar: "تقدر تزوّد", en: "You can add" },
+  exportColumnsReset: { ar: "رجّع الافتراضي", en: "Back to default" },
 } satisfies Record<string, Record<Lang, string>>;
 
 export type TKey = keyof typeof dict;
+
+/** The Arabic text of a key, whatever language the app is in (the exported sheets are always Arabic). */
+export const arabic = (k: TKey) => dict[k].ar;
 
 type I18n = { lang: Lang; setLang: (l: Lang) => void; t: (k: TKey) => string };
 

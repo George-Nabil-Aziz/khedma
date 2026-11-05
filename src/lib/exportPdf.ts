@@ -119,10 +119,21 @@ const border = '1px solid #000'
 const cell = (extra = '') => `border:${border};padding:2px 4px;text-align:center;vertical-align:middle;${extra}`
 
 function page(sheet: Sheet, withHeader: boolean, rows: SheetRow[]): string {
-  const widths = sheet.pdfWidths ?? sheet.widths
+  // a column is at least as wide as its longest word or number, so nothing has to be broken or cut
+  const small = sheet.kind === 'attendance' ? 11 : 10.5
+  const base = sheet.pdfWidths ?? sheet.widths
+  const room = PAGE_W - 2 * PAD
+  const sum = base.reduce((a, b) => a + b, 0)
+  // in pixels: what the longest word needs, and what the column's share of the page gives it;
+  // columns with more than they need give some back so the words of the others fit
+  const need = base.map((_, i) => longestWord(sheet, i) * small * 0.62 + 10)
+  const want = base.map((w, i) => Math.max((w / sum) * room, need[i]))
+  const slack = want.reduce((a, w, i) => a + w - need[i], 0)
+  const minimum = need.reduce((a, b) => a + b, 0)
+  const k = slack > 0 ? Math.max(0, Math.min(1, (room - minimum) / slack)) : 0
+  const widths = want.map((w, i) => need[i] + (w - need[i]) * k)
   const total = widths.reduce((a, b) => a + b, 0)
   const cols = widths.map(w => `<col style="width:${((w / total) * 100).toFixed(3)}%">`).join('')
-  const small = sheet.kind === 'attendance' ? 11 : 10.5
 
   const head1 = sheet.head1
     .map(h => `<th colspan="${h.span}" rowspan="${h.down ? 2 : 1}" style="${cell(`background:#d8d8d8;font-size:${small}px;font-weight:700;`)}">${esc(h.label)}</th>`)
@@ -141,7 +152,7 @@ function page(sheet: Sheet, withHeader: boolean, rows: SheetRow[]): string {
           const span = row.merge && i < row.merge ? ' rowspan="2"' : ''
           const align = sheet.alignStart.includes(i) ? 'text-align:right;' : ''
           const bg = row.shade ? 'background:#f2f2f2;' : ''
-          return `<td${span} style="${cell(`${align}${bg}font-size:${small}px;font-weight:600;${/^[\d\s+/-]+$/.test(String(v ?? '')) ? 'white-space:nowrap;' : 'word-break:break-word;'}`)}">${esc(v)}</td>`
+          return `<td${span} style="${cell(`${align}${bg}font-size:${small}px;font-weight:600;overflow-wrap:anywhere;`)}">${esc(v)}</td>`
         })
         .join('')
       return `<tr style="height:22px">${tds}</tr>`
@@ -159,9 +170,25 @@ function page(sheet: Sheet, withHeader: boolean, rows: SheetRow[]): string {
   </div>`
 }
 
+/** The longest word (or number) in a column of the table, in characters. */
+function longestWord(sheet: Sheet, i: number) {
+  // the column's own head too (the second header row sits over the columns head1 does not cover)
+  const under: number[] = []
+  let c = 0
+  for (const h of sheet.head1) {
+    if (!h.down) for (let k = 0; k < h.span; k++) under.push(c + k)
+    c += h.span
+  }
+  const head = under.indexOf(i)
+  const own = head >= 0 ? sheet.head2[head].label : (sheet.head1.find((h, j) => h.down && sheet.head1.slice(0, j).reduce((a, x) => a + x.span, 0) === i)?.label ?? '')
+  let n = Math.max(0, ...own.split(/\s+/).map(w => w.length))
+  for (const row of sheet.rows) if ('cells' in row) for (const w of String(row.cells[i] ?? '').split(/\s+/)) n = Math.max(n, w.length)
+  return n
+}
+
 function header(sheet: Sheet): string {
   const box = (text: string, bg: string, extra = '') =>
-    `<div style="background:${bg};padding:2px 8px;font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${extra}">${esc(text)}</div>`
+    `<div style="background:${bg};padding:2px 8px;font-size:13px;font-weight:700;overflow-wrap:anywhere;${extra}">${esc(text)}</div>`
   const pairs = SHEET_LABELS.map(l => box(l.label, '#deeaf6', 'text-decoration:underline;') + box(sheet.header[l.key], '#f2f2f2', 'text-align:center;')).join('')
   return `<div data-header style="display:flex;align-items:center;gap:16px;margin-bottom:8px;">
     <img src="${logoUrl()}" style="width:146px;height:80px;object-fit:contain;flex:none" />
