@@ -152,9 +152,10 @@ function moreColumns(classId: string): ChildColumn[] {
   ]
 }
 
-/** Every column the كشف الأولاد can have for a class, and which are on by default. */
+/** Every column the كشف الأولاد can have for a class; all of them are on by default. */
 export function childColumns(classId: string): { all: ChildColumn[]; defaults: string[] } {
-  return { all: [...DEFAULT_COLUMNS, ...moreColumns(classId)], defaults: DEFAULT_COLUMNS.map(c => c.id) }
+  const all = [...DEFAULT_COLUMNS, ...moreColumns(classId)]
+  return { all, defaults: all.map(c => c.id) }
 }
 
 /** `picked`: column ids (م and the name are always there), in the order they will show. */

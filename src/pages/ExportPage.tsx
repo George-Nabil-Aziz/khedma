@@ -153,9 +153,7 @@ export function ExportPage() {
           <p className={`mb-3 rounded-lg px-3 py-2 text-sm ${isDefault ? 'bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300' : 'bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-200'}`}>
             {isDefault ? t('exportColumnsDefault') : t('exportColumnsChanged')}
           </p>
-          <div className="flex flex-wrap gap-2">{allColumns.filter(col => defaults.includes(col.id)).map(chip)}</div>
-          <p className="mb-2 mt-4 text-xs font-semibold text-slate-500">{t('exportColumnsMore')}</p>
-          <div className="flex flex-wrap gap-2">{allColumns.filter(col => !defaults.includes(col.id)).map(chip)}</div>
+          <div className="flex flex-wrap gap-2">{allColumns.map(chip)}</div>
           {!isDefault && (
             <button onClick={() => pick(defaults)} className="mt-4 text-sm font-semibold text-indigo-600 hover:underline dark:text-indigo-300">
               {t('exportColumnsReset')}

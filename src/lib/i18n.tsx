@@ -691,8 +691,8 @@ const dict = {
   exportEmpty: { ar: "الفصل ده مفيهوش أولاد لسه", en: "This class has no children yet" },
   exportColumns: { ar: "العواميد", en: "Columns" },
   exportColumnsDefault: {
-    ar: "اللي متعلّم عليه ده الشكل الافتراضي (زي الكشف الورقي). شيل العلامة من عمود عشان تشيله، أو علّم على عمود من «تقدر تزوّد» عشان يتضاف في الآخر.",
-    en: "What is ticked is the default (like the paper sheet). Untick a column to drop it, or tick one under “You can add” to add it at the end.",
+    ar: "كل العواميد متعلّم عليها، وده الشكل الافتراضي. شيل العلامة من أي عمود مش عايزه في الكشف.",
+    en: "Every column is ticked; that is the default. Untick any column you don't want in the sheet.",
   },
   exportColumnsChanged: {
     ar: "غيّرت العواميد. اختيارك ده هيتحفظ على حسابك، والمرة الجاية هتلاقيه زي ما سبته من أي جهاز.",
@@ -702,7 +702,6 @@ const dict = {
     ar: "اختيارك ماتحفظش على حسابك (محتاج نت). التصدير دلوقتي هيمشي بيه عادي.",
     en: "Your choice was not saved to your account (needs a connection). This export still uses it.",
   },
-  exportColumnsMore: { ar: "تقدر تزوّد", en: "You can add" },
   exportColumnsReset: { ar: "رجّع الافتراضي", en: "Back to default" },
 } satisfies Record<string, Record<Lang, string>>;
 
