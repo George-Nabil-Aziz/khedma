@@ -173,6 +173,7 @@ export function UsersPage({ myId }: { myId: string }) {
 
               {/* classes this user can see */}
               <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold text-slate-500">{t('userClasses')}</span>
                 {u.class_ids.map(id => (
                   <span key={id} className="flex items-center gap-1 rounded-full bg-indigo-50 py-0.5 ps-3 pe-1 text-sm text-indigo-800 dark:bg-indigo-500/10 dark:text-indigo-200">
                     {className(id)}
@@ -344,29 +345,57 @@ function EditUser({
     setBusy(false)
   }
 
+  const field = (label: string, control: ReactNode, hint?: string) => (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-sm font-semibold">{label}</span>
+      {control}
+      {hint && <span className="text-xs text-slate-500 dark:text-slate-400">{hint}</span>}
+    </label>
+  )
+
   return (
-    <form onSubmit={submit} className="grid gap-2 rounded-lg bg-slate-50 p-3 sm:grid-cols-[1fr_1fr_1fr_auto] dark:bg-slate-800/50">
-      <input maxLength={100} placeholder={t('phUserName')} className={input} value={name} onChange={e => setName(e.target.value)} disabled={busy} aria-label={t('name')} />
-      <input type="email" required dir="ltr" placeholder="name@example.com" className={input} value={email} onChange={e => setEmail(e.target.value)} disabled={busy || user.shared} aria-label={t('email')} />
-      <PasswordInput
-        minLength={8}
-        autoComplete="new-password"
-        placeholder={user.shared ? t('sharedAccount') : t('passwordKeep')}
-        className={input}
-        value={password}
-        onChange={e => setPassword(e.target.value)}
-        disabled={busy || user.shared}
-      />
-      <label className="flex items-center gap-2 text-sm font-semibold">
-        <input type="checkbox" className="size-4 accent-indigo-600" checked={admin} onChange={e => setAdmin(e.target.checked)} disabled={busy || isMe} />
-        {t('admin')}
-      </label>
-      {user.shared && <p className="text-xs text-amber-700 sm:col-span-4 dark:text-amber-300">{t('sharedAccountHelp')}</p>}
-      <div className="flex gap-2 sm:col-span-4">
-        <button disabled={busy || !changed} className="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+    <form onSubmit={submit} className="space-y-4 rounded-xl border-2 border-indigo-200 bg-indigo-50/40 p-4 dark:border-indigo-500/30 dark:bg-indigo-500/5">
+      <h3 className="flex items-center gap-2 font-bold">
+        <PencilIcon className="size-4 text-indigo-600 dark:text-indigo-300" />
+        {t('editingAccount')}: <span className="text-indigo-700 dark:text-indigo-300">{user.display_name || user.email}</span>
+      </h3>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        {field(t('name'), <input maxLength={100} placeholder={t('phUserName')} className={input} value={name} onChange={e => setName(e.target.value)} disabled={busy} />)}
+        {field(
+          t('email'),
+          <input type="email" required dir="ltr" placeholder="name@example.com" className={input} value={email} onChange={e => setEmail(e.target.value)} disabled={busy || user.shared} />,
+        )}
+        {field(
+          t('newPassword'),
+          <PasswordInput
+            minLength={8}
+            autoComplete="new-password"
+            placeholder="••••••••"
+            className={input}
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            disabled={busy || user.shared}
+          />,
+          user.shared ? undefined : t('passwordKeep'),
+        )}
+        <div className="flex flex-col gap-1.5 sm:pt-7">
+          <label className="flex items-center gap-2 text-sm font-semibold">
+            <input type="checkbox" className="size-4 accent-indigo-600" checked={admin} onChange={e => setAdmin(e.target.checked)} disabled={busy || isMe} />
+            <ShieldIcon className="size-4 text-indigo-600 dark:text-indigo-300" />
+            {t('makeAdmin')}
+          </label>
+          <span className="text-xs text-slate-500 dark:text-slate-400">{isMe ? t('adminSelfHint') : t('adminHint')}</span>
+        </div>
+      </div>
+
+      {user.shared && <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">{t('sharedAccountHelp')}</p>}
+
+      <div className="flex gap-2 border-t border-indigo-100 pt-3 dark:border-indigo-500/20">
+        <button disabled={busy || !changed} className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
           {t('save')}
         </button>
-        <button type="button" onClick={onCancel} className="rounded-lg border border-slate-200 px-4 py-1.5 text-sm font-semibold dark:border-slate-700">
+        <button type="button" onClick={onCancel} className="rounded-lg border border-slate-300 bg-white px-5 py-2 text-sm font-semibold hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700">
           {t('cancel')}
         </button>
       </div>
