@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useI18n } from '../lib/i18n'
 import { classRows, getState, saveExportColumns, useStore } from '../lib/store'
 import { supabase } from '../lib/supabase'
-import { attendanceSheet, childColumns, childrenSheet, classMonths, sheetHeader } from '../lib/sheet'
+import { attendanceSheet, childColumns, childrenSheet, classMonths, classQuarters, sheetHeader } from '../lib/sheet'
 import { ClassTitle } from '../components/ClassTitle'
+import { iso } from '../lib/serviceYear'
 import { CalendarCheckIcon, CheckIcon, DownloadIcon, FileTextIcon, SheetIcon, UsersIcon } from '../components/Icons'
 
 const input =
@@ -21,8 +22,11 @@ export function ExportPage() {
   const store = useStore()
   const c = store.classes.find(x => x.id === store.currentClass)
   const [table, setTable] = useState<Table>('children')
-  const [month, setMonth] = useState('') // '' = the whole year
+  // الفترة of كشف المتابعة: the whole year, one of its four quarters, or a month picked from a list
+  const [period, setPeriod] = useState<'year' | 'month' | number>('year') // a number = that quarter
+  const [month, setMonth] = useState('')
   const months = useMemo(() => (c ? classMonths(c) : []), [c, store.yearEndWeeks])
+  const quarters = useMemo(() => (c ? classQuarters(c) : []), [c, store.yearEndWeeks])
 
   // كشف الأولاد columns: the paper sheet's by default; a change is kept on my account
   const { all: allColumns, defaults } = useMemo(() => childColumns(c?.id ?? ''), [c?.id, store.fields])
@@ -45,9 +49,13 @@ export function ExportPage() {
 
   const [servants, setServants] = useState('')
   useEffect(() => {
-    setMonth('')
+    setPeriod('year')
     setServants('')
     if (!c) return
+    // the month list starts on this month when it is in the class's year
+    const list = classMonths(c)
+    const now = iso(new Date()).slice(0, 7)
+    setMonth(list.find(m => m.value === now)?.value ?? list[0]?.value ?? '')
     setPicked(getState().profile?.export_columns?.[c.id] ?? childColumns(c.id).defaults)
     setColumnsError('')
     // the class's servants, for الخادم and the file name (needs a connection)
@@ -69,7 +77,13 @@ export function ExportPage() {
     setError('')
     try {
       const header = sheetHeader(c, c.sheet_info ?? {}, servants)
-      const sheet = table === 'children' ? childrenSheet(c, header, picked) : attendanceSheet(c, header, month || null)
+      const chosen =
+        period === 'year'
+          ? { months: null, label: c.service_year }
+          : period === 'month'
+            ? { months: [month], label: months.find(m => m.value === month)?.label ?? month }
+            : { months: quarters[period].months, label: `${quarters[period].label} (${quarters[period].range})` }
+      const sheet = table === 'children' ? childrenSheet(c, header, picked) : attendanceSheet(c, header, chosen)
       if (format === 'excel') await (await import('../lib/exportExcel')).exportExcel(sheet)
       else await (await import('../lib/exportPdf')).exportPdf(sheet)
     } catch (e) {
@@ -112,19 +126,25 @@ export function ExportPage() {
           <Choice on={table === 'attendance'} onClick={() => setTable('attendance')} icon={<CalendarCheckIcon />} title={t('exportAttendance')} hint={t('exportAttendanceHint')} />
         </div>
         {table === 'attendance' && (
-          <label className="mt-3 block space-y-1">
+          <div className="mt-4 space-y-2">
             <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">{t('exportPeriod')}</span>
-            <select className={input} value={month} onChange={e => setMonth(e.target.value)}>
-              <option value="">
-                {t('wholeYear')} ({c.service_year})
-              </option>
-              {months.map(m => (
-                <option key={m.value} value={m.value}>
-                  {m.label}
-                </option>
+            <Period on={period === 'year'} onClick={() => setPeriod('year')} title={t('wholeYear')} sub={c.service_year} />
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {quarters.map((q, i) => (
+                <Period key={i} on={period === i} onClick={() => setPeriod(i)} title={q.label} sub={q.range} />
               ))}
-            </select>
-          </label>
+            </div>
+            <Period on={period === 'month'} onClick={() => setPeriod('month')} title={t('oneMonth')} sub={period === 'month' ? undefined : t('oneMonthHint')} />
+            {period === 'month' && (
+              <select className={input} value={month} onChange={e => setMonth(e.target.value)} aria-label={t('oneMonth')} autoFocus>
+                {months.map(m => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
         )}
       </Step>
 
@@ -158,6 +178,22 @@ export function ExportPage() {
         {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
       </Step>
     </div>
+  )
+}
+
+/** One choice of الفترة: a box, filled when chosen. */
+function Period({ on, onClick, title, sub }: { on: boolean; onClick: () => void; title: string; sub?: string }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-pressed={on}
+      className={`w-full rounded-lg border px-3 py-2 text-center ${
+        on ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-500/20 dark:bg-indigo-500/10' : 'border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800'
+      }`}
+    >
+      <span className={`block font-semibold ${on ? 'text-indigo-700 dark:text-indigo-300' : ''}`}>{title}</span>
+      {sub && <span className="block text-xs text-slate-500">{sub}</span>}
+    </button>
   )
 }
 

@@ -679,6 +679,8 @@ const dict = {
   exportAttendanceHint: { ar: "الحضور والافتقاد لكل يوم خدمة", en: "Attendance and visits for each service day" },
   exportPeriod: { ar: "الفترة", en: "Period" },
   wholeYear: { ar: "السنة كلها", en: "Whole year" },
+  oneMonth: { ar: "شهر معين", en: "One month" },
+  oneMonthHint: { ar: "دوس واختار الشهر", en: "Tap and pick the month" },
   sheetGrade: { ar: "السنة الدراسية", en: "School year" },
   sheetHead: { ar: "أمين الأسرة", en: "Family head" },
   sheetAssistant: { ar: "الأمين المساعد", en: "Assistant head" },

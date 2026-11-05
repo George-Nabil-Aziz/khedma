@@ -218,18 +218,37 @@ export function classMonths(c: ClassInfo): { value: string; label: string }[] {
   return [...out].map(([value, label]) => ({ value, label }))
 }
 
-/** The class's service days in its service year — only those of `month` ("yyyy-mm") when given. */
-function classDays(c: ClassInfo, month: string | null): Date[] {
+/**
+ * The service year in four quarters of three months each, in order (the last also takes a 13th
+ * month when the year has one, e.g. the few days of October at its end).
+ */
+export function classQuarters(c: ClassInfo): { months: string[]; label: string; range: string }[] {
+  const months = classMonths(c)
+  const names = ['الربع الأول', 'الربع التاني', 'الربع التالت', 'الربع الرابع']
+  const name = (m: { label: string }) => m.label.split(' ')[0] // "أكتوبر 2026" → "أكتوبر"
+  return names
+    .map((label, q) => {
+      const part = months.slice(q * 3, q === 3 ? undefined : q * 3 + 3)
+      if (!part.length) return null
+      const range = part.length > 1 ? `${name(part[0])} – ${part[part.length - 1].label}` : part[0].label
+      return { months: part.map(m => m.value), label, range }
+    })
+    .filter(x => x !== null)
+}
+
+/** The class's service days in its service year — only those in `months` ("yyyy-mm") when given. */
+function classDays(c: ClassInfo, months: string[] | null): Date[] {
   const { start, end } = serviceYearRange(c.service_year)
   const days = serviceDays(start, end, serviceDayOf(getState().classes, c.id))
-  return month ? days.filter(d => iso(d).startsWith(month)) : days
+  return months ? days.filter(d => months.includes(iso(d).slice(0, 7))) : days
 }
 
 const VISIT_SIGN = { phone: '📞', home: '🏠', done: '✓' } as const
 
-export function attendanceSheet(c: ClassInfo, header: Sheet['header'], month: string | null): Sheet {
+/** `period`: the months to show ("yyyy-mm"; null = the whole year), and their name for the file. */
+export function attendanceSheet(c: ClassInfo, header: Sheet['header'], period: { months: string[] | null; label: string }): Sheet {
   const s = getState()
-  const days = classDays(c, month)
+  const days = classDays(c, period.months)
   const dates = days.map(iso)
   const { inClass, left } = ordered(c.id)
 
@@ -267,7 +286,6 @@ export function attendanceSheet(c: ClassInfo, header: Sheet['header'], month: st
     left.forEach((r, i) => rows.push(...pair(r, inClass.length + i + 1)))
   }
 
-  const period = month ? (months[0]?.label ?? month) : c.service_year
   return {
     kind: 'attendance',
     header,
@@ -282,7 +300,7 @@ export function attendanceSheet(c: ClassInfo, header: Sheet['header'], month: st
     head2,
     rows,
     alignStart: [1],
-    fileName: safe(`كشف المتابعة - ${who(c, header)} - ${period}`),
+    fileName: safe(`كشف المتابعة - ${who(c, header)} - ${period.label}`),
   }
 }
 
