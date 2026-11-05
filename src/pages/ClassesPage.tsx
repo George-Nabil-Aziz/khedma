@@ -13,6 +13,17 @@ const input =
 
 // بيانات الكشف: the header of the exported sheets (تصدير), typed when the class is made or edited.
 // The title is the class name and الخادم its servants, so neither is asked for.
+/** السنة الدراسية: the school year of the class's children, picked from a list. */
+const GRADES = [
+  'KG1',
+  'KG2',
+  ...['أولى', 'ثانية', 'ثالثة', 'رابعة', 'خامسة', 'سادسة'].map(n => `${n} ابتدائي`),
+  ...['أولى', 'ثانية', 'ثالثة'].map(n => `${n} إعدادي`),
+  ...['أولى', 'ثانية', 'ثالثة'].map(n => `${n} ثانوي`),
+  'جامعة',
+  'خريجين',
+]
+
 const SHEET_FIELDS: { key: keyof SheetInfo; label: TKey }[] = [
   { key: 'grade', label: 'sheetGrade' },
   { key: 'area', label: 'sheetArea' },
@@ -33,7 +44,19 @@ function SheetInfoFields({ value, onChange, disabled }: { value: SheetInfo; onCh
       {SHEET_FIELDS.map(f => (
         <label key={f.key} className="block space-y-1">
           <span className="text-xs font-semibold text-slate-500">{t(f.label)}</span>
-          <input className={input} value={value[f.key] ?? ''} onChange={e => onChange({ ...value, [f.key]: e.target.value })} disabled={disabled} />
+          {f.key === 'grade' ? (
+            <select className={input} value={value.grade ?? ''} onChange={e => onChange({ ...value, grade: e.target.value })} disabled={disabled}>
+              <option value="">—</option>
+              {/* something typed before the list existed stays choosable */}
+              {[...(value.grade && !GRADES.includes(value.grade) ? [value.grade] : []), ...GRADES].map(g => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input className={input} value={value[f.key] ?? ''} onChange={e => onChange({ ...value, [f.key]: e.target.value })} disabled={disabled} />
+          )}
         </label>
       ))}
     </div>
@@ -124,26 +147,15 @@ function NewClassForm() {
         <PlusIcon className="size-5 text-indigo-600 dark:text-indigo-300" />
         {t('newClass')}
       </h2>
-      <div className="grid gap-2 sm:grid-cols-[1fr_10rem_auto]">
+      <div className="grid gap-2 sm:grid-cols-[1fr_9rem_auto]">
         <input className={input} placeholder={t('phClassName')} value={name} onChange={e => setName(e.target.value)} disabled={!online || busy} />
-        {/* The list shows single years (2027); once picked, the box shows the whole service year
-            (2026-2027). The select's own text is hidden and the full year is drawn over it. */}
-        <div className="relative" dir="ltr">
-          <select
-            className={`${input} text-transparent`}
-            value={year}
-            onChange={e => setYear(e.target.value)}
-            disabled={!online || busy}
-            aria-label={`${t('serviceYear')}: ${year}`}
-          >
-            {serviceYearOptions().map(y => (
-              <option key={y.value} value={y.value} className="text-slate-900 dark:text-slate-100">
-                {y.label}
-              </option>
-            ))}
-          </select>
-          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-semibold">{year}</span>
-        </div>
+        <select className={input} dir="ltr" value={year} onChange={e => setYear(e.target.value)} disabled={!online || busy} aria-label={t('serviceYear')}>
+          {serviceYearOptions().map(y => (
+            <option key={y.value} value={y.value}>
+              {y.label}
+            </option>
+          ))}
+        </select>
         <button
           disabled={!online || busy || !name.trim()}
           className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
