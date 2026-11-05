@@ -91,6 +91,20 @@ export function ageOf(birthDate: string | null): number | null {
   return age
 }
 
+/**
+ * Days until the child's next birthday: 0 when it is today, then 1, 2 … up to 365. Sorting on it
+ * lists the coming birthdays first, whatever the year of birth. 29 Feb counts as 1 Mar in other years.
+ */
+export function daysToBirthday(birthDate: string | null): number | null {
+  const m = birthDate?.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!m) return null
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  let next = new Date(today.getFullYear(), Number(m[2]) - 1, Number(m[3]))
+  if (next < today) next = new Date(today.getFullYear() + 1, Number(m[2]) - 1, Number(m[3]))
+  return Math.round((next.getTime() - today.getTime()) / 86_400_000)
+}
+
 /** Every column except the name, which is always shown first. */
 export function useColumns(): Column[] {
   const { t, lang } = useI18n()
@@ -154,7 +168,8 @@ export function useColumns(): Column[] {
         sort: r => [r.street, r.branch_of_street, r.house_number].map(p => p?.trim() ?? '').join('\u0001').replace(/^\u0001+$/, '') || address(r) || null,
       },
       { id: 'landmark', label: t('landmark'), render: r => r.landmark, sort: r => r.landmark },
-      { id: 'birth_date', label: t('birthDate'), render: r => r.birth_date && <span dir="ltr">{dmy(r.birth_date)}</span>, sort: r => r.birth_date, nowrap: true },
+      { id: 'birth_date', label: t('birthDate'), render: r => r.birth_date && <span dir="ltr">{dmy(r.birth_date)}</span>, // the nearest coming birthday first, not by year
+        sort: r => daysToBirthday(r.birth_date), nowrap: true },
       {
         id: 'age',
         label: t('age'),
