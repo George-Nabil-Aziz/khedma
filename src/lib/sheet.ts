@@ -60,6 +60,8 @@ function ordered(classId: string): { inClass: ViewRow[]; left: ViewRow[] } {
 }
 
 const LEFT_BAND = 'اتنقلوا من الفصل'
+/** Who the file is from: the class's servants, or — offline, when they could not be loaded — the class name. */
+const who = (c: ClassInfo, header: Sheet['header']) => header.servants || c.name
 const safe = (s: string) => s.replace(/[\\/:*?"<>|]+/g, ' ').trim()
 
 // ---- كشف الأولاد ------------------------------------------------------------
@@ -120,7 +122,7 @@ export function childrenSheet(c: ClassInfo, header: Sheet['header']): Sheet {
     head2: ['رقم المنزل', 'إسم الشارع', 'متفرع من شارع', 'علامة مميزة', 'الدور', 'ي/ش/ وسط', 'رقم الشقة', 'موبايل ماما', 'موبايل بابا', 'موبايل الولد'].map(label => ({ label })),
     rows,
     alignStart: [1, 3, 4, 5, 14],
-    fileName: safe(`كشف الأولاد - ${c.name} - ${c.service_year}`),
+    fileName: safe(`كشف الأولاد - ${who(c, header)}`),
   }
 }
 
@@ -199,7 +201,7 @@ export function attendanceSheet(c: ClassInfo, header: Sheet['header'], month: st
     head2,
     rows,
     alignStart: [1],
-    fileName: safe(`كشف المتابعة - ${c.name} - ${period}`),
+    fileName: safe(`كشف المتابعة - ${who(c, header)} - ${period}`),
   }
 }
 
