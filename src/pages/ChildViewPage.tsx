@@ -137,7 +137,8 @@ export function ChildViewPage({ clientId }: { clientId: string }) {
       <dl className="grid gap-x-6 gap-y-4 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2 dark:border-slate-800 dark:bg-slate-900">
         {columns.flatMap(c => {
           // where a child who left went has its own section above
-          if (c.movedOutOnly) return []
+          // and the second home is shown right after the address below
+          if (c.movedOutOnly || c.id === 'other_address') return []
           const item = (key: string, label: ReactNode, value: ReactNode) => {
             const empty = value == null || value === '' || value === false
             return (

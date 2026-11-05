@@ -167,6 +167,13 @@ export function useColumns(): Column[] {
         // by the street's name (then متفرع من, then the house number as a number), not "بيت 5…"
         sort: r => [r.street, r.branch_of_street, r.house_number].map(p => p?.trim() ?? '').join('\u0001').replace(/^\u0001+$/, '') || address(r) || null,
       },
+      // the second home (outside the area), with whose home it is first; empty for most children
+      {
+        id: 'other_address',
+        label: t('otherAddress'),
+        render: r => (r.other_address ? otherAddressText(r.other_address, t, lang) : null),
+        sort: r => (r.other_address ? otherAddressText(r.other_address, t, lang) || null : null),
+      },
       { id: 'landmark', label: t('landmark'), render: r => r.landmark, sort: r => r.landmark },
       { id: 'birth_date', label: t('birthDate'), render: r => r.birth_date && <span dir="ltr">{dmy(r.birth_date)}</span>, // the nearest coming birthday first, not by year
         sort: r => daysToBirthday(r.birth_date), nowrap: true },
