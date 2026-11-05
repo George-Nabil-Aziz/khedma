@@ -87,4 +87,5 @@ export type ClassInfo = { id: string; name: string; service_year: string; is_def
 export type SheetInfo = { title?: string; servants?: string; grade?: string; head?: string; assistant?: string; area?: string }
 
 /** A servant's own profile: the name and photo shown in the sidebar. */
-export type Profile = { display_name: string | null; photo: string | null }
+/** `export_columns`: the كشف الأولاد columns I picked, per class id (033); a class not in it = the default. */
+export type Profile = { display_name: string | null; photo: string | null; export_columns?: Record<string, string[]> }

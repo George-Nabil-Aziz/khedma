@@ -692,7 +692,14 @@ const dict = {
     ar: "اللي متعلّم عليه ده الشكل الافتراضي (زي الكشف الورقي). شيل العلامة من عمود عشان تشيله، أو علّم على عمود من «تقدر تزوّد» عشان يتضاف في الآخر.",
     en: "What is ticked is the default (like the paper sheet). Untick a column to drop it, or tick one under “You can add” to add it at the end.",
   },
-  exportColumnsChanged: { ar: "غيّرت العواميد، وده هيتفتكر على الجهاز ده.", en: "You changed the columns; this device remembers it." },
+  exportColumnsChanged: {
+    ar: "غيّرت العواميد. اختيارك ده هيتحفظ على حسابك، والمرة الجاية هتلاقيه زي ما سبته من أي جهاز.",
+    en: "You changed the columns. Your choice is saved on your account, and you will find it as you left it next time, on any device.",
+  },
+  exportColumnsNotSaved: {
+    ar: "اختيارك ماتحفظش على حسابك (محتاج نت). التصدير دلوقتي هيمشي بيه عادي.",
+    en: "Your choice was not saved to your account (needs a connection). This export still uses it.",
+  },
   exportColumnsMore: { ar: "تقدر تزوّد", en: "You can add" },
   exportColumnsReset: { ar: "رجّع الافتراضي", en: "Back to default" },
 } satisfies Record<string, Record<Lang, string>>;

@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useI18n } from '../lib/i18n'
-import { classRows, getState, useStore } from '../lib/store'
+import { classRows, getState, saveExportColumns, useStore } from '../lib/store'
 import { supabase } from '../lib/supabase'
-import { load, save } from '../lib/storage'
 import { attendanceSheet, childColumns, childrenSheet, classMonths, sheetHeader } from '../lib/sheet'
 import { ClassTitle } from '../components/ClassTitle'
 import { CalendarCheckIcon, CheckIcon, DownloadIcon, FileTextIcon, SheetIcon, UsersIcon } from '../components/Icons'
@@ -11,17 +10,6 @@ const input =
   'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800'
 
 type Table = 'children' | 'attendance'
-
-/** The كشف الأولاد columns chosen on this device for a class, or null for the default. */
-const COLUMNS_KEY = (classId: string) => `exportColumns:${classId}`
-function savedColumns(classId: string): string[] | null {
-  try {
-    const v = JSON.parse(load(COLUMNS_KEY(classId)) ?? 'null')
-    return Array.isArray(v) ? v : null
-  } catch {
-    return null
-  }
-}
 
 /**
  * التصدير for the class on screen (picked in the sidebar): a table (كشف الأولاد / كشف المتابعة),
@@ -36,23 +24,32 @@ export function ExportPage() {
   const [month, setMonth] = useState('') // '' = the whole year
   const months = useMemo(() => (c ? classMonths(c) : []), [c, store.yearEndWeeks])
 
-  // كشف الأولاد columns: the paper sheet's by default; a change is remembered on this device
+  // كشف الأولاد columns: the paper sheet's by default; a change is kept on my account
   const { all: allColumns, defaults } = useMemo(() => childColumns(c?.id ?? ''), [c?.id, store.fields])
-  const [picked, setPicked] = useState<string[]>(defaults)
+  const mine = c ? store.profile?.export_columns?.[c.id] : undefined
+  const [picked, setPicked] = useState<string[]>(mine ?? defaults)
   const isDefault = picked.length === defaults.length && defaults.every(id => picked.includes(id))
-  function pick(next: string[]) {
-    setPicked(next)
+  const [columnsError, setColumnsError] = useState('')
+  async function pick(next: string[]) {
+    setPicked(next) // used for this export even if it could not be kept
     if (!c) return
     const same = next.length === defaults.length && defaults.every(id => next.includes(id))
-    save(COLUMNS_KEY(c.id), same ? '' : JSON.stringify(next))
+    const err = await saveExportColumns(c.id, same ? null : next)
+    setColumnsError(err ? t('exportColumnsNotSaved') : '')
   }
+  // my choice arriving from the account (first sync, another device) while the page is open
+  useEffect(() => {
+    if (mine) setPicked(mine)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(mine)])
 
   const [servants, setServants] = useState('')
   useEffect(() => {
     setMonth('')
     setServants('')
     if (!c) return
-    setPicked(savedColumns(c.id) ?? childColumns(c.id).defaults)
+    setPicked(getState().profile?.export_columns?.[c.id] ?? childColumns(c.id).defaults)
+    setColumnsError('')
     // the class's servants, for الخادم and the file name (needs a connection)
     let live = true
     supabase.rpc('class_servants', { p_class: c.id }).then(({ data }) => {
@@ -144,6 +141,7 @@ export function ExportPage() {
               {t('exportColumnsReset')}
             </button>
           )}
+          {columnsError && <p className="mt-2 text-sm text-amber-600">{columnsError}</p>}
         </Step>
       )}
 

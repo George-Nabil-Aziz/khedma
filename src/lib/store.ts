@@ -277,18 +277,33 @@ async function myId() {
 async function pullProfile() {
   const id = await myId()
   if (!id) return
-  const { data, error } = await supabase.from('profiles').select('display_name,photo').eq('user_id', id).maybeSingle()
+  // '*': still works before 033 adds export_columns
+  const { data, error } = await supabase.from('profiles').select('*').eq('user_id', id).maybeSingle()
   if (error) throw isNetworkError(error.message) ? new Offline() : new Error(error.message)
-  set({ profile: (data as Profile | null) ?? { display_name: null, photo: null } })
+  const row = data as Profile | null
+  set({ profile: { display_name: row?.display_name ?? null, photo: row?.photo ?? null, export_columns: row?.export_columns ?? {} } })
 }
 
 /** Name and photo; needs a connection. */
 export async function saveProfile(profile: Profile): Promise<string | null> {
   const id = await myId()
   if (!id) return 'not signed in'
-  const { error } = await supabase.from('profiles').upsert({ user_id: id, ...profile })
+  const { error } = await supabase.from('profiles').upsert({ user_id: id, display_name: profile.display_name, photo: profile.photo })
   if (error) return error.message
-  set({ profile })
+  set({ profile: { ...state.profile, ...profile } })
+  return null
+}
+
+/** التصدير → العواميد: my columns for a class (null = back to the default), kept on my account. Needs a connection. */
+export async function saveExportColumns(classId: string, columns: string[] | null): Promise<string | null> {
+  const id = await myId()
+  if (!id) return 'not signed in'
+  const next = { ...(state.profile?.export_columns ?? {}) }
+  if (columns) next[classId] = columns
+  else delete next[classId]
+  const { error } = await supabase.from('profiles').upsert({ user_id: id, export_columns: next })
+  if (error) return error.message
+  set({ profile: { display_name: null, photo: null, ...state.profile, export_columns: next } })
   return null
 }
 
