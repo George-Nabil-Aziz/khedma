@@ -1,27 +1,18 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { useI18n, type TKey } from '../lib/i18n'
-import { activeClasses, classRows, getState, saveSheetInfo, useStore } from '../lib/store'
-import { supabase, type SheetInfo } from '../lib/supabase'
+import { useI18n } from '../lib/i18n'
+import { activeClasses, classRows, getState, useStore } from '../lib/store'
+import { supabase } from '../lib/supabase'
 import { attendanceSheet, childrenSheet, classMonths, sheetHeader } from '../lib/sheet'
 import { CalendarCheckIcon, CheckIcon, DownloadIcon, FileTextIcon, SheetIcon, UsersIcon } from '../components/Icons'
 
 const input =
   'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800'
 
-const FIELDS: { key: keyof SheetInfo; label: TKey }[] = [
-  { key: 'title', label: 'sheetTitle' },
-  { key: 'servants', label: 'sheetServants' },
-  { key: 'grade', label: 'sheetGrade' },
-  { key: 'head', label: 'sheetHead' },
-  { key: 'assistant', label: 'sheetAssistant' },
-  { key: 'area', label: 'sheetArea' },
-]
-
 type Table = 'children' | 'attendance'
 
 /**
  * التصدير: pick a class, a table (كشف الأولاد / كشف المتابعة), then PDF or Excel. Works offline —
- * everything is already on this device; only saving بيانات الكشف needs a connection.
+ * everything is already on this device. بيانات الكشف are typed with the class (الفصول).
  */
 export function ExportPage() {
   const { t } = useI18n()
@@ -33,12 +24,8 @@ export function ExportPage() {
   const [month, setMonth] = useState('') // '' = the whole year
   const months = useMemo(() => (c ? classMonths(c) : []), [c, store.yearEndWeeks])
 
-  // بيانات الكشف as typed here; starts from what the class has saved
-  const saved = c?.sheet_info ?? {}
-  const [info, setInfo] = useState<SheetInfo>(saved)
   const [servants, setServants] = useState('')
   useEffect(() => {
-    setInfo(c?.sheet_info ?? {})
     setMonth('')
     setServants('')
     if (!c) return
@@ -53,31 +40,14 @@ export function ExportPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [c?.id])
 
-  const changed = FIELDS.some(f => (info[f.key] ?? '').trim() !== (saved[f.key] ?? '').trim())
-  const [saving, setSaving] = useState(false)
-  const [savedNote, setSavedNote] = useState(false)
   const [error, setError] = useState('')
-  async function save() {
-    if (!c) return
-    setSaving(true)
-    setError('')
-    const clean = Object.fromEntries(FIELDS.map(f => [f.key, (info[f.key] ?? '').trim()]).filter(([, v]) => v)) as SheetInfo
-    const r = await saveSheetInfo(c.id, clean)
-    setSaving(false)
-    if (!r.ok) setError(r.error)
-    else {
-      setSavedNote(true)
-      setTimeout(() => setSavedNote(false), 2000)
-    }
-  }
-
   const [busy, setBusy] = useState<'pdf' | 'excel' | null>(null)
   async function run(format: 'pdf' | 'excel') {
     if (!c) return
     setBusy(format)
     setError('')
     try {
-      const header = sheetHeader(c, info, servants)
+      const header = sheetHeader(c, c.sheet_info ?? {}, servants)
       const sheet = table === 'children' ? childrenSheet(c, header) : attendanceSheet(c, header, month || null)
       if (format === 'excel') await (await import('../lib/exportExcel')).exportExcel(sheet)
       else await (await import('../lib/exportPdf')).exportPdf(sheet)
@@ -126,35 +96,7 @@ export function ExportPage() {
         )}
       </Step>
 
-      <Step n={3} title={t('sheetInfo')}>
-        <p className="mb-3 text-sm text-slate-500">{t('sheetInfoHint')}</p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {FIELDS.map(f => (
-            <label key={f.key} className="block space-y-1">
-              <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">{t(f.label)}</span>
-              <input
-                className={input}
-                value={info[f.key] ?? ''}
-                placeholder={f.key === 'title' ? c.name : f.key === 'servants' ? servants : ''}
-                onChange={e => setInfo({ ...info, [f.key]: e.target.value })}
-              />
-            </label>
-          ))}
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <button
-            onClick={save}
-            disabled={!changed || saving || !store.online}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
-            {t('save')}
-          </button>
-          {savedNote && <span className="text-sm font-semibold text-emerald-600">{t('saved')}</span>}
-          {!store.online && changed && <span className="text-sm text-amber-600">{t('sheetInfoOffline')}</span>}
-        </div>
-      </Step>
-
-      <Step n={4} title={t('exportAs')}>
+      <Step n={3} title={t('exportAs')}>
         {empty ? (
           <p className="text-sm text-slate-500">{t('exportEmpty')}</p>
         ) : (

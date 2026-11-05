@@ -1,15 +1,44 @@
 import { useState, type FormEvent } from 'react'
-import { useI18n } from '../lib/i18n'
+import { useI18n, type TKey } from '../lib/i18n'
 import { go } from '../lib/router'
-import { activeClasses, createClass, deleteClass, leaveClass, rejoinClass, renameClass, setCurrentClass, setDefaultClass, useStore } from '../lib/store'
+import { activeClasses, createClass, deleteClass, leaveClass, rejoinClass, renameClass, saveSheetInfo, setCurrentClass, setDefaultClass, useStore } from '../lib/store'
 import { currentServiceYear, dmy, serviceYearOptions } from '../lib/serviceYear'
-import type { ClassInfo } from '../lib/supabase'
+import type { ClassInfo, SheetInfo } from '../lib/supabase'
 import { confirmDialog } from '../components/ConfirmDialog'
 import { ClassServants } from '../components/ClassServants'
 import { CloudOffIcon, PencilIcon, PlusIcon, ShareIcon, StarIcon, StarOutlineIcon, TrashIcon, UsersIcon } from '../components/Icons'
 
 const input =
   'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800'
+
+// بيانات الكشف: the header of the exported sheets (تصدير), typed when the class is made or edited.
+// The title is the class name and الخادم its servants, so neither is asked for.
+const SHEET_FIELDS: { key: keyof SheetInfo; label: TKey }[] = [
+  { key: 'grade', label: 'sheetGrade' },
+  { key: 'area', label: 'sheetArea' },
+  { key: 'head', label: 'sheetHead' },
+  { key: 'assistant', label: 'sheetAssistant' },
+]
+
+/** Only the filled fields, trimmed — what is saved. */
+function cleanInfo(info: SheetInfo): SheetInfo {
+  return Object.fromEntries(SHEET_FIELDS.map(f => [f.key, (info[f.key] ?? '').trim()]).filter(([, v]) => v))
+}
+const sameInfo = (a: SheetInfo, b: SheetInfo) => JSON.stringify(cleanInfo(a)) === JSON.stringify(cleanInfo(b))
+
+function SheetInfoFields({ value, onChange, disabled }: { value: SheetInfo; onChange: (v: SheetInfo) => void; disabled: boolean }) {
+  const { t } = useI18n()
+  return (
+    <div className="grid gap-2 sm:grid-cols-2">
+      {SHEET_FIELDS.map(f => (
+        <label key={f.key} className="block space-y-1">
+          <span className="text-xs font-semibold text-slate-500">{t(f.label)}</span>
+          <input className={input} value={value[f.key] ?? ''} onChange={e => onChange({ ...value, [f.key]: e.target.value })} disabled={disabled} />
+        </label>
+      ))}
+    </div>
+  )
+}
 
 /** All my classes over the years, grouped by service year, newest first. */
 export function ClassesPage({ admin }: { admin: boolean }) {
@@ -69,6 +98,7 @@ function NewClassForm() {
   const { online } = useStore()
   const [name, setName] = useState('')
   const [year, setYear] = useState(currentServiceYear())
+  const [info, setInfo] = useState<SheetInfo>({})
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -77,9 +107,13 @@ function NewClassForm() {
     setBusy(true)
     setError('')
     const r = await createClass(name.trim(), year)
+    // the class is made even if its بيانات الكشف could not be saved — they can be added later (✏️)
+    const saved = r.ok && Object.keys(cleanInfo(info)).length ? await saveSheetInfo(r.value, cleanInfo(info)) : null
     setBusy(false)
     if (r.ok) {
       setName('')
+      setInfo({})
+      if (saved && !saved.ok) return setError(saved.error)
       go('/')
     } else setError(r.error)
   }
@@ -117,6 +151,7 @@ function NewClassForm() {
           {t('create')}
         </button>
       </div>
+      <SheetInfoFields value={info} onChange={setInfo} disabled={!online || busy} />
       {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">{error}</p>}
     </form>
   )
@@ -168,6 +203,7 @@ function ClassCard({ c, admin }: { c: ClassInfo; admin: boolean }) {
   const { online, currentClass } = store
   const [renaming, setRenaming] = useState(false)
   const [name, setName] = useState(c.name)
+  const [info, setInfo] = useState<SheetInfo>(c.sheet_info ?? {})
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const open = c.id === currentClass
@@ -184,6 +220,7 @@ function ClassCard({ c, admin }: { c: ClassInfo; admin: boolean }) {
 
   function cancelRename() {
     setName(c.name)
+    setInfo(c.sheet_info ?? {})
     setError('')
     setRenaming(false)
   }
@@ -239,10 +276,17 @@ function ClassCard({ c, admin }: { c: ClassInfo; admin: boolean }) {
 
         {renaming ? (
           <form
-            className="flex flex-1 gap-2"
+            className="flex min-w-0 flex-1 basis-full flex-col gap-2"
             onSubmit={async e => {
               e.preventDefault()
-              if (await run(() => renameClass(c.id, name.trim()))) setRenaming(false)
+              const ok = await run(async () => {
+                if (name.trim() !== c.name) {
+                  const r = await renameClass(c.id, name.trim())
+                  if (!r.ok) return r
+                }
+                return sameInfo(info, c.sheet_info ?? {}) ? { ok: true } : saveSheetInfo(c.id, cleanInfo(info))
+              })
+              if (ok) setRenaming(false)
             }}
           >
             <input
@@ -255,19 +299,25 @@ function ClassCard({ c, admin }: { c: ClassInfo; admin: boolean }) {
               autoFocus
               aria-label={t('className')}
             />
-            {/* nothing to save until the name is actually changed */}
-            <button disabled={busy || !name.trim() || name.trim() === c.name} className="rounded-lg bg-indigo-600 px-3 text-sm font-semibold text-white disabled:opacity-50">
-              {t('save')}
-            </button>
-            {/* back to the card without saving */}
-            <button
-              type="button"
-              onClick={cancelRename}
-              disabled={busy}
-              className="rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-            >
-              {t('cancel')}
-            </button>
+            <SheetInfoFields value={info} onChange={setInfo} disabled={busy} />
+            <div className="flex gap-2">
+              {/* nothing to save until something is actually changed */}
+              <button
+                disabled={busy || !name.trim() || (name.trim() === c.name && sameInfo(info, c.sheet_info ?? {}))}
+                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {t('save')}
+              </button>
+              {/* back to the card without saving */}
+              <button
+                type="button"
+                onClick={cancelRename}
+                disabled={busy}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                {t('cancel')}
+              </button>
+            </div>
           </form>
         ) : (
           <div className="min-w-0 flex-1 basis-40">
@@ -301,7 +351,11 @@ function ClassCard({ c, admin }: { c: ClassInfo; admin: boolean }) {
             >
               {t('openClass')}
             </button>
-            <button onClick={() => setRenaming(true)} disabled={!online} title={t('rename')} aria-label={t('rename')} className={`${iconBtn} text-slate-500`}>
+            <button onClick={() => {
+              setName(c.name)
+              setInfo(c.sheet_info ?? {})
+              setRenaming(true)
+            }} disabled={!online} title={t('rename')} aria-label={t('rename')} className={`${iconBtn} text-slate-500`}>
               <PencilIcon />
             </button>
             {/* the trash can: an admin deletes the whole class, a servant leaves it */}
