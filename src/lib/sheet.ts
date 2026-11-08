@@ -114,6 +114,17 @@ const DEFAULT_COLUMNS: ChildColumn[] = [
   { id: 'national_id', label: 'الرقم القومي', width: 35.29, pdf: 14, value: r => r.national_id },
 ]
 
+/** The sheet's columns for the built-in columns an admin removed (العنوان = the address's parts). */
+function removedFromApp(): Set<string> {
+  const out = new Set<string>()
+  for (const id of getState().columnDefaults?.removed ?? []) {
+    if (id === 'address') ['house_number', 'street', 'branch_of_street', 'floor', 'side', 'apartment'].forEach(p => out.add(p))
+    else if (id.startsWith('phones_')) out.add('phone:' + id.slice('phones_'.length))
+    else out.add(id)
+  }
+  return out
+}
+
 /** Columns of the app the paper sheet does not have, plus the class's own columns. */
 function moreColumns(classId: string): ChildColumn[] {
   const s = getState()
@@ -157,7 +168,8 @@ function moreColumns(classId: string): ChildColumn[] {
  * anything in (e.g. المدرسة never filled) — off by default; every other column is on.
  */
 export function childColumns(classId: string): { all: ChildColumn[]; defaults: string[]; empty: string[] } {
-  const all = [...DEFAULT_COLUMNS, ...moreColumns(classId)]
+  const gone = removedFromApp()
+  const all = [...DEFAULT_COLUMNS, ...moreColumns(classId)].filter(col => !gone.has(col.id))
   const { inClass, left } = ordered(classId)
   const everyone = [...inClass, ...left]
   const filled = (v: Cell) => v !== null && v !== undefined && String(v).trim() !== ''

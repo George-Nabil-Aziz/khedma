@@ -1,11 +1,11 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import type { CustomField, FieldType } from '../lib/supabase'
 import { useI18n, type TKey } from '../lib/i18n'
 import { addField, approveField, classFields, deleteField, pendingFields, renameField, saveColumnDefaults, useStore, viewRows } from '../lib/store'
-import { useColumnDefaultsEditor, useColumns } from '../lib/columns'
+import { BUILT_IN, removedColumns, useAllColumns, useColumnDefaultsEditor, type Column } from '../lib/columns'
 import { ColumnsList } from '../components/ColumnsMenu'
-import { AlertIcon, CheckIcon, ChevronDownIcon, CloudOffIcon, LockIcon, PlusIcon, TrashIcon } from '../components/Icons'
+import { AlertIcon, CheckIcon, ChevronDownIcon, CloudOffIcon, PlusIcon, TrashIcon } from '../components/Icons'
 import { confirmDialog } from '../components/ConfirmDialog'
 
 const TYPES: { value: FieldType; key: TKey }[] = [
@@ -15,18 +15,22 @@ const TYPES: { value: FieldType; key: TKey }[] = [
   { value: 'boolean', key: 'typeBoolean' },
 ]
 
-const BUILT_IN: TKey[] = ['name', 'address', 'landmark', 'birthDate', 'age', 'motherMobile', 'fatherMobile', 'childMobile', 'primaryContact', 'category', 'deacon', 'confessionFather', 'school', 'notes', 'nationalId']
-
 const input =
   'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800'
 
-export function FieldsPage({ admin }: { admin: boolean }) {
+const card = 'space-y-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900'
+
+/**
+ * Admins only — الأعمدة: add a column, and every column (no fixed ones but the name) in one list:
+ * drag to order, tick what everyone sees by default, rename the class's own columns, delete any.
+ * A built-in column deleted here leaves the app but keeps its data, so it can be brought back.
+ */
+export function FieldsPage() {
   const { t } = useI18n()
   const store = useStore()
   const { online } = store
-  const fields = classFields(store)
   const pending = pendingFields(store)
-  const names = useServantNames(admin && pending.length > 0 ? store.currentClass : null)
+  const names = useServantNames(pending.length > 0 ? store.currentClass : null)
   const [label, setLabel] = useState('')
   const [type, setType] = useState<FieldType>('text')
   const [busy, setBusy] = useState(false)
@@ -55,7 +59,7 @@ export function FieldsPage({ admin }: { admin: boolean }) {
     }).length
   }
 
-  async function remove(f: CustomField) {
+  async function removeField(f: CustomField) {
     const n = filledCount(f)
     const message = n
       ? t('deleteFieldWithData').replace('{name}', f.label).replace('{count}', String(n))
@@ -63,8 +67,20 @@ export function FieldsPage({ admin }: { admin: boolean }) {
     if (await confirmDialog({ title: t('deleteField'), message, confirmLabel: t('deleteField'), danger: true })) run(() => deleteField(f.key))
   }
 
-  /** A column: its name to rename in place, its type, and — when allowed — delete (and, waiting for an admin, approve). */
-  function fieldRow(f: CustomField, canDelete: boolean, approve = false) {
+  /** A built-in column out of the app, or back in — saved at once, for everyone. */
+  function setRemoved(id: string, gone: boolean) {
+    const now = store.columnDefaults ?? BUILT_IN
+    const removed = [...removedColumns(store)].filter(r => r !== id)
+    return run(() => saveColumnDefaults({ ...now, removed: gone ? [...removed, id] : removed }))
+  }
+
+  async function removeBuiltIn(c: Column) {
+    const ok = await confirmDialog({ title: t('deleteField'), message: t('removeBuiltInConfirm').replace('{name}', c.label), confirmLabel: t('deleteField'), danger: true })
+    if (ok) setRemoved(c.id, true)
+  }
+
+  /** A waiting column: its name to rename in place, who added it, approve and delete. */
+  function pendingRow(f: CustomField) {
     return (
       <div key={f.key} className="flex flex-wrap items-center gap-2">
         <input
@@ -83,38 +99,31 @@ export function FieldsPage({ admin }: { admin: boolean }) {
           <span className="text-slate-500">{t('fieldType')}: </span>
           <span className="font-semibold">{t(TYPES.find(o => o.value === f.type)?.key ?? 'typeText')}</span>
         </span>
-        {approve && f.created_by && names[f.created_by] && (
+        {f.created_by && names[f.created_by] && (
           <span className="shrink-0 whitespace-nowrap rounded-lg bg-white px-2.5 py-1.5 text-xs dark:bg-slate-800">
             <span className="text-slate-500">{t('addedBy')}: </span>
             <span className="font-semibold">{names[f.created_by]}</span>
           </span>
         )}
-        {f.mine && f.approved === false && (
-          <span className="shrink-0 whitespace-nowrap rounded-lg bg-amber-100 px-2.5 py-1.5 text-xs font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">{t('fieldPending')}</span>
-        )}
-        {approve && (
-          <button
-            type="button"
-            disabled={!online || busy}
-            onClick={() => run(() => approveField(f.key))}
-            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
-          >
-            <CheckIcon className="size-4" />
-            {t('approveField')}
-          </button>
-        )}
-        {canDelete && (
-          <button
-            type="button"
-            disabled={!online || busy}
-            onClick={() => remove(f)}
-            title={t('deleteField')}
-            aria-label={t('deleteField')}
-            className="grid size-9 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-500/10"
-          >
-            <TrashIcon />
-          </button>
-        )}
+        <button
+          type="button"
+          disabled={!online || busy}
+          onClick={() => run(() => approveField(f.key))}
+          className="flex shrink-0 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+        >
+          <CheckIcon className="size-4" />
+          {t('approveField')}
+        </button>
+        <button
+          type="button"
+          disabled={!online || busy}
+          onClick={() => removeField(f)}
+          title={t('deleteField')}
+          aria-label={t('deleteField')}
+          className="grid size-9 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-500/10"
+        >
+          <TrashIcon />
+        </button>
       </div>
     )
   }
@@ -128,8 +137,8 @@ export function FieldsPage({ admin }: { admin: boolean }) {
         </div>
       )}
 
-      {/* admins: how many columns wait, at the very top — a tap goes down to them */}
-      {admin && pending.length > 0 && (
+      {/* how many columns servants added wait, at the very top — a tap goes down to them */}
+      {pending.length > 0 && (
         <button
           type="button"
           onClick={() => document.getElementById('pending-fields')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
@@ -141,22 +150,7 @@ export function FieldsPage({ admin }: { admin: boolean }) {
         </button>
       )}
 
-      {/* built-in — first of all */}
-      <section className="space-y-2 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-        <h2 className="font-bold">{t('builtInColumns')}</h2>
-        <p className="text-sm text-slate-500">{t('builtInHelp')}</p>
-        <div className="flex flex-wrap gap-2">
-          {BUILT_IN.map(k => (
-            <span key={k} className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-sm dark:bg-slate-800">
-              <LockIcon className="size-3.5 text-slate-400" />
-              {t(k)}
-            </span>
-          ))}
-        </div>
-      </section>
-
-      {/* add — before the extra columns it adds to */}
-      <form onSubmit={add} className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+      <form onSubmit={add} className={`${card} space-y-4`}>
         <h2 className="flex items-center gap-2 font-bold">
           <PlusIcon className="size-5 text-indigo-600 dark:text-indigo-300" />
           {t('addField')}
@@ -184,24 +178,14 @@ export function FieldsPage({ admin }: { admin: boolean }) {
           <PlusIcon className="size-4" />
           {t('addField')}
         </button>
-        {!admin && <p className="text-xs text-slate-500">{t('fieldPendingNote')}</p>}
-        {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">{error}</p>}
       </form>
 
-      {/* custom */}
-      <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-        <h2 className="font-bold">{t('extraFields')}</h2>
-        {fields.length === 0 ? (
-          <p className="text-sm text-slate-500">{t('noCustomFields')}</p>
-        ) : (
-          // a servant may still delete their own column while it waits — nobody else has it yet
-          fields.map(f => fieldRow(f, admin || (f.mine && f.approved === false)))
-        )}
-        {!admin && fields.length > 0 && <p className="text-xs text-slate-400">{t('deleteFieldAdminOnly')}</p>}
-      </section>
+      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">{error}</p>}
 
-      {/* admins: what servants added, seen by nobody else until approved here */}
-      {admin && pending.length > 0 && (
+      <ColumnsCard busy={busy} onRemoveField={removeField} onRemoveBuiltIn={removeBuiltIn} onRename={(key, v) => run(() => renameField(key, v))} onRestore={id => setRemoved(id, false)} />
+
+      {/* what servants added, seen by nobody else until approved here */}
+      {pending.length > 0 && (
         <section id="pending-fields" className="space-y-3 rounded-xl border border-amber-300 bg-amber-50/60 p-4 dark:border-amber-500/40 dark:bg-amber-500/5">
           <div>
             <h2 className="font-bold">
@@ -209,13 +193,155 @@ export function FieldsPage({ admin }: { admin: boolean }) {
             </h2>
             <p className="mt-1 text-sm text-slate-500">{t('pendingFieldsHelp')}</p>
           </div>
-          {pending.map(f => fieldRow(f, true, true))}
+          {pending.map(pendingRow)}
         </section>
       )}
-
-      {/* admins: the table's default look for everyone */}
-      {admin && <ColumnDefaultsCard />}
     </div>
+  )
+}
+
+/**
+ * Every column in one list: the order and what is shown by default (a draft until saved), the
+ * class's own columns renamed in place, a delete button on each. Then the deleted built-in ones.
+ */
+function ColumnsCard({
+  busy,
+  onRemoveField,
+  onRemoveBuiltIn,
+  onRename,
+  onRestore,
+}: {
+  busy: boolean
+  onRemoveField: (f: CustomField) => void
+  onRemoveBuiltIn: (c: Column) => void
+  onRename: (key: string, label: string) => void
+  onRestore: (id: string) => void
+}) {
+  const { t } = useI18n()
+  const store = useStore()
+  const { online } = store
+  const all = useAllColumns()
+  const removed = removedColumns(store)
+  const shown = useMemo(() => all.filter(c => !removedColumns({ columnDefaults: store.columnDefaults }).has(c.id)), [all, store.columnDefaults])
+  const editor = useColumnDefaultsEditor(shown)
+  const fields = classFields(store)
+  const fieldOf = (c: Column) => (c.id.startsWith('x:') ? fields.find(f => `x:${f.key}` === c.id) : undefined)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [done, setDone] = useState(false)
+
+  async function save() {
+    setSaving(true)
+    setError('')
+    // keep the deleted built-in columns as they are
+    const err = await saveColumnDefaults({ ...editor.layout(), removed: [...removed] })
+    setSaving(false)
+    if (err) return setError(err)
+    editor.saved()
+    setDone(true)
+  }
+
+  const changed = () => setDone(false)
+
+  return (
+    <>
+      <section className={card}>
+        <div>
+          <h2 className="font-bold">{t('tableColumnsTitle')}</h2>
+          <p className="mt-1 text-sm text-slate-500">{t('tableColumnsHelp')}</p>
+        </div>
+        <ColumnsList
+          ordered={editor.ordered}
+          onToggle={id => {
+            editor.toggle(id)
+            changed()
+          }}
+          onReorder={(id, overId) => {
+            editor.reorder(id, overId)
+            changed()
+          }}
+          label={(c, visible) => {
+            const f = fieldOf(c)
+            if (!f) return <span className={`truncate ${visible ? '' : 'text-slate-400'}`}>{c.label}</span>
+            return (
+              <input
+                // a new name from the server starts the box afresh
+                key={f.label}
+                className="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-1.5 py-0.5 hover:border-slate-300 focus:border-indigo-500 focus:outline-none disabled:opacity-60 dark:hover:border-slate-700"
+                defaultValue={f.label}
+                disabled={!online || busy}
+                aria-label={t('fieldLabel')}
+                title={t('renameColumn')}
+                onBlur={e => {
+                  const v = e.target.value.trim()
+                  if (v && v !== f.label) onRename(f.key, v)
+                  else e.target.value = f.label
+                }}
+              />
+            )
+          }}
+          actions={c => {
+            const f = fieldOf(c)
+            return (
+              <button
+                type="button"
+                disabled={!online || busy}
+                onClick={() => (f ? onRemoveField(f) : onRemoveBuiltIn(c))}
+                title={t('deleteField')}
+                aria-label={`${t('deleteField')}: ${c.label}`}
+                className="grid size-8 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-40 dark:hover:bg-red-500/10"
+              >
+                <TrashIcon />
+              </button>
+            )
+          }}
+        />
+        {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">{error}</p>}
+        <div className="flex items-center justify-end gap-2">
+          {done && <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{t('saved')}</span>}
+          <button
+            onClick={editor.reset}
+            disabled={saving || !editor.changed}
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+          >
+            {t('cancel')}
+          </button>
+          <button
+            onClick={save}
+            disabled={!online || saving || !editor.changed}
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {t('save')}
+          </button>
+        </div>
+      </section>
+
+      {/* deleted built-in columns: their data is still there — one tap brings a column back */}
+      {removed.size > 0 && (
+        <section className={card}>
+          <div>
+            <h2 className="font-bold">{t('removedColumnsTitle')}</h2>
+            <p className="mt-1 text-sm text-slate-500">{t('removedColumnsHelp')}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {all
+              .filter(c => removed.has(c.id))
+              .map(c => (
+                <button
+                  key={c.id}
+                  type="button"
+                  disabled={!online || busy}
+                  onClick={() => onRestore(c.id)}
+                  className="flex items-center gap-1.5 rounded-full border border-dashed border-slate-300 px-3 py-1 text-sm text-slate-500 hover:border-indigo-400 hover:bg-indigo-50 hover:text-indigo-700 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
+                >
+                  <PlusIcon className="size-3.5" />
+                  {c.label}
+                </button>
+              ))}
+          </div>
+        </section>
+      )}
+    </>
   )
 }
 
@@ -230,65 +356,4 @@ function useServantNames(classId: string | null) {
     })
   }, [classId])
   return names
-}
-
-/**
- * Admins: the order of the table's columns and which are shown, for everyone. Anyone's
- * "default" in the columns menu goes back to this. A draft until saved.
- */
-function ColumnDefaultsCard() {
-  const { t } = useI18n()
-  const { online } = useStore()
-  const editor = useColumnDefaultsEditor(useColumns())
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-  const [done, setDone] = useState(false)
-
-  async function save() {
-    setBusy(true)
-    setError('')
-    const err = await saveColumnDefaults(editor.layout())
-    setBusy(false)
-    if (err) return setError(err)
-    editor.saved()
-    setDone(true)
-  }
-
-  return (
-    <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-      <div>
-        <h2 className="font-bold">{t('columnDefaultsTitle')}</h2>
-        <p className="mt-1 text-sm text-slate-500">{t('columnDefaultsHelp')}</p>
-      </div>
-      <ColumnsList
-        ordered={editor.ordered}
-        onToggle={id => {
-          editor.toggle(id)
-          setDone(false)
-        }}
-        onReorder={(id, overId) => {
-          editor.reorder(id, overId)
-          setDone(false)
-        }}
-      />
-      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">{error}</p>}
-      <div className="flex items-center justify-end gap-2">
-        {done && <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{t('saved')}</span>}
-        <button
-          onClick={editor.reset}
-          disabled={busy || !editor.changed}
-          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-        >
-          {t('cancel')}
-        </button>
-        <button
-          onClick={save}
-          disabled={!online || busy || !editor.changed}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
-        >
-          {t('save')}
-        </button>
-      </div>
-    </section>
-  )
 }

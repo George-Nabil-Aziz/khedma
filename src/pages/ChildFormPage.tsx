@@ -4,7 +4,7 @@ import { useI18n, type TKey } from '../lib/i18n'
 import { openPicker } from '../lib/picker'
 import { go } from '../lib/router'
 import { classFields, findRow, saveChild, useStore } from '../lib/store'
-import { CATEGORIES, SIDES } from '../lib/columns'
+import { CATEGORIES, SIDES, removedColumns } from '../lib/columns'
 import { formatNationalId, nationalIdDigits } from '../lib/nationalId'
 import { NO, YES, formatDeacon, parseDeacon } from '../lib/deacon'
 import { PhotoPicker } from '../components/Avatar'
@@ -42,6 +42,9 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
   const store = useStore()
   const { online } = store
   const fields = classFields(store)
+  // built-in columns an admin removed: not asked for here (what was typed in them stays saved)
+  const removed = removedColumns(store)
+  const has = (id: string) => !removed.has(id)
   const [texts, setTexts] = useState<Texts>(() =>
     initial
       ? ({ ...(Object.fromEntries(Object.keys(EMPTY_TEXTS).map(f => [f, initial[f as FormField] ?? ''])) as Texts), national_id: nationalIdDigits(initial.national_id) })
@@ -140,71 +143,80 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
           <PhotoPicker photo={photo} name={texts.full_name} onChange={setPhoto} />
         </div>
         <div className="sm:col-span-2">{text('full_name', 'name', { hint: 'nameHint', placeholder: 'phName' })}</div>
-        {text('birth_date', 'birthDate', { type: 'date', ltr: true })}
-        {text('national_id', 'nationalId', { ltr: true, inputMode: 'numeric', placeholder: 'phNationalId' })}
-        <DeaconField value={texts.deacon} onChange={setText('deacon')} />
-        {text('confession_father', 'confessionFather', { placeholder: 'phConfessionFather' })}
-        {text('school', 'school', { placeholder: 'phSchool' })}
-        <CategoryField value={texts.category} onChange={setText('category')} />
+        {has('birth_date') && text('birth_date', 'birthDate', { type: 'date', ltr: true })}
+        {has('national_id') && text('national_id', 'nationalId', { ltr: true, inputMode: 'numeric', placeholder: 'phNationalId' })}
+        {has('deacon') && <DeaconField value={texts.deacon} onChange={setText('deacon')} />}
+        {has('confession_father') && text('confession_father', 'confessionFather', { placeholder: 'phConfessionFather' })}
+        {has('school') && text('school', 'school', { placeholder: 'phSchool' })}
+        {has('category') && <CategoryField value={texts.category} onChange={setText('category')} />}
       </Section>
 
       {/* two homes: say which is in the class's area and which is outside it */}
-      <Section title={other ? t('addressInArea') : t('address')}>
-        {other && <div className="sm:col-span-2">{text('address_label', 'addressLabel', { placeholder: 'phMainAddressLabel' })}</div>}
-        {text('house_number', 'houseNumber', { placeholder: 'phHouse' })}
-        {text('street', 'street', { placeholder: 'phStreet' })}
-        {text('branch_of_street', 'branchOfStreet', { placeholder: 'phBranch' })}
-        {text('landmark', 'landmark', { placeholder: 'phLandmark' })}
-        {text('floor', 'floorLabel', { placeholder: 'phFloor' })}
-        <Field label={t('side')}>
-          <select className={inputClass(false)} value={texts.side} onChange={e => setText('side')(e.target.value)}>
-            <option value="">—</option>
-            {SIDES.map(s => (
-              <option key={s.value} value={s.value}>
-                {t(s.key)}
-              </option>
-            ))}
-            {texts.side && !SIDES.some(s => s.value === texts.side) && <option value={texts.side}>{texts.side}</option>}
-          </select>
-        </Field>
-        {text('apartment', 'apartmentLabel', { placeholder: 'phApartment' })}
-        {/* under the address: ticking it names this home and opens a second address below */}
-        <label className="flex items-center gap-2 text-sm font-semibold sm:col-span-2">
-          <input
-            type="checkbox"
-            className="size-4 accent-indigo-600"
-            checked={!!other}
-            onChange={async e => {
-              if (e.target.checked) return setOther({})
-              const filled = other && Object.values(other).some(v => v?.trim())
-              if (!filled || (await confirmDialog({ title: t('removeOtherAddress'), message: t('removeOtherAddressConfirm'), confirmLabel: t('removeOtherAddress'), danger: true }))) setOther(null)
-            }}
-          />
-          {t('hasOtherAddress')}
-        </label>
-      </Section>
+      {(has('address') || has('landmark') || has('other_address')) && (
+        <Section title={other && has('other_address') ? t('addressInArea') : t('address')}>
+          {other && has('other_address') && <div className="sm:col-span-2">{text('address_label', 'addressLabel', { placeholder: 'phMainAddressLabel' })}</div>}
+          {has('address') && text('house_number', 'houseNumber', { placeholder: 'phHouse' })}
+          {has('address') && text('street', 'street', { placeholder: 'phStreet' })}
+          {has('address') && text('branch_of_street', 'branchOfStreet', { placeholder: 'phBranch' })}
+          {has('landmark') && text('landmark', 'landmark', { placeholder: 'phLandmark' })}
+          {has('address') && text('floor', 'floorLabel', { placeholder: 'phFloor' })}
+          {has('address') && (
+            <Field label={t('side')}>
+              <select className={inputClass(false)} value={texts.side} onChange={e => setText('side')(e.target.value)}>
+                <option value="">—</option>
+                {SIDES.map(s => (
+                  <option key={s.value} value={s.value}>
+                    {t(s.key)}
+                  </option>
+                ))}
+                {texts.side && !SIDES.some(s => s.value === texts.side) && <option value={texts.side}>{texts.side}</option>}
+              </select>
+            </Field>
+          )}
+          {has('address') && text('apartment', 'apartmentLabel', { placeholder: 'phApartment' })}
+          {/* under the address: ticking it names this home and opens a second address below */}
+          {has('other_address') && (
+            <label className="flex items-center gap-2 text-sm font-semibold sm:col-span-2">
+              <input
+                type="checkbox"
+                className="size-4 accent-indigo-600"
+                checked={!!other}
+                onChange={async e => {
+                  if (e.target.checked) return setOther({})
+                  const filled = other && Object.values(other).some(v => v?.trim())
+                  if (!filled || (await confirmDialog({ title: t('removeOtherAddress'), message: t('removeOtherAddressConfirm'), confirmLabel: t('removeOtherAddress'), danger: true }))) setOther(null)
+                }}
+              />
+              {t('hasOtherAddress')}
+            </label>
+          )}
+        </Section>
+      )}
 
-      {other && (
+      {other && has('other_address') && (
         <Section title={t('addressOutArea')}>
           <OtherAddressFields value={other} onChange={setOther} />
         </Section>
       )}
 
-      <Section title={t('phones')}>
-        <div className="space-y-4 sm:col-span-2">
-          {OWNERS.map(owner => (
-            <PhoneGroup
-              key={owner}
-              owner={owner}
-              phones={phones}
-              setPhones={setPhones}
-              primary={primary.includes(owner)}
-              onPrimary={() => setPrimary(p => (p.includes(owner) ? p.filter(o => o !== owner) : [...p, owner]))}
-              errors={errors}
-            />
-          ))}
-        </div>
-      </Section>
+      {OWNERS.some(o => has(`phones_${o}`)) && (
+        <Section title={t('phones')}>
+          <div className="space-y-4 sm:col-span-2">
+            {OWNERS.filter(o => has(`phones_${o}`)).map(owner => (
+              <PhoneGroup
+                key={owner}
+                owner={owner}
+                showPrimary={has('primary_contacts')}
+                phones={phones}
+                setPhones={setPhones}
+                primary={primary.includes(owner)}
+                onPrimary={() => setPrimary(p => (p.includes(owner) ? p.filter(o => o !== owner) : [...p, owner]))}
+                errors={errors}
+              />
+            ))}
+          </div>
+        </Section>
+      )}
 
       {fields.length > 0 && (
         <Section title={t('extraFields')}>
@@ -214,11 +226,13 @@ function ChildForm({ clientId, initial }: { clientId: string | null; initial: Ch
         </Section>
       )}
 
-      <Section title={t('notes')}>
-        <div className="sm:col-span-2">
-          <textarea rows={3} placeholder={t('phNotes')} className={inputClass(false)} value={texts.notes} onChange={e => setText('notes')(e.target.value)} />
-        </div>
-      </Section>
+      {has('notes') && (
+        <Section title={t('notes')}>
+          <div className="sm:col-span-2">
+            <textarea rows={3} placeholder={t('phNotes')} className={inputClass(false)} value={texts.notes} onChange={e => setText('notes')(e.target.value)} />
+          </div>
+        </Section>
+      )}
 
       {/* sticky action bar, easy to reach on a phone */}
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/90 p-3 backdrop-blur lg:inset-s-64 dark:border-slate-800 dark:bg-slate-900/90">
@@ -240,8 +254,10 @@ function PhoneGroup({
   setPhones,
   primary,
   onPrimary,
+  showPrimary,
   errors,
 }: {
+  showPrimary: boolean
   owner: Owner
   phones: Phone[]
   setPhones: (f: (prev: Phone[]) => Phone[]) => void
@@ -258,17 +274,19 @@ function PhoneGroup({
     <div className={`rounded-lg border p-3 ${primary ? 'border-amber-300 bg-amber-50/50 dark:border-amber-500/40 dark:bg-amber-500/5' : 'border-slate-200 dark:border-slate-800'}`}>
       <div className="mb-2 flex items-center gap-2">
         <span className="flex-1 text-sm font-bold">{t(OWNER_PHONES_LABEL[owner])}</span>
-        <button
-          type="button"
-          onClick={onPrimary}
-          title={t('makePrimary')}
-          className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
-            primary ? 'bg-amber-400 text-amber-950' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
-          }`}
-        >
-          {primary ? <StarIcon className="size-3.5" /> : <StarOutlineIcon className="size-3.5" />}
-          {t('primaryContact')}
-        </button>
+        {showPrimary && (
+          <button
+            type="button"
+            onClick={onPrimary}
+            title={t('makePrimary')}
+            className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+              primary ? 'bg-amber-400 text-amber-950' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            {primary ? <StarIcon className="size-3.5" /> : <StarOutlineIcon className="size-3.5" />}
+            {t('primaryContact')}
+          </button>
+        )}
       </div>
 
       <div className="space-y-2">

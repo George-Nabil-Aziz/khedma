@@ -105,8 +105,21 @@ export function daysToBirthday(birthDate: string | null): number | null {
   return Math.round((next.getTime() - today.getTime()) / 86_400_000)
 }
 
-/** Every column except the name, which is always shown first. */
+/** Every column except the name (always shown first) and the built-in ones an admin removed. */
 export function useColumns(): Column[] {
+  const all = useAllColumns()
+  const { columnDefaults } = useStore()
+  return useMemo(() => {
+    const removed = removedColumns({ columnDefaults })
+    return all.filter(c => !removed.has(c.id))
+  }, [all, columnDefaults])
+}
+
+/** Built-in column ids an admin removed. */
+export const removedColumns = (s: { columnDefaults: ColumnLayout | null }) => new Set(s.columnDefaults?.removed ?? [])
+
+/** Every column but the name — the removed built-in ones too (the admins' الأعمدة page lists them to bring back). */
+export function useAllColumns(): Column[] {
   const { t, lang } = useI18n()
   const store = useStore()
   const fields = useMemo(() => classFields(store), [store])
@@ -258,7 +271,7 @@ function customColumn(f: CustomField, t: (k: TKey) => string): Column {
 type Prefs = ColumnLayout
 
 /** Built in, for when no admin has set a default yet. */
-const BUILT_IN: Prefs = { order: [], hidden: ['age', 'primary_contacts'] }
+export const BUILT_IN: Prefs = { order: [], hidden: ['age', 'primary_contacts'] }
 
 function readPrefs(): Prefs | null {
   try {

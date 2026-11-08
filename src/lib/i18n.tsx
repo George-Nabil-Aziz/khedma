@@ -190,11 +190,11 @@ const dict = {
   primaryContact: { ar: "التواصل الأساسي", en: "Main contact" },
   makePrimary: { ar: "اجعله التواصل الأساسي", en: "Make main contact" },
   // custom fields
-  customize: { ar: "تعديل الأعمدة", en: "Edit columns" },
+  customize: { ar: "الأعمدة", en: "Columns" },
   extraFields: { ar: "حقول إضافية", en: "Extra fields" },
   customFieldsHelp: {
-    ar: "أي عمود تضيفه هنا هيظهر في جدول الأولاد وفي صفحة التعديل. هيظهر ليك إنت بس لحد ما الأدمن يوافق عليه، وبعدها لكل الخدام.",
-    en: "Columns added here appear in the children table and the edit form — only to you until an admin approves them, then to every servant.",
+    ar: "الأعمدة للأدمن بس: أي عمود تضيفه هيظهر لكل الخدام في جدول الأولاد وصفحة التعديل، وتقدر تمسح أي عمود (ما عدا الاسم).",
+    en: "Columns are for admins only: a column added here shows to every servant in the children table and the edit form, and any column but the name can be deleted.",
   },
   fieldPending: { ar: "مستني موافقة الأدمن", en: "Waiting for an admin" },
   fieldPendingNote: {
@@ -236,10 +236,20 @@ const dict = {
     ar: "تعديل الأعمدة محتاج نت",
     en: "Editing columns needs a connection",
   },
-  builtInColumns: { ar: "الأعمدة الأساسية", en: "Built-in columns" },
-  builtInHelp: {
-    ar: 'دي ثابتة في الداتابيز. تقدر تخفيها أو ترتّبها من زرار "الأعمدة" في صفحة الأولاد.',
-    en: 'These are fixed in the database. Hide or reorder them from the "Columns" button on the Children page.',
+  renameColumn: { ar: "دوس علشان تغيّر الاسم", en: "Tap to rename" },
+  tableColumnsTitle: { ar: "أعمدة الجدول", en: "Table columns" },
+  tableColumnsHelp: {
+    ar: 'رتّب الأعمدة بالسحب من ⠿، وعلّم على اللي يظهر لكل الخدام، وبعدين "حفظ". ده اللي بيرجعله أي خادم لما يدوس "الافتراضي" في قايمة الأعمدة. اسم العمود اللي إنت ضفته تقدر تغيّره مكانه، و🗑 تمسح أي عمود.',
+    en: 'Drag ⠿ to order the columns, tick the ones everyone sees, then Save. This is what anyone gets back with "Default" in the columns menu. Rename a column you added in place; 🗑 deletes any column.',
+  },
+  removeBuiltInConfirm: {
+    ar: 'عمود "{name}" هيختفي عند كل الخدام: من الجدول وصفحة الولد وصفحة التعديل والكشوف. اللي متكتب فيه مش هيتمسح، وتقدر ترجّعه بعدين. متأكد؟',
+    en: '"{name}" will disappear for every servant: from the table, the child’s page, the edit form and the exports. What is in it is kept, and it can be brought back. Sure?',
+  },
+  removedColumnsTitle: { ar: "أعمدة اتمسحت", en: "Deleted columns" },
+  removedColumnsHelp: {
+    ar: "بياناتها لسه محفوظة. دوس على أي واحد يرجع تاني لكل الخدام.",
+    en: "Their data is still kept. Tap one to bring it back for everyone.",
   },
   // متابعة
   attendance: { ar: "متابعة", en: "Follow-up" },

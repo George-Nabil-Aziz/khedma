@@ -10,9 +10,9 @@ import { CalendarCheckIcon, CloudOffIcon, PlusIcon } from '../components/Icons'
 export function settingsTabs(admin: boolean): { name: Route['name']; path: Path; label: TKey }[] {
   return [
     { name: 'notifications', path: '/notifications', label: 'notifications' },
-    { name: 'fields', path: '/fields', label: 'customize' },
     { name: 'days', path: '/days', label: 'daysTitle' },
-    ...(admin ? [{ name: 'settings', path: '/settings', label: 'serviceSettings' } as const] : []),
+    // admins only: الأعمدة (add, delete, order) and إعدادات الخدمة
+    ...(admin ? [{ name: 'fields', path: '/fields', label: 'customize' } as const, { name: 'settings', path: '/settings', label: 'serviceSettings' } as const] : []),
     { name: 'install', path: '/install', label: 'installApp' },
     { name: 'help', path: '/help', label: 'howToUse' },
     { name: 'sync', path: '/sync', label: 'sync' },
@@ -339,7 +339,7 @@ export function HelpPage({ admin }: { admin: boolean }) {
         ['inviteHelp', TONE.indigo],
         ['joinHelp', TONE.indigo],
       ])}
-      {section('customize', [['customFieldsHelp', TONE.grey], ...(admin ? ([['columnDefaultsHelp', TONE.grey]] as [TKey, string][]) : [])])}
+      {admin && section('customize', [['customFieldsHelp', TONE.grey], ['tableColumnsHelp', TONE.grey]])}
       {section('notifications', [['notificationsHint', TONE.indigo]])}
       {section('installApp', [['installHelp', TONE.green]])}
       {admin && section('users', [['usersHelp', TONE.indigo]])}

@@ -8,6 +8,7 @@ import {
   useSensors,
   type DragEndEvent,
 } from '@dnd-kit/core'
+import type { ReactNode } from 'react'
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { restrictToParentElement, restrictToVerticalAxis } from '@dnd-kit/modifiers'
 import { CSS } from '@dnd-kit/utilities'
@@ -52,8 +53,16 @@ export function ColumnsMenu({ prefs, onClose }: { prefs: Prefs; onClose: () => v
   )
 }
 
+/** A column's own bits in the list: its name (e.g. an input to rename it) and buttons after it. */
+type RowSlots = { label?: (c: Column, visible: boolean) => ReactNode; actions?: (c: Column) => ReactNode }
+
 /** The name (fixed first), then every column: drag to reorder, tick to show. */
-export function ColumnsList({ ordered, onToggle, onReorder }: { ordered: Prefs['ordered']; onToggle: (id: string) => void; onReorder: (id: string, overId: string) => void }) {
+export function ColumnsList({
+  ordered,
+  onToggle,
+  onReorder,
+  ...slots
+}: { ordered: Prefs['ordered']; onToggle: (id: string) => void; onReorder: (id: string, overId: string) => void } & RowSlots) {
   const { t } = useI18n()
   const sensors = useSensors(
     // A small move before dragging starts, so ticking a checkbox is still a plain click.
@@ -79,7 +88,7 @@ export function ColumnsList({ ordered, onToggle, onReorder }: { ordered: Prefs['
         <SortableContext items={ordered.map(o => o.column.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-0.5">
             {ordered.map(({ column, visible }) => (
-              <SortableRow key={column.id} column={column} visible={visible} onToggle={() => onToggle(column.id)} />
+              <SortableRow key={column.id} column={column} visible={visible} onToggle={() => onToggle(column.id)} {...slots} />
             ))}
           </div>
         </SortableContext>
@@ -88,7 +97,7 @@ export function ColumnsList({ ordered, onToggle, onReorder }: { ordered: Prefs['
   )
 }
 
-function SortableRow({ column, visible, onToggle }: { column: Column; visible: boolean; onToggle: () => void }) {
+function SortableRow({ column, visible, onToggle, label, actions }: { column: Column; visible: boolean; onToggle: () => void } & RowSlots) {
   const { t } = useI18n()
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: column.id })
 
@@ -112,10 +121,18 @@ function SortableRow({ column, visible, onToggle }: { column: Column; visible: b
       >
         <GripIcon />
       </button>
-      <label className="flex flex-1 items-center gap-2 py-0.5 text-sm">
-        <input type="checkbox" checked={visible} onChange={onToggle} className="size-4 accent-indigo-600" />
-        <span className={visible ? '' : 'text-slate-400'}>{column.label}</span>
-      </label>
+      {label ? (
+        <div className="flex min-w-0 flex-1 items-center gap-2 py-0.5 text-sm">
+          <input type="checkbox" checked={visible} onChange={onToggle} aria-label={column.label} className="size-4 shrink-0 accent-indigo-600" />
+          {label(column, visible)}
+        </div>
+      ) : (
+        <label className="flex flex-1 items-center gap-2 py-0.5 text-sm">
+          <input type="checkbox" checked={visible} onChange={onToggle} className="size-4 accent-indigo-600" />
+          <span className={visible ? '' : 'text-slate-400'}>{column.label}</span>
+        </label>
+      )}
+      {actions?.(column)}
     </div>
   )
 }

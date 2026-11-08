@@ -123,7 +123,8 @@ function Routes({ email, userId, admin }: { email: string; userId: string; admin
     case 'days':
       return settings(<DaysPage />)
     case 'fields':
-      return settings(<FieldsPage admin={admin} />)
+      // الأعمدة: admins only
+      return admin ? settings(<FieldsPage />) : page('children', <ChildrenPage />)
     default:
       return page('children', <ChildrenPage />)
   }

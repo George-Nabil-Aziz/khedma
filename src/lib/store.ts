@@ -63,8 +63,12 @@ type State = {
   columnDefaults: ColumnLayout | null
 }
 
-/** The children table's columns: their order and which are hidden (column ids). */
-export type ColumnLayout = { order: string[]; hidden: string[] }
+/**
+ * The children table's columns: their order and which are hidden (column ids). `removed`: built-in
+ * columns an admin took out of the app (the table, the child's page and form, the export) — their
+ * data stays, and an admin can bring them back.
+ */
+export type ColumnLayout = { order: string[]; hidden: string[]; removed?: string[] }
 
 /** Two ticks per child per Friday: الحضور (attendance) and الافتقاد (visit). */
 export type FollowUpKind = 'attendance' | 'visit'
