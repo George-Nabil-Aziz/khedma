@@ -1,7 +1,7 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useI18n } from '../lib/i18n'
 import { go } from '../lib/router'
-import { childrenLoading, stillInClassFirst, sync, useStore, viewRows, type RowStatus, type ViewRow } from '../lib/store'
+import { childrenLoading, stillInClassFirst, sync, useStore, viewRows, type RowStatus } from '../lib/store'
 import { ColumnsMenu } from '../components/ColumnsMenu'
 import { Pagination, usePageSize } from '../components/Pagination'
 import { MY_ORDER, sortRows, useColumnPrefs, useColumns, useSort, type Column } from '../lib/columns'
@@ -68,9 +68,11 @@ export function ChildrenPage() {
 
   const colSpan = prefs.visible.length + 2
   // the # and name columns stay put when the table scrolls sideways; opaque, the rows pass under them
-  const stickyNum = 'sticky inset-s-0 z-10 w-12 min-w-12'
+  // a phone: no # column (the number goes by the name) — more room for the other columns
+  const stickyNum = 'sticky inset-s-0 z-10 hidden w-12 min-w-12 sm:table-cell'
   // its own line on the far side: the table's shared borders stay behind while the column is stuck in place
-  const stickyName = "sticky inset-s-12 z-10 after:pointer-events-none after:absolute after:inset-y-0 after:inset-e-0 after:w-px after:bg-slate-300 after:content-[''] dark:after:bg-slate-600"
+  // a phone: narrow, a long name on two lines — about a third of the screen instead of half
+  const stickyName = "sticky inset-s-0 sm:inset-s-12 z-10 w-28 min-w-28 max-w-28 sm:w-auto sm:min-w-40 sm:max-w-none after:pointer-events-none after:absolute after:inset-y-0 after:inset-e-0 after:w-px after:bg-slate-300 after:content-[''] dark:after:bg-slate-600"
 
   const top = (
     <>
@@ -158,55 +160,21 @@ export function ChildrenPage() {
 
       {/* the number the search found is marked among the child's other numbers */}
       <SearchedPhone.Provider value={phone}>
-      {/* a phone: a card per child instead of the table — the whole name on top, the columns under it */}
-      <div className="space-y-2 sm:hidden">
-        <div className="flex items-center gap-2 text-sm">
-          <span className="shrink-0 font-semibold text-slate-500">{t('sortBy')}</span>
-          <select
-            value={sort.id}
-            onChange={e => sortBy(e.target.value)}
-            className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-900"
-          >
-            <option value={MY_ORDER}>{t('myOrder')}</option>
-            <option value="name">{t('name')}</option>
-            {prefs.visible.map(c => (
-              <option key={c.id} value={c.id}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-          {/* the same column again flips the direction */}
-          <button
-            onClick={() => sortBy(sort.id)}
-            aria-label={sort.dir === 'asc' ? '↑' : '↓'}
-            className="grid size-10 shrink-0 place-items-center rounded-lg border border-slate-300 bg-white hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
-          >
-            {sort.dir === 'asc' ? <ChevronUpIcon /> : <ChevronDownIcon />}
-          </button>
-        </div>
-        {filtered.length === 0 ? (
-          <p className="rounded-xl border border-slate-200 bg-white px-3 py-10 text-center text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900">{t('noResults')}</p>
-        ) : (
-          pageRows.map((r, i) => (
-            <Fragment key={r.client_id}>
-              {r.moved_out_on && !pageRows[i - 1]?.moved_out_on && (
-                <div className="px-1 pt-2 text-xs font-bold text-slate-500">
-                  {t('movedOut')} ({movedOutCount})
-                </div>
-              )}
-              <ChildCard row={r} n={(current - 1) * pageSize + i + 1} columns={prefs.visible} />
-            </Fragment>
-          ))
-        )}
-      </div>
-
-      <div className="hidden overflow-x-auto rounded-xl sm:block border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <table className="table-grid w-full text-sm">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        <table className="table-grid w-full text-xs sm:text-sm">
           <thead className="bg-slate-50 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
             <tr>
               {/* # and the name stay in view while scrolling across the columns */}
               <SortHeader id={MY_ORDER} label="#" sort={sort} onSort={sortBy} className={`${stickyNum} bg-slate-50 dark:bg-slate-800`} />
-              <SortHeader id="name" label={t('name')} sort={sort} onSort={sortBy} className={`${stickyName} bg-slate-50 dark:bg-slate-800`} />
+              <SortHeader
+                id="name"
+                label={t('name')}
+                sort={sort}
+                onSort={sortBy}
+                className={`${stickyName} bg-slate-50 dark:bg-slate-800`}
+                // a phone has no # column: its sort (ترتيبي) sits by the name's
+                before={<SortButton id={MY_ORDER} label="#" sort={sort} onSort={sortBy} className="sm:hidden" />}
+              />
               {prefs.visible.map(c => (
                 <SortHeader key={c.id} id={c.id} label={c.label} sort={sort} onSort={sortBy} />
               ))}
@@ -240,16 +208,17 @@ export function ChildrenPage() {
                       r.moved_out_on ? '[&>td:not(.sticky)]:opacity-60' : ''
                     }`}
                   >
-                    <td className={`${stickyNum} bg-inherit px-3 py-2 text-slate-400`}>
+                    <td className={`${stickyNum} bg-inherit px-2 py-1.5 text-slate-400 sm:px-3 sm:py-2`}>
                       <span className={r.moved_out_on ? 'opacity-60' : ''}>{(current - 1) * pageSize + i + 1}</span>
                     </td>
-                    <td className={`${stickyName} min-w-40 bg-inherit px-3 py-2`}>
+                    <td className={`${stickyName} bg-inherit px-2 py-1.5 sm:px-3 sm:py-2`}>
                       <button
                         onClick={() => go(`/child/${r.client_id}`)}
-                        className={`flex items-center gap-2 text-start font-semibold text-indigo-700 hover:underline dark:text-indigo-300 ${r.moved_out_on ? 'opacity-60' : ''}`}
+                        className={`flex items-start gap-1.5 text-start font-semibold text-indigo-700 hover:underline sm:items-center sm:gap-2 dark:text-indigo-300 ${r.moved_out_on ? 'opacity-60' : ''}`}
                       >
-                        {r.photo && <Avatar photo={r.photo} name={r.full_name} />}
-                        {r.full_name}
+                        <span className="shrink-0 font-normal text-slate-400 sm:hidden">{(current - 1) * pageSize + i + 1}</span>
+                        {r.photo && <span className="hidden sm:block"><Avatar photo={r.photo} name={r.full_name} /></span>}
+                        <span className="min-w-0 break-words">{r.full_name}</span>
                         <StatusBadge status={r.status} />
                       </button>
                     </td>
@@ -281,56 +250,42 @@ export function ChildrenPage() {
   )
 }
 
-/** A phone: one child as a card — the number and the whole name on top, then each shown column with its value (empty ones left out). */
-function ChildCard({ row, n, columns }: { row: ViewRow; n: number; columns: Column[] }) {
-  const filled = columns.flatMap(c => {
-    if (c.movedOutOnly && !row.moved_out_on) return []
-    const content = c.render(row)
-    return content == null || content === '' || content === false ? [] : [{ c, content }]
-  })
-  return (
-    <div className={`rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900 ${row.moved_out_on ? 'opacity-60' : ''}`}>
-      <button onClick={() => go(`/child/${row.client_id}`)} className="flex w-full items-center gap-2 text-start">
-        <span className="w-6 shrink-0 text-sm text-slate-400">{n}</span>
-        {row.photo && <Avatar photo={row.photo} name={row.full_name} />}
-        <span className="min-w-0 flex-1 font-semibold text-indigo-700 dark:text-indigo-300">{row.full_name}</span>
-        <StatusBadge status={row.status} />
-      </button>
-      {filled.length > 0 && (
-        <dl className="mt-2 space-y-1.5 border-t border-slate-100 pt-2 text-sm dark:border-slate-800">
-          {filled.map(({ c, content }) => (
-            <div key={c.id} className="grid grid-cols-[6.5rem_1fr] gap-2">
-              <dt className="text-xs font-semibold leading-5 text-slate-500">{c.label}</dt>
-              <dd className="min-w-0 break-words">{content}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-    </div>
-  )
-}
-
 function Cell({ column, row }: { column: Column; row: Parameters<Column['render']>[0] }) {
   // a child still in the class: nothing at all under the columns about where a child who left went
   if (column.movedOutOnly && !row.moved_out_on) return <td />
   const content = column.render(row)
   const empty = content == null || content === '' || content === false
   return (
-    <td className={`px-3 py-2 ${column.nowrap ? 'whitespace-nowrap' : 'min-w-32'}`}>
+    <td className={`px-2 py-1.5 sm:px-3 sm:py-2 ${column.nowrap ? 'whitespace-nowrap' : 'min-w-28 sm:min-w-32'}`}>
       {empty ? <span className="text-slate-300 dark:text-slate-600">—</span> : content}
     </td>
   )
 }
 
-function SortHeader({ id, label, sort, onSort, className = '' }: { id: string; label: string; sort: { id: string; dir: 'asc' | 'desc' }; onSort: (id: string) => void; className?: string }) {
+type SortProps = { id: string; label: string; sort: { id: string; dir: 'asc' | 'desc' }; onSort: (id: string) => void; className?: string }
+
+function SortHeader({ before, ...props }: SortProps & { before?: ReactNode }) {
+  const active = props.sort.id === props.id
+  return (
+    <th
+      className={`whitespace-nowrap px-2 py-2 text-start font-semibold sm:px-3 sm:py-3 ${props.className ?? ''}`}
+      aria-sort={active ? (props.sort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
+    >
+      <div className="flex items-center gap-2">
+        {before}
+        <SortButton {...props} className="" />
+      </div>
+    </th>
+  )
+}
+
+function SortButton({ id, label, sort, onSort, className = '' }: SortProps) {
   const active = sort.id === id
   return (
-    <th className={`whitespace-nowrap px-3 py-3 text-start font-semibold ${className}`} aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined}>
-      <button onClick={() => onSort(id)} className={`flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-300 ${active ? 'text-indigo-700 dark:text-indigo-300' : ''}`}>
-        {label}
-        {active ? sort.dir === 'asc' ? <ChevronUpIcon className="size-3.5" /> : <ChevronDownIcon className="size-3.5" /> : <SortIcon className="size-3.5 opacity-30" />}
-      </button>
-    </th>
+    <button onClick={() => onSort(id)} className={`flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-300 ${active ? 'text-indigo-700 dark:text-indigo-300' : ''} ${className}`}>
+      {label}
+      {active ? sort.dir === 'asc' ? <ChevronUpIcon className="size-3.5" /> : <ChevronDownIcon className="size-3.5" /> : <SortIcon className="size-3.5 opacity-30" />}
+    </button>
   )
 }
 
