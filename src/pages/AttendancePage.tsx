@@ -180,9 +180,10 @@ export function AttendancePage() {
   }, [store, columns, sort, lang, query, filter, classTrips, going, lastFriday])
 
   // Name and row label stay in view while scrolling across the Fridays.
-  // Narrow on a phone, so the Fridays still get most of the screen.
+  // Narrow on a phone (a long name on two lines, الحضور / الافتقاد in small type), so the Fridays
+  // get most of the screen — about a third for the two, as on the Children page.
   const stickyName = 'sticky inset-s-0 z-10 w-24 min-w-24 max-w-24 sm:w-44 sm:min-w-44 sm:max-w-44'
-  const stickyKind = 'sticky inset-s-24 sm:inset-s-44 z-10 w-16 min-w-16 sm:w-24 sm:min-w-24'
+  const stickyKind = 'sticky inset-s-24 sm:inset-s-44 z-10 w-12 min-w-12 max-w-12 sm:w-24 sm:min-w-24 sm:max-w-24'
   const headBg = 'bg-white dark:bg-slate-900'
   // every other child on a light band (both of its rows); opaque, as the name cells stay on top while scrolling
   const band = (i: number) => (i % 2 ? 'bg-[#e9eef4] dark:bg-slate-800' : 'bg-white dark:bg-slate-900') // between slate-100 and -200
@@ -263,7 +264,7 @@ export function AttendancePage() {
                 {t('name')}
               </th>
               <th rowSpan={2} className={`${stickyKind} ${headBg} border-b border-e border-slate-200 dark:border-slate-800`} />
-              <th rowSpan={2} className="border-b border-e border-slate-200 px-2 py-2 font-semibold dark:border-slate-800" title={t('attendanceTotal')}>
+              <th rowSpan={2} className="border-b border-e border-slate-200 px-1 py-2 font-semibold sm:px-2 dark:border-slate-800" title={t('attendanceTotal')}>
                 ∑
               </th>
               {months.map(m => (
@@ -380,16 +381,16 @@ export function AttendancePage() {
                         <td rowSpan={KINDS.length} className={`${stickyName} ${band(ri)} border-b-2 border-slate-200 px-2 py-1.5 align-middle sm:px-3 dark:border-slate-700`}>
                           <button
                             onClick={() => go(`/child/${r.client_id}`)}
-                            className={`text-start text-xs font-semibold leading-snug hover:text-indigo-600 sm:text-sm dark:hover:text-indigo-300 ${dim}`}
+                            className={`break-words text-start text-xs font-semibold leading-snug hover:text-indigo-600 sm:text-sm dark:hover:text-indigo-300 ${dim}`}
                           >
                             {r.full_name}
                           </button>
                         </td>
                       )}
-                      <td className={`${stickyKind} ${band(ri)} ${bottom} border-e px-1.5 py-1 text-xs font-semibold text-slate-500 sm:px-2 dark:text-slate-400`}>
+                      <td className={`${stickyKind} ${band(ri)} ${bottom} border-e px-1 py-1 text-[10px] font-semibold text-slate-500 sm:px-2 sm:text-xs dark:text-slate-400`}>
                         <span className={dim}>{t(label)}</span>
                       </td>
-                      <td className={`${bottom} border-e px-2 text-center font-bold text-slate-700 dark:text-slate-200`} title={t('attendanceTotal')}>
+                      <td className={`${bottom} border-e px-1 text-center text-xs font-bold text-slate-700 sm:px-2 sm:text-sm dark:text-slate-200`} title={t('attendanceTotal')}>
                         <span className={dim}>{total}</span>
                       </td>
                       {days.map(d => {
