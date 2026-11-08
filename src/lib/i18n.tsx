@@ -379,7 +379,7 @@ const dict = {
   addressLabel: { ar: "بيت مين؟", en: "Whose home?" },
   phMainAddressLabel: { ar: "مثال: بيت بابا وماما", en: "e.g. parents’ home" },
   phOtherAddressLabel: { ar: "مثال: بيت الجد", en: "e.g. grandparents’ home" },
-  otherAddress: { ar: "البيت التاني (خارج المنطقة)", en: "Other home (outside the area)" },
+  otherAddress: { ar: "العنوان خارج المنطقة", en: "Address outside the area" },
   addressInArea: { ar: "العنوان اللي داخل المنطقة", en: "Address inside the area" },
   addressOutArea: { ar: "العنوان اللي خارج المنطقة", en: "Address outside the area" },
   removeOtherAddress: { ar: "شيل البيت التاني", en: "Remove the other home" },
