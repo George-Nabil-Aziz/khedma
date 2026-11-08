@@ -49,7 +49,7 @@ const dict = {
   searchName: { ar: "بحث بالاسم…", en: "Search by name…" }, // المتابعة: names only
   filter: { ar: "فلتر", en: "Filter" },
   filterAll: { ar: "كل الأولاد", en: "All children" },
-  filterAbsent: { ar: "غابوا يوم {date}", en: "Absent on {date}" },
+  filterAbsent: { ar: "غابوا الجمعة اللي فاتت", en: "Absent last Friday" },
   filterGoing: { ar: "طالعين", en: "Going" },
   filterGoingTo: { ar: "طالعين {name}", en: "Going to {name}" }, // المتابعة: one line per trip
   filterNotGoing: { ar: "مش طالعين", en: "Not going" },

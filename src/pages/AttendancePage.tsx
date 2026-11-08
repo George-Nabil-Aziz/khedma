@@ -221,8 +221,9 @@ export function AttendancePage() {
         >
           <option value="all">{t('filterAll')}</option>
           {lastFriday && (
-            <option value="absent">
-              {t('filterAbsent').replace('{date}', dmy(lastFriday))}
+            // the date itself shows on hover
+            <option value="absent" title={dmy(lastFriday)}>
+              {t('filterAbsent')}
             </option>
           )}
           {/* the rest (مش طالعين، لسه عليهم فلوس) is on the trip's own page */}
