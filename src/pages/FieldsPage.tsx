@@ -9,7 +9,7 @@ import { useI18n, type TKey } from '../lib/i18n'
 import { addField, approveField, classFields, deleteField, pendingFields, renameField, saveColumnDefaults, useStore, viewRows } from '../lib/store'
 import { BUILT_IN, removedColumns, useAllColumns, useColumnDefaultsEditor, type Column } from '../lib/columns'
 import { ColumnsList } from '../components/ColumnsMenu'
-import { AlertIcon, CheckIcon, ChevronDownIcon, CloudOffIcon, GripIcon, PlusIcon, TrashIcon } from '../components/Icons'
+import { AlertIcon, CheckIcon, ChevronDownIcon, CloudOffIcon, GripIcon, LockIcon, PlusIcon, TrashIcon } from '../components/Icons'
 import { confirmDialog } from '../components/ConfirmDialog'
 import { childColumns, sheetBlocks } from '../lib/sheet'
 
@@ -438,6 +438,12 @@ function ExportDefaultsCard() {
       <div>
         <h2 className="font-bold">{t('exportDefaultsTitle')}</h2>
         <p className="mt-1 text-sm text-slate-500">{t('exportDefaultsHelp')}</p>
+      </div>
+      {/* the name: always first in the sheet, as in the table's list */}
+      <div className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-400">
+        <LockIcon className="size-4" />
+        <span className="font-semibold text-slate-700 dark:text-slate-200">{t('name')}</span>
+        <span className="text-xs">({t('alwaysShown')})</span>
       </div>
       <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis, restrictToParentElement]} onDragEnd={onDragEnd}>
         <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
