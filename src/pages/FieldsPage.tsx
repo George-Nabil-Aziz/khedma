@@ -1,13 +1,17 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { DndContext, KeyboardSensor, PointerSensor, TouchSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { restrictToParentElement, restrictToVerticalAxis } from '@dnd-kit/modifiers'
+import { CSS } from '@dnd-kit/utilities'
 import { supabase } from '../lib/supabase'
 import type { CustomField, FieldType } from '../lib/supabase'
 import { useI18n, type TKey } from '../lib/i18n'
 import { addField, approveField, classFields, deleteField, pendingFields, renameField, saveColumnDefaults, useStore, viewRows } from '../lib/store'
 import { BUILT_IN, removedColumns, useAllColumns, useColumnDefaultsEditor, type Column } from '../lib/columns'
 import { ColumnsList } from '../components/ColumnsMenu'
-import { AlertIcon, CheckIcon, ChevronDownIcon, CloudOffIcon, PlusIcon, TrashIcon } from '../components/Icons'
+import { AlertIcon, CheckIcon, ChevronDownIcon, CloudOffIcon, GripIcon, PlusIcon, TrashIcon } from '../components/Icons'
 import { confirmDialog } from '../components/ConfirmDialog'
-import { childColumns } from '../lib/sheet'
+import { childColumns, sheetBlocks } from '../lib/sheet'
 
 const TYPES: { value: FieldType; key: TKey }[] = [
   { value: 'text', key: 'typeText' },
@@ -350,7 +354,8 @@ function ColumnsCard({
 }
 
 /**
- * The كشف الأولاد's columns everyone starts with in التصدير (and gets back with "رجّع الافتراضي").
+ * The كشف الأولاد for everyone in التصدير: its order (drag a block — العنوان's parts and the phones
+ * each move as one) and the columns ticked to start with ("رجّع الافتراضي" goes back to them).
  * A draft until saved. Shown for the class on screen — its own columns are among them.
  */
 function ExportDefaultsCard() {
@@ -358,28 +363,74 @@ function ExportDefaultsCard() {
   const store = useStore()
   const { online, currentClass, columnDefaults } = store
   const { all, defaults } = useMemo(() => childColumns(currentClass ?? ''), [currentClass, store.fields, store.rows, columnDefaults])
-  const [draft, setDraft] = useState<string[] | null>(null)
-  const picked = draft ?? defaults
-  const changed = draft !== null && (draft.length !== defaults.length || draft.some(id => !defaults.includes(id)))
+  const savedBlocks = useMemo(() => sheetBlocks(all), [all])
+  const [picks, setPicks] = useState<string[] | null>(null)
+  const [order, setOrder] = useState<string[] | null>(null)
+  const picked = picks ?? defaults
+  const blocks = order ? order.flatMap(id => savedBlocks.filter(b => b.id === id)) : savedBlocks
+  const changed =
+    (picks !== null && (picks.length !== defaults.length || picks.some(id => !defaults.includes(id)))) || (order !== null && order.join() !== savedBlocks.map(b => b.id).join())
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
 
-  function toggle(id: string) {
-    setDraft(picked.includes(id) ? picked.filter(x => x !== id) : [...picked, id])
+  const sensors = useSensors(
+    // a small move before dragging starts, so a tap on a column still ticks it
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    // a phone: press and hold briefly, so the page still scrolls with a finger
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
+
+  function onDragEnd({ active, over }: DragEndEvent) {
+    if (!over || active.id === over.id) return
+    const ids = blocks.map(b => b.id)
+    setOrder(arrayMove(ids, ids.indexOf(String(active.id)), ids.indexOf(String(over.id))))
     setDone(false)
+  }
+
+  function toggle(id: string) {
+    setPicks(picked.includes(id) ? picked.filter(x => x !== id) : [...picked, id])
+    setDone(false)
+  }
+
+  function cancel() {
+    setPicks(null)
+    setOrder(null)
   }
 
   async function save() {
     setBusy(true)
     setError('')
-    // columns of other classes the admin ticked before stay ticked
+    // what was set for other classes' own columns stays as it was
     const others = (columnDefaults?.export ?? []).filter(id => !all.some(col => col.id === id))
-    const err = await saveColumnDefaults({ ...(columnDefaults ?? BUILT_IN), export: [...others, ...picked] })
+    const ids = blocks.map(b => b.id)
+    const otherBlocks = (columnDefaults?.exportOrder ?? []).filter(id => !ids.includes(id))
+    const err = await saveColumnDefaults({ ...(columnDefaults ?? BUILT_IN), export: [...others, ...picked], exportOrder: [...ids, ...otherBlocks] })
     setBusy(false)
     if (err) return setError(err)
-    setDraft(null)
+    cancel()
     setDone(true)
+  }
+
+  const chip = (col: { id: string; label: string }) => {
+    const on = picked.includes(col.id)
+    return (
+      <button
+        key={col.id}
+        type="button"
+        onClick={() => toggle(col.id)}
+        aria-pressed={on}
+        className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm ${
+          on
+            ? 'border-indigo-500 bg-indigo-50 font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300'
+            : 'border-slate-300 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800'
+        }`}
+      >
+        {on && <CheckIcon className="size-3.5" />}
+        {col.label}
+      </button>
+    )
   }
 
   return (
@@ -388,32 +439,22 @@ function ExportDefaultsCard() {
         <h2 className="font-bold">{t('exportDefaultsTitle')}</h2>
         <p className="mt-1 text-sm text-slate-500">{t('exportDefaultsHelp')}</p>
       </div>
-      <div className="flex flex-wrap gap-2">
-        {all.map(col => {
-          const on = picked.includes(col.id)
-          return (
-            <button
-              key={col.id}
-              type="button"
-              onClick={() => toggle(col.id)}
-              aria-pressed={on}
-              className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm ${
-                on
-                  ? 'border-indigo-500 bg-indigo-50 font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300'
-                  : 'border-slate-300 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800'
-              }`}
-            >
-              {on && <CheckIcon className="size-3.5" />}
-              {col.label}
-            </button>
-          )
-        })}
-      </div>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis, restrictToParentElement]} onDragEnd={onDragEnd}>
+        <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
+          <div className="space-y-1">
+            {blocks.map(b => (
+              <BlockRow key={b.id} id={b.id} title={b.id === 'address' ? t('address') : b.id === 'phones' ? t('phones') : null}>
+                {b.cols.map(chip)}
+              </BlockRow>
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
       {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">{error}</p>}
       <div className="flex items-center justify-end gap-2">
         {done && <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{t('saved')}</span>}
         <button
-          onClick={() => setDraft(null)}
+          onClick={cancel}
           disabled={busy || !changed}
           className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
         >
@@ -424,6 +465,36 @@ function ExportDefaultsCard() {
         </button>
       </div>
     </section>
+  )
+}
+
+/** One block of the sheet in the list, dragged by its handle; العنوان and the phones framed, with their name. */
+function BlockRow({ id, title, children }: { id: string; title: string | null; children: ReactNode }) {
+  const { t } = useI18n()
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id })
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`flex items-center gap-1 rounded-lg p-1 ${title ? 'border border-slate-200 dark:border-slate-700' : ''} ${
+        isDragging ? 'relative z-10 bg-white shadow-lg ring-2 ring-indigo-500/40 dark:bg-slate-800' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
+      }`}
+    >
+      {/* only the handle starts a drag, so the columns stay easy to tap */}
+      <button
+        ref={setActivatorNodeRef}
+        {...attributes}
+        {...listeners}
+        aria-label={`${t('dragToReorder')}: ${title ?? id}`}
+        className={`grid size-7 shrink-0 touch-none place-items-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+      >
+        <GripIcon />
+      </button>
+      <div className="min-w-0 flex-1">
+        {title && <div className="mb-1 text-xs font-semibold text-slate-500">{title}</div>}
+        <div className="flex flex-wrap gap-1.5">{children}</div>
+      </div>
+    </div>
   )
 }
 

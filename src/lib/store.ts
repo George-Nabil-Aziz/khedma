@@ -74,6 +74,8 @@ export type ColumnLayout = {
   removed?: string[]
   /** The كشف الأولاد's columns ticked by default (its column ids) — "رجّع الافتراضي" goes back to them. */
   export?: string[]
+  /** The كشف الأولاد's order, block by block: column ids, 'address' for العنوان's parts, 'phones' for the phones. */
+  exportOrder?: string[]
 }
 
 /** Two ticks per child per Friday: الحضور (attendance) and الافتقاد (visit). */

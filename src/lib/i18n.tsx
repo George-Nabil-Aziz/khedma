@@ -248,8 +248,8 @@ const dict = {
   },
   exportDefaultsTitle: { ar: "أعمدة الكشف الافتراضية (Excel / PDF)", en: "Default sheet columns (Excel / PDF)" },
   exportDefaultsHelp: {
-    ar: 'علّم على العواميد اللي تطلع في كشف الأولاد لأي خادم أول ما يفتح التصدير، وبعدين "حفظ". أي خادم يقدر يغيّرها لنفسه، و"رجّع الافتراضي" بيرجّعها زي ما إنت عاملها هنا. ترتيبها نفس ترتيب أعمدة الجدول فوق.',
-    en: 'Tick the columns of the children sheet everyone starts with in Export, then Save. Anyone can change them for themselves; "Back to default" returns to what you set here. They follow the order of the table columns above.',
+    ar: 'علّم على العواميد اللي تطلع في كشف الأولاد لأي خادم أول ما يفتح التصدير، وبعدين "حفظ". أي خادم يقدر يغيّرها لنفسه، و"رجّع الافتراضي" بيرجّعها زي ما إنت عاملها هنا. رتّبها بالسحب من ⠿ — العنوان والتليفونات كل واحد منهم بيتنقل حتة واحدة.',
+    en: 'Tick the columns of the children sheet everyone starts with in Export, then Save. Anyone can change them for themselves; "Back to default" returns to what you set here. Drag ⠿ to order them — the address and the phones each move as one block.',
   },
   removedColumnsTitle: { ar: "أعمدة اتمسحت", en: "Deleted columns" },
   removedColumnsHelp: {

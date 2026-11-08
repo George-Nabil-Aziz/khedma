@@ -128,26 +128,34 @@ function removedFromApp(): Set<string> {
 /** The address's parts, in the paper sheet's order (علامة مميزة is its own column in the app). */
 const ADDRESS_PARTS = ['house_number', 'street', 'branch_of_street', 'landmark', 'floor', 'side', 'apartment']
 
+/** Which block a column moves with when ordering the sheet: العنوان's parts together, the phones together. */
+export const blockOf = (id: string) => (ADDRESS_PARTS.includes(id) ? 'address' : id.startsWith('phone:') ? 'phones' : id)
+
+/** The columns cut into blocks (one column, or العنوان / the phones), in their order. */
+export function sheetBlocks<C extends { id: string }>(cols: C[]): { id: string; cols: C[] }[] {
+  const out: { id: string; cols: C[] }[] = []
+  for (const col of cols) {
+    const id = blockOf(col.id)
+    const last = out[out.length - 1]
+    if (last?.id === id) last.cols.push(col)
+    else out.push({ id, cols: [col] })
+  }
+  return out
+}
+
 /**
- * The columns in the admin's order of the table's columns (الإعدادات ← الأعمدة): العنوان's parts
- * together where العنوان is — with علامة مميزة inside them when it comes right after it — and a phone
- * column where its موبايل column is. Before an admin set an order: the paper sheet's. Columns the
- * order does not have (added since) go at the end, as they were.
+ * The columns in the admin's order of the sheet (الإعدادات ← الأعمدة), block by block — before an
+ * admin set one, the paper sheet's. Inside a block, the paper sheet's order. Blocks the order does
+ * not have (columns added since) go at the end, as they were.
  */
 function inAdminOrder(cols: ChildColumn[]): ChildColumn[] {
-  const order = getState().columnDefaults?.order ?? []
+  const order = getState().columnDefaults?.exportOrder ?? []
   if (!order.length) return cols
-  const rank = new Map<string, number>()
-  order.forEach((id, i) => {
-    if (id === 'address') {
-      const withLandmark = order[i + 1] === 'landmark'
-      ADDRESS_PARTS.forEach((p, k) => (p !== 'landmark' || withLandmark) && rank.set(p, i + k / 10))
-    } else if (id === 'landmark') {
-      if (!rank.has('landmark')) rank.set('landmark', i)
-    } else rank.set(id.startsWith('phones_') ? 'phone:' + id.slice('phones_'.length) : id, i)
-  })
-  const at = (col: ChildColumn, i: number) => rank.get(col.id) ?? order.length + i
-  return cols.map((col, i) => ({ col, r: at(col, i) })).sort((a, b) => a.r - b.r).map(x => x.col)
+  const at = (col: ChildColumn, i: number) => {
+    const r = order.indexOf(blockOf(col.id))
+    return (r < 0 ? order.length : r) * 1000 + i
+  }
+  return cols.map((col, i) => ({ col, r: at(col, i) })).sort((x, y) => x.r - y.r).map(x => x.col)
 }
 
 /** Columns of the app the paper sheet does not have, plus the class's own columns. */
