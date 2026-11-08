@@ -70,9 +70,9 @@ export function ChildrenPage() {
   // the # and name columns stay put when the table scrolls sideways; opaque, the rows pass under them
   // a phone: no # column (the number goes by the name) — more room for the other columns
   const stickyNum = 'sticky inset-s-0 z-10 hidden w-12 min-w-12 sm:table-cell'
-  // its own line on the far side: the table's shared borders stay behind while the column is stuck in place
+  // a darker line on its far side, between the stuck columns and the ones scrolling under them
   // a phone: narrow, a long name on two lines — about a third of the screen instead of half
-  const stickyName = "sticky inset-s-0 sm:inset-s-12 z-10 w-28 min-w-28 max-w-28 sm:w-auto sm:min-w-40 sm:max-w-none after:pointer-events-none after:absolute after:inset-y-0 after:inset-e-0 after:w-px after:bg-slate-300 after:content-[''] dark:after:bg-slate-600"
+  const stickyName = "sticky inset-s-0 sm:inset-s-12 z-10 w-28 min-w-28 max-w-28 sm:w-auto sm:min-w-40 sm:max-w-none border-e-slate-300! dark:border-e-slate-600!"
 
   const top = (
     <>

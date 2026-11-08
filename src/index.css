@@ -82,23 +82,21 @@ button:disabled {
  * Table grid: a thin line between every cell, across and down. The outer edge is left to the
  * rounded card around the table, so the frame is never drawn twice.
  */
+/* Each cell draws its own lines (under it and at its end), not shared ones: shared (collapsed)
+   borders stay put while the sticky # and name columns don't, and showed through them on scroll. */
 .table-grid {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 .table-grid :where(th, td) {
-  border: 1px solid var(--color-slate-200);
+  border-bottom: 1px solid var(--color-slate-200);
+  border-inline-end: 1px solid var(--color-slate-200);
 }
 .dark .table-grid :where(th, td) {
   border-color: var(--color-slate-700);
 }
-.table-grid :where(tr > :first-child) {
-  border-inline-start: 0;
-}
 .table-grid :where(tr > :last-child) {
   border-inline-end: 0;
-}
-.table-grid :where(thead tr:first-child > *) {
-  border-top: 0;
 }
 .table-grid :where(tbody tr:last-child > *) {
   border-bottom: 0;
