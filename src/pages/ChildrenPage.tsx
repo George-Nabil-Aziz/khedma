@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useI18n } from '../lib/i18n'
 import { go } from '../lib/router'
-import { childrenLoading, stillInClassFirst, sync, useStore, viewRows, type RowStatus } from '../lib/store'
+import { childrenLoading, stillInClassFirst, sync, useStore, viewRows, type RowStatus, type ViewRow } from '../lib/store'
 import { ColumnsMenu } from '../components/ColumnsMenu'
 import { Pagination, usePageSize } from '../components/Pagination'
 import { MY_ORDER, sortRows, useColumnPrefs, useColumns, useSort, type Column } from '../lib/columns'
@@ -158,7 +158,49 @@ export function ChildrenPage() {
 
       {/* the number the search found is marked among the child's other numbers */}
       <SearchedPhone.Provider value={phone}>
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      {/* a phone: a card per child instead of the table — the whole name on top, the columns under it */}
+      <div className="space-y-2 sm:hidden">
+        <div className="flex items-center gap-2 text-sm">
+          <span className="shrink-0 font-semibold text-slate-500">{t('sortBy')}</span>
+          <select
+            value={sort.id}
+            onChange={e => sortBy(e.target.value)}
+            className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-900"
+          >
+            <option value={MY_ORDER}>{t('myOrder')}</option>
+            <option value="name">{t('name')}</option>
+            {prefs.visible.map(c => (
+              <option key={c.id} value={c.id}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+          {/* the same column again flips the direction */}
+          <button
+            onClick={() => sortBy(sort.id)}
+            aria-label={sort.dir === 'asc' ? '↑' : '↓'}
+            className="grid size-10 shrink-0 place-items-center rounded-lg border border-slate-300 bg-white hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
+          >
+            {sort.dir === 'asc' ? <ChevronUpIcon /> : <ChevronDownIcon />}
+          </button>
+        </div>
+        {filtered.length === 0 ? (
+          <p className="rounded-xl border border-slate-200 bg-white px-3 py-10 text-center text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900">{t('noResults')}</p>
+        ) : (
+          pageRows.map((r, i) => (
+            <Fragment key={r.client_id}>
+              {r.moved_out_on && !pageRows[i - 1]?.moved_out_on && (
+                <div className="px-1 pt-2 text-xs font-bold text-slate-500">
+                  {t('movedOut')} ({movedOutCount})
+                </div>
+              )}
+              <ChildCard row={r} n={(current - 1) * pageSize + i + 1} columns={prefs.visible} />
+            </Fragment>
+          ))
+        )}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         <table className="table-grid w-full text-sm">
           <thead className="bg-slate-50 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
             <tr>
@@ -234,6 +276,35 @@ export function ChildrenPage() {
             setPage(1)
           }}
         />
+      )}
+    </div>
+  )
+}
+
+/** A phone: one child as a card — the number and the whole name on top, then each shown column with its value (empty ones left out). */
+function ChildCard({ row, n, columns }: { row: ViewRow; n: number; columns: Column[] }) {
+  const filled = columns.flatMap(c => {
+    if (c.movedOutOnly && !row.moved_out_on) return []
+    const content = c.render(row)
+    return content == null || content === '' || content === false ? [] : [{ c, content }]
+  })
+  return (
+    <div className={`rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900 ${row.moved_out_on ? 'opacity-60' : ''}`}>
+      <button onClick={() => go(`/child/${row.client_id}`)} className="flex w-full items-center gap-2 text-start">
+        <span className="w-6 shrink-0 text-sm text-slate-400">{n}</span>
+        {row.photo && <Avatar photo={row.photo} name={row.full_name} />}
+        <span className="min-w-0 flex-1 font-semibold text-indigo-700 dark:text-indigo-300">{row.full_name}</span>
+        <StatusBadge status={row.status} />
+      </button>
+      {filled.length > 0 && (
+        <dl className="mt-2 space-y-1.5 border-t border-slate-100 pt-2 text-sm dark:border-slate-800">
+          {filled.map(({ c, content }) => (
+            <div key={c.id} className="grid grid-cols-[6.5rem_1fr] gap-2">
+              <dt className="text-xs font-semibold leading-5 text-slate-500">{c.label}</dt>
+              <dd className="min-w-0 break-words">{content}</dd>
+            </div>
+          ))}
+        </dl>
       )}
     </div>
   )
