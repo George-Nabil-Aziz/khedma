@@ -200,7 +200,7 @@ export function ChildrenPage() {
         )}
       </div>
 
-      <div className="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      <div className="hidden overflow-x-auto rounded-xl sm:block border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         <table className="table-grid w-full text-sm">
           <thead className="bg-slate-50 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
             <tr>
