@@ -28,8 +28,8 @@ export function ExportPage() {
   const months = useMemo(() => (c ? classMonths(c) : []), [c, store.yearEndWeeks])
   const quarters = useMemo(() => (c ? classQuarters(c) : []), [c, store.yearEndWeeks])
 
-  // كشف الأولاد columns: the paper sheet's by default; a change is kept on my account
-  const { all: allColumns, defaults, empty: emptyColumns } = useMemo(() => childColumns(c?.id ?? ''), [c?.id, store.fields, store.rows, store.outbox])
+  // كشف الأولاد columns: the admin's default (in the admin's order); a change is kept on my account
+  const { all: allColumns, defaults, empty: emptyColumns } = useMemo(() => childColumns(c?.id ?? ''), [c?.id, store.fields, store.rows, store.outbox, store.columnDefaults])
   const mine = c ? store.profile?.export_columns?.[c.id] : undefined
   const [picked, setPicked] = useState<string[]>(mine ?? defaults)
   const isDefault = picked.length === defaults.length && defaults.every(id => picked.includes(id))
@@ -151,9 +151,7 @@ export function ExportPage() {
 
       {table === 'children' && (
         <Step n={2} title={t('exportColumns')}>
-          <p className={`mb-3 rounded-lg px-3 py-2 text-sm ${isDefault ? 'bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300' : 'bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-200'}`}>
-            {isDefault ? t('exportColumnsDefault') : t('exportColumnsChanged')}
-          </p>
+          {isDefault && <p className="mb-3 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300">{t('exportColumnsDefault')}</p>}
           <div className="flex flex-wrap gap-2">{allColumns.filter(col => !emptyColumns.includes(col.id)).map(chip)}</div>
           {/* columns no child has anything in: on their own line, off unless picked */}
           {emptyColumns.length > 0 && (

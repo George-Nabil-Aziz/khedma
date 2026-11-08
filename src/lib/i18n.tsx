@@ -246,6 +246,11 @@ const dict = {
     ar: 'عمود "{name}" هيختفي عند كل الخدام: من الجدول وصفحة الولد وصفحة التعديل والكشوف. اللي متكتب فيه مش هيتمسح، وتقدر ترجّعه بعدين. متأكد؟',
     en: '"{name}" will disappear for every servant: from the table, the child’s page, the edit form and the exports. What is in it is kept, and it can be brought back. Sure?',
   },
+  exportDefaultsTitle: { ar: "أعمدة الكشف الافتراضية (Excel / PDF)", en: "Default sheet columns (Excel / PDF)" },
+  exportDefaultsHelp: {
+    ar: 'علّم على العواميد اللي تطلع في كشف الأولاد لأي خادم أول ما يفتح التصدير، وبعدين "حفظ". أي خادم يقدر يغيّرها لنفسه، و"رجّع الافتراضي" بيرجّعها زي ما إنت عاملها هنا. ترتيبها نفس ترتيب أعمدة الجدول فوق.',
+    en: 'Tick the columns of the children sheet everyone starts with in Export, then Save. Anyone can change them for themselves; "Back to default" returns to what you set here. They follow the order of the table columns above.',
+  },
   removedColumnsTitle: { ar: "أعمدة اتمسحت", en: "Deleted columns" },
   removedColumnsHelp: {
     ar: "بياناتها لسه محفوظة. دوس على أي واحد يرجع تاني لكل الخدام.",
@@ -713,16 +718,12 @@ const dict = {
   exportEmpty: { ar: "الفصل ده مفيهوش أولاد لسه", en: "This class has no children yet" },
   exportColumns: { ar: "العواميد", en: "Columns" },
   exportColumnsDefault: {
-    ar: "كل العواميد اللي فيها بيانات متعلّم عليها، وده الشكل الافتراضي. شيل العلامة من أي عمود مش عايزه في الكشف.",
-    en: "Every column with data is ticked; that is the default. Untick any column you don't want in the sheet.",
+    ar: "ده الشكل الافتراضي. شيل العلامة من أي عمود مش عايزه في الكشف، أو علّم على اللي عايزه.",
+    en: "This is the default. Untick any column you don't want in the sheet, or tick one you do.",
   },
   exportColumnsEmpty: {
-    ar: "العواميد دي مفيش فيها بيانات لأي ولد في الفصل، علشان كده مش متعلّم عليها. لو عايزها في الكشف دوس عليها.",
-    en: "No child in the class has anything in these columns, so they are unticked. Tap one to add it to the sheet.",
-  },
-  exportColumnsChanged: {
-    ar: "غيّرت العواميد. اختيارك ده هيتحفظ على حسابك، والمرة الجاية هتلاقيه زي ما سبته من أي جهاز.",
-    en: "You changed the columns. Your choice is saved on your account, and you will find it as you left it next time, on any device.",
+    ar: "العواميد دي مفيش فيها بيانات لأي ولد في الفصل.",
+    en: "No child in the class has anything in these columns.",
   },
   exportColumnsNotSaved: {
     ar: "اختيارك ماتحفظش على حسابك (محتاج نت). التصدير دلوقتي هيمشي بيه عادي.",

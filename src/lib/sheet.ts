@@ -125,6 +125,31 @@ function removedFromApp(): Set<string> {
   return out
 }
 
+/** The address's parts, in the paper sheet's order (علامة مميزة is its own column in the app). */
+const ADDRESS_PARTS = ['house_number', 'street', 'branch_of_street', 'landmark', 'floor', 'side', 'apartment']
+
+/**
+ * The columns in the admin's order of the table's columns (الإعدادات ← الأعمدة): العنوان's parts
+ * together where العنوان is — with علامة مميزة inside them when it comes right after it — and a phone
+ * column where its موبايل column is. Before an admin set an order: the paper sheet's. Columns the
+ * order does not have (added since) go at the end, as they were.
+ */
+function inAdminOrder(cols: ChildColumn[]): ChildColumn[] {
+  const order = getState().columnDefaults?.order ?? []
+  if (!order.length) return cols
+  const rank = new Map<string, number>()
+  order.forEach((id, i) => {
+    if (id === 'address') {
+      const withLandmark = order[i + 1] === 'landmark'
+      ADDRESS_PARTS.forEach((p, k) => (p !== 'landmark' || withLandmark) && rank.set(p, i + k / 10))
+    } else if (id === 'landmark') {
+      if (!rank.has('landmark')) rank.set('landmark', i)
+    } else rank.set(id.startsWith('phones_') ? 'phone:' + id.slice('phones_'.length) : id, i)
+  })
+  const at = (col: ChildColumn, i: number) => rank.get(col.id) ?? order.length + i
+  return cols.map((col, i) => ({ col, r: at(col, i) })).sort((a, b) => a.r - b.r).map(x => x.col)
+}
+
 /** Columns of the app the paper sheet does not have, plus the class's own columns. */
 function moreColumns(classId: string): ChildColumn[] {
   const s = getState()
@@ -169,14 +194,17 @@ function moreColumns(classId: string): ChildColumn[] {
  */
 export function childColumns(classId: string): { all: ChildColumn[]; defaults: string[]; empty: string[] } {
   const gone = removedFromApp()
-  const all = [...DEFAULT_COLUMNS, ...moreColumns(classId)].filter(col => !gone.has(col.id))
+  const all = inAdminOrder([...DEFAULT_COLUMNS, ...moreColumns(classId)].filter(col => !gone.has(col.id)))
   const { inClass, left } = ordered(classId)
   const everyone = [...inClass, ...left]
   const filled = (v: Cell) => v !== null && v !== undefined && String(v).trim() !== ''
   const hasData = (col: ChildColumn) => everyone.some(r => (col.owner ? phonesOf(r, col.owner).length > 0 : filled(col.value(r))))
   // a class with no children yet: nothing is "empty", everything stays on
   const empty = everyone.length ? all.filter(col => !hasData(col)).map(col => col.id) : []
-  return { all, defaults: all.filter(col => !empty.includes(col.id)).map(col => col.id), empty }
+  // the admin's default (الإعدادات ← الأعمدة) when there is one; otherwise every column with data
+  const adminPick = getState().columnDefaults?.export
+  const defaults = adminPick ? all.filter(col => adminPick.includes(col.id)) : all.filter(col => !empty.includes(col.id))
+  return { all, defaults: defaults.map(col => col.id), empty }
 }
 
 /** `picked`: column ids (م and the name are always there), in the order they will show. */
@@ -184,7 +212,7 @@ export function childrenSheet(c: ClassInfo, header: Sheet['header'], picked: str
   const { inClass, left } = ordered(c.id)
   const everyone = [...inClass, ...left]
   const { all } = childColumns(c.id)
-  // the paper sheet's order first, then what was added, in the order of the list
+  // in the order of the list (the admin's order of the columns)
   const chosen = all.filter(col => picked.includes(col.id))
 
   // one column per number: a second number of ماما gets its own column (موبايل ماما 2), for the whole sheet
@@ -207,9 +235,11 @@ export function childrenSheet(c: ClassInfo, header: Sheet['header'], picked: str
   const head2: { label: string }[] = []
   columns.forEach((col, i) => {
     const prev = columns[i - 1]
-    if (col.group && prev?.group === col.group) head1[head1.length - 1].span++
-    else head1.push(col.group ? { label: GROUP_LABEL[col.group], span: 1 } : { label: col.label, span: 1, down: true })
-    if (col.group) head2.push({ label: col.label })
+    // a group's column on its own (the admin put it away from the others) is a plain column
+    const grouped = !!col.group && (prev?.group === col.group || columns[i + 1]?.group === col.group)
+    if (grouped && prev?.group === col.group) head1[head1.length - 1].span++
+    else head1.push(grouped ? { label: GROUP_LABEL[col.group!], span: 1 } : { label: col.label, span: 1, down: true })
+    if (grouped) head2.push({ label: col.label })
   })
   // a group with nothing over its second row would leave that row empty: such a sheet has no groups at all
   if (!head2.length) head1.forEach(h => (h.down = true))

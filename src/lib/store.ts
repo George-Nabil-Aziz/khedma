@@ -68,7 +68,13 @@ type State = {
  * columns an admin took out of the app (the table, the child's page and form, the export) — their
  * data stays, and an admin can bring them back.
  */
-export type ColumnLayout = { order: string[]; hidden: string[]; removed?: string[] }
+export type ColumnLayout = {
+  order: string[]
+  hidden: string[]
+  removed?: string[]
+  /** The كشف الأولاد's columns ticked by default (its column ids) — "رجّع الافتراضي" goes back to them. */
+  export?: string[]
+}
 
 /** Two ticks per child per Friday: الحضور (attendance) and الافتقاد (visit). */
 export type FollowUpKind = 'attendance' | 'visit'

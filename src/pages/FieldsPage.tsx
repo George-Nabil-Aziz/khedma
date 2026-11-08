@@ -7,6 +7,7 @@ import { BUILT_IN, removedColumns, useAllColumns, useColumnDefaultsEditor, type 
 import { ColumnsList } from '../components/ColumnsMenu'
 import { AlertIcon, CheckIcon, ChevronDownIcon, CloudOffIcon, PlusIcon, TrashIcon } from '../components/Icons'
 import { confirmDialog } from '../components/ConfirmDialog'
+import { childColumns } from '../lib/sheet'
 
 const TYPES: { value: FieldType; key: TKey }[] = [
   { value: 'text', key: 'typeText' },
@@ -184,6 +185,8 @@ export function FieldsPage() {
 
       <ColumnsCard busy={busy} onRemoveField={removeField} onRemoveBuiltIn={removeBuiltIn} onRename={(key, v) => run(() => renameField(key, v))} onRestore={id => setRemoved(id, false)} />
 
+      <ExportDefaultsCard />
+
       {/* what servants added, seen by nobody else until approved here */}
       {pending.length > 0 && (
         <section id="pending-fields" className="space-y-3 rounded-xl border border-amber-300 bg-amber-50/60 p-4 dark:border-amber-500/40 dark:bg-amber-500/5">
@@ -234,7 +237,8 @@ function ColumnsCard({
     setSaving(true)
     setError('')
     // keep the deleted built-in columns as they are
-    const err = await saveColumnDefaults({ ...editor.layout(), removed: [...removed] })
+    // keep the deleted built-in columns and the sheet's default as they are
+    const err = await saveColumnDefaults({ ...(store.columnDefaults ?? BUILT_IN), ...editor.layout(), removed: [...removed] })
     setSaving(false)
     if (err) return setError(err)
     editor.saved()
@@ -342,6 +346,84 @@ function ColumnsCard({
         </section>
       )}
     </>
+  )
+}
+
+/**
+ * The كشف الأولاد's columns everyone starts with in التصدير (and gets back with "رجّع الافتراضي").
+ * A draft until saved. Shown for the class on screen — its own columns are among them.
+ */
+function ExportDefaultsCard() {
+  const { t } = useI18n()
+  const store = useStore()
+  const { online, currentClass, columnDefaults } = store
+  const { all, defaults } = useMemo(() => childColumns(currentClass ?? ''), [currentClass, store.fields, store.rows, columnDefaults])
+  const [draft, setDraft] = useState<string[] | null>(null)
+  const picked = draft ?? defaults
+  const changed = draft !== null && (draft.length !== defaults.length || draft.some(id => !defaults.includes(id)))
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [done, setDone] = useState(false)
+
+  function toggle(id: string) {
+    setDraft(picked.includes(id) ? picked.filter(x => x !== id) : [...picked, id])
+    setDone(false)
+  }
+
+  async function save() {
+    setBusy(true)
+    setError('')
+    // columns of other classes the admin ticked before stay ticked
+    const others = (columnDefaults?.export ?? []).filter(id => !all.some(col => col.id === id))
+    const err = await saveColumnDefaults({ ...(columnDefaults ?? BUILT_IN), export: [...others, ...picked] })
+    setBusy(false)
+    if (err) return setError(err)
+    setDraft(null)
+    setDone(true)
+  }
+
+  return (
+    <section className={card}>
+      <div>
+        <h2 className="font-bold">{t('exportDefaultsTitle')}</h2>
+        <p className="mt-1 text-sm text-slate-500">{t('exportDefaultsHelp')}</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {all.map(col => {
+          const on = picked.includes(col.id)
+          return (
+            <button
+              key={col.id}
+              type="button"
+              onClick={() => toggle(col.id)}
+              aria-pressed={on}
+              className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm ${
+                on
+                  ? 'border-indigo-500 bg-indigo-50 font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300'
+                  : 'border-slate-300 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800'
+              }`}
+            >
+              {on && <CheckIcon className="size-3.5" />}
+              {col.label}
+            </button>
+          )
+        })}
+      </div>
+      {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">{error}</p>}
+      <div className="flex items-center justify-end gap-2">
+        {done && <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{t('saved')}</span>}
+        <button
+          onClick={() => setDraft(null)}
+          disabled={busy || !changed}
+          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+        >
+          {t('cancel')}
+        </button>
+        <button onClick={save} disabled={!online || busy || !changed} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+          {t('save')}
+        </button>
+      </div>
+    </section>
   )
 }
 
