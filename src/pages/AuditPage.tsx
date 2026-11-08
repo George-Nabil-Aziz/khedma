@@ -21,6 +21,10 @@ type Entry = {
 
 const PAGE = 100
 
+/** A servant's own choices on their account (which columns their كشف has) — not something to audit. */
+const PREFERENCES = ['export_columns', 'updated_at']
+const onlyPreferences = (e: Entry) => e.action === 'update' && !!e.changed_fields?.length && e.changed_fields.every(k => PREFERENCES.includes(k))
+
 /** Which marks of a day (تناول / نادي) an entry is about: the changed ones, or those set when added. */
 function dayKindsChanged(e: Entry): ('communion' | 'club')[] {
   return (['communion', 'club'] as const).filter(k => (e.action === 'update' ? e.changed_fields?.includes(k) : e.new_data?.[k] === true))
@@ -78,6 +82,7 @@ export function AuditPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [hasMore, setHasMore] = useState(false)
+  const [lastId, setLastId] = useState<number | undefined>()
 
   const load = useCallback(
     async (before?: number) => {
@@ -92,8 +97,11 @@ export function AuditPage() {
       const { data, error } = await q
       if (error) setError(error.message)
       else {
-        setEntries(prev => (before ? [...prev, ...(data as Entry[])] : (data as Entry[])))
+        const list = (data as Entry[]).filter(e => !onlyPreferences(e))
+        setEntries(prev => (before ? [...prev, ...list] : list))
         setHasMore(data.length === PAGE)
+        // the next page goes on from the last entry fetched, shown or not
+        setLastId((data as Entry[])[data.length - 1]?.id)
       }
       setLoading(false)
     },
@@ -241,7 +249,8 @@ export function AuditPage() {
                   {lines.map((l, i) => (
                     <div key={i} className="grid gap-1 sm:grid-cols-[10rem_1fr]">
                       <span className="font-semibold text-slate-500">{l.label}</span>
-                      <span>
+                      {/* long values wrap inside the card instead of running off it */}
+                      <span className="min-w-0 break-words [overflow-wrap:anywhere]">
                         <span className="text-red-600 line-through decoration-red-300 dark:text-red-400" dir="auto">
                           {l.from}
                         </span>
@@ -262,7 +271,7 @@ export function AuditPage() {
       {!loading && entries.length === 0 && online && !error && <p className="text-center text-sm text-slate-500">{t('auditEmpty')}</p>}
       {hasMore && (
         <button
-          onClick={() => load(entries[entries.length - 1]?.id)}
+          onClick={() => load(lastId)}
           disabled={loading}
           className="w-full rounded-lg border border-slate-200 py-2 text-sm font-semibold hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
         >
