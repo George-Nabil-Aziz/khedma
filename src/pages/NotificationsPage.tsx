@@ -105,10 +105,10 @@ export function NotificationsPage() {
             {reminders.length === 0 && <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-500 dark:bg-slate-800/60">{t('noReminders')}</p>}
             <ul className="space-y-2">
               {reminders.map((r, i) => (
-                // a phone: the number and the bin at the sides, the two choices one under the other, full width
-                <li key={i} className="flex items-center gap-2 rounded-lg border border-slate-200 p-2 dark:border-slate-700">
+                // a phone: the number above the bin on one side, the two choices one under the other with all the room left
+                <li key={i} className="grid grid-cols-[auto_1fr] items-center justify-items-center gap-x-2 gap-y-1 sm:flex rounded-lg border border-slate-200 p-2 dark:border-slate-700">
                   <span className="grid size-7 shrink-0 place-items-center rounded-full bg-indigo-50 text-sm font-bold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">{i + 1}</span>
-                  <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row">
+                  <div className="row-span-2 flex w-full min-w-0 flex-1 flex-col gap-2 sm:flex-row">
                     <select
                       value={r.when}
                       onChange={e => change(reminders.map((x, j) => (j === i ? { ...x, when: e.target.value as When } : x)))}
