@@ -35,6 +35,7 @@ export function Layout({ email, admin, title, children }: { email: string; admin
   const route = useRoute()
   const { outbox, conflicts, attOutbox, dayOutbox, attError, classes, currentClass, profile } = useStore()
   const main = useRef<HTMLElement>(null)
+  const settingsList = useRef<HTMLDivElement>(null)
 
   // A new page starts at its top: the same <main> stays on screen between pages, so it would
   // otherwise keep the scroll of the page before (on a phone, the bottom of a long list).
@@ -145,7 +146,15 @@ export function Layout({ email, admin, title, children }: { email: string; admin
           {/* الإعدادات, last: a tap opens its tabs right under it. The sync count shows on it
               (and on مزامنة), since sync lives inside it. */}
           {!admin && <div className="mx-3 my-2 border-t border-slate-200 dark:border-slate-800" />}
-          <button className={item(inSettings && !settingsOpen)} onClick={() => setSettingsOpen(v => !v)} aria-expanded={settingsOpen}>
+          <button
+            className={item(inSettings && !settingsOpen)}
+            onClick={() => {
+              // opening it: scroll down so all its tabs show, not only the first ones
+              if (!settingsOpen) requestAnimationFrame(() => settingsList.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }))
+              setSettingsOpen(v => !v)
+            }}
+            aria-expanded={settingsOpen}
+          >
             <SettingsIcon />
             <span className="flex-1">{t('settings')}</span>
             {issues > 0 ? (
@@ -156,7 +165,7 @@ export function Layout({ email, admin, title, children }: { email: string; admin
             <ChevronDownIcon className={`size-4 shrink-0 text-slate-400 transition-transform ${settingsOpen ? 'rotate-180' : ''}`} />
           </button>
           {settingsOpen && (
-            <div className="ms-5 space-y-0.5 border-s border-slate-200 ps-2 dark:border-slate-800">
+            <div ref={settingsList} className="ms-5 space-y-0.5 border-s border-slate-200 ps-2 dark:border-slate-800">
               {settingsTabs(admin).map(s => (
                 <button key={s.name} className={item(route.name === s.name) + ' py-1.5 text-sm'} onClick={() => nav(s.path)}>
                   <span className="flex-1">{t(s.label)}</span>
@@ -190,14 +199,19 @@ export function Layout({ email, admin, title, children }: { email: string; admin
               </span>
             </span>
           </button>
-          {/* phone only — on wider screens these sit in the header */}
-          <div className="flex items-center gap-2 px-3 pb-2 sm:hidden">
-            <HeaderButtons />
+          {/* one row: language and theme (phone only — on wider screens they sit in the header), then sign out */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 sm:hidden">
+              <HeaderButtons />
+            </div>
+            <button
+              onClick={signOut}
+              className="flex h-9 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 text-sm text-slate-600 hover:bg-red-50 hover:text-red-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-red-500/10"
+            >
+              <LogOutIcon />
+              <span className="truncate">{t('signOut')}</span>
+            </button>
           </div>
-          <button onClick={signOut} className={item(false) + ' text-sm'}>
-            <LogOutIcon />
-            {t('signOut')}
-          </button>
         </div>
       </aside>
 
