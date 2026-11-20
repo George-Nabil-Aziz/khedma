@@ -35,7 +35,8 @@ export function Layout({ email, admin, title, children }: { email: string; admin
   const route = useRoute()
   const { outbox, conflicts, attOutbox, dayOutbox, attError, classes, currentClass, profile } = useStore()
   const main = useRef<HTMLElement>(null)
-  const settingsList = useRef<HTMLDivElement>(null)
+  const nav_ = useRef<HTMLElement>(null)
+  const scrollToSettings = useRef(false)
 
   // A new page starts at its top: the same <main> stays on screen between pages, so it would
   // otherwise keep the scroll of the page before (on a phone, the bottom of a long list).
@@ -53,6 +54,13 @@ export function Layout({ email, admin, title, children }: { email: string; admin
   useEffect(() => {
     if (inSettings) setSettingsOpen(true)
   }, [inSettings])
+  // opened with a tap: scroll the sidebar to its end (الإعدادات is last), so all its tabs show
+  useEffect(() => {
+    if (!settingsOpen || !scrollToSettings.current) return
+    scrollToSettings.current = false
+    const el = nav_.current
+    el?.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+  }, [settingsOpen])
 
   function nav(path: Path) {
     go(path)
@@ -104,7 +112,7 @@ export function Layout({ email, admin, title, children }: { email: string; admin
           </div>
         )}
 
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 pt-3">
+        <nav ref={nav_} className="flex-1 space-y-1 overflow-y-auto px-3 pt-3">
           <button className={item(route.name === 'list' || route.name === 'child' || route.name === 'edit')} onClick={() => nav('/')}>
             <UsersIcon />
             {t('children')}
@@ -150,7 +158,7 @@ export function Layout({ email, admin, title, children }: { email: string; admin
             className={item(inSettings && !settingsOpen)}
             onClick={() => {
               // opening it: scroll down so all its tabs show, not only the first ones
-              if (!settingsOpen) requestAnimationFrame(() => settingsList.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }))
+              scrollToSettings.current = !settingsOpen
               setSettingsOpen(v => !v)
             }}
             aria-expanded={settingsOpen}
@@ -165,7 +173,7 @@ export function Layout({ email, admin, title, children }: { email: string; admin
             <ChevronDownIcon className={`size-4 shrink-0 text-slate-400 transition-transform ${settingsOpen ? 'rotate-180' : ''}`} />
           </button>
           {settingsOpen && (
-            <div ref={settingsList} className="ms-5 space-y-0.5 border-s border-slate-200 ps-2 dark:border-slate-800">
+            <div className="ms-5 space-y-0.5 border-s border-slate-200 ps-2 dark:border-slate-800">
               {settingsTabs(admin).map(s => (
                 <button key={s.name} className={item(route.name === s.name) + ' py-1.5 text-sm'} onClick={() => nav(s.path)}>
                   <span className="flex-1">{t(s.label)}</span>
