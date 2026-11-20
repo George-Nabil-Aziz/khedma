@@ -4,13 +4,15 @@ import { go } from '../lib/router'
 import { useInstall } from '../lib/install'
 import { useStore } from '../lib/store'
 import {
-  DEFAULT_REMINDERS,
   WHENS,
   currentSubscription,
   disablePush,
   enablePush,
+  loadReminderDefaults,
   loadReminders,
   pushSupported,
+  sameReminders,
+  saveReminderDefaults,
   saveReminders,
   testPush,
   type Reminder,
@@ -38,7 +40,7 @@ const card = 'space-y-4 rounded-xl border border-slate-200 bg-white p-4 dark:bor
  * الإعدادات → الإشعارات: birthday reminders. Turned on per device; when they come (how many
  * times, which days, what time) is mine, the same on all my devices.
  */
-export function NotificationsPage() {
+export function NotificationsPage({ admin }: { admin: boolean }) {
   const { t, lang } = useI18n()
   const { online } = useStore()
   // "8 ص" / "9 م" — the hour the way people say it
@@ -51,21 +53,47 @@ export function NotificationsPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
+  // the admin's times (or the built-in ones) — what "الافتراضي" goes back to
+  const [defaults, setDefaults] = useState<Reminder[] | null>(null)
+  const [defaultsSaved, setDefaultsSaved] = useState(false)
 
   useEffect(() => {
     if (!online || reminders) return
-    loadReminders()
-      .then(r => {
+    Promise.all([loadReminders(), loadReminderDefaults()])
+      .then(([r, d]) => {
+        setDefaults(d)
         setHasSaved(!!r)
-        setReminders(r ?? DEFAULT_REMINDERS)
+        setReminders(r ?? d)
       })
       .catch(e => setError(e.message))
   }, [online, reminders])
+
+  // back to the admin's times, saved at once (like "الافتراضي" in the columns menu)
+  function reset() {
+    if (!defaults) return
+    setReminders(defaults)
+    save(defaults)
+  }
+
+  /** Admins: the times on screen become everyone's default. */
+  async function saveAsDefault() {
+    if (!reminders) return
+    setBusy(true)
+    setError('')
+    const err = await saveReminderDefaults(reminders)
+    setBusy(false)
+    if (err) return setError(err)
+    setDefaults(reminders)
+    setDefaultsSaved(true)
+  }
+
+  const isDefault = !!reminders && !!defaults && sameReminders(reminders, defaults)
 
   function change(next: Reminder[]) {
     setReminders(next)
     setChanged(true)
     setSaved(false)
+    setDefaultsSaved(false)
   }
 
   async function save(list = reminders) {
@@ -156,6 +184,14 @@ export function NotificationsPage() {
                 <PlusIcon />
                 {t('addReminder')}
               </button>
+              <button
+                onClick={reset}
+                disabled={!online || busy || !defaults || isDefault}
+                title={t('remindersResetHelp')}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:hover:bg-slate-800"
+              >
+                {t('resetDefault')}
+              </button>
               <span className="flex-1" />
               {saved && <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{t('saved')}</span>}
               <button
@@ -166,6 +202,20 @@ export function NotificationsPage() {
                 {t('save')}
               </button>
             </div>
+
+            {admin && (
+              <div className="flex flex-wrap items-center gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">
+                <p className="min-w-0 flex-1 text-sm text-slate-500">{t('remindersDefaultHelp')}</p>
+                {defaultsSaved && <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{t('saved')}</span>}
+                <button
+                  onClick={saveAsDefault}
+                  disabled={!online || busy || isDefault}
+                  className="rounded-lg border border-indigo-200 px-3 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-500/30 dark:text-indigo-300 dark:hover:bg-indigo-500/10"
+                >
+                  {t('remindersSaveDefault')}
+                </button>
+              </div>
+            )}
           </>
         )}
 

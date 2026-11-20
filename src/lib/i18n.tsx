@@ -349,6 +349,12 @@ const dict = {
   remindSameDay: { ar: 'يوم عيد الميلاد نفسه', en: 'On the birthday' },
   addReminder: { ar: 'ميعاد تاني', en: 'Add a time' },
   removeReminder: { ar: 'شيل الميعاد ده', en: 'Remove this time' },
+  remindersResetHelp: { ar: 'رجّع المواعيد اللي الأدمن حطها', en: 'Back to the times the admin set' },
+  remindersDefaultHelp: {
+    ar: 'للأدمن: المواعيد اللي فوق تبقى الافتراضي للكل. ده اللي بيرجعله أي حد يدوس "الافتراضي"، واللي بيوصل لأي حد ما اختارش مواعيد لنفسه',
+    en: 'Admins: make the times above everyone\'s default. "Default" goes back to them, and anyone who never picked their own gets them',
+  },
+  remindersSaveDefault: { ar: 'خليها الافتراضي للكل', en: 'Make default for everyone' },
   notificationsHint: { ar: 'الإشعارات: شغّلها على كل جهاز من الإعدادات ← الإشعارات، اختار كام مرة وإمتى يوصلك التذكير، دوسة على الإشعار بتفتح صفحة الولد', en: 'Notifications: turn them on on each device in Settings → Notifications, pick how many times and when you are reminded, tapping one opens the child' },
   installApp: { ar: 'تحميل التطبيق', en: 'Install the app' },
   installHelp: { ar: 'سطّبه على موبايلك أو الكمبيوتر، يفتح بأيقونته زي أي تطبيق ويشتغل من غير نت', en: 'Install it on your phone or computer: it opens from its icon like any app and works offline' },

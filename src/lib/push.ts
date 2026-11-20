@@ -15,7 +15,7 @@ export type Reminder = { when: When; time: string }
 
 export const WHENS: When[] = ['friday_before', 'week_before', 'two_days_before', 'day_before', 'same_day']
 
-/** What a servant gets until they change it: the Friday before, the night before, the morning of. */
+/** Built in, for when no admin has set the default times yet: the Friday before, the night before, the morning of. */
 export const DEFAULT_REMINDERS: Reminder[] = [
   { when: 'friday_before', time: '10:00' },
   { when: 'day_before', time: '21:00' },
@@ -87,7 +87,7 @@ export async function keepPushOn(lang: string) {
     const sub = await subscribe(reg)
     if (typeof sub === 'string' || (await saveSubscription(sub))) return
     // the server sends only the times I saved: someone who never saved any gets the usual ones
-    if (!(await loadReminders())) await saveReminders(DEFAULT_REMINDERS, lang)
+    if (!(await loadReminders())) await saveReminders(await loadReminderDefaults(), lang)
   } catch {
     /* offline, or the browser refused: try again next time */
   }
@@ -117,6 +117,21 @@ export async function loadReminders(): Promise<Reminder[] | null> {
   if (error) throw new Error(error.message)
   return (data?.reminders as Reminder[] | undefined) ?? null
 }
+
+/** What a servant gets until they change it, and what "الافتراضي" goes back to: the admin's times, or the built-in ones. */
+export async function loadReminderDefaults(): Promise<Reminder[]> {
+  const { data } = await supabase.from('settings').select('value').eq('key', 'reminder_defaults').maybeSingle()
+  return Array.isArray(data?.value) ? (data.value as Reminder[]) : DEFAULT_REMINDERS
+}
+
+/** Admins only (034): these times become everyone's default. */
+export async function saveReminderDefaults(reminders: Reminder[]) {
+  const { error } = await supabase.rpc('set_reminder_defaults', { p_value: reminders })
+  return error?.message ?? null
+}
+
+export const sameReminders = (a: Reminder[], b: Reminder[]) =>
+  a.length === b.length && a.every((r, i) => r.when === b[i].when && r.time.slice(0, 2) === b[i].time.slice(0, 2))
 
 export async function saveReminders(reminders: Reminder[], lang: string) {
   const { data } = await supabase.auth.getSession()

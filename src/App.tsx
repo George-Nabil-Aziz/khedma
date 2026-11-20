@@ -99,7 +99,7 @@ function Routes({ email, userId, admin }: { email: string; userId: string; admin
   if (route.name === 'sync') return settings(<SyncPage />)
   if (route.name === 'install') return settings(<InstallPage />)
   if (route.name === 'help') return settings(<HelpPage admin={admin} />)
-  if (route.name === 'notifications') return settings(<NotificationsPage />)
+  if (route.name === 'notifications') return settings(<NotificationsPage admin={admin} />)
   if (route.name === 'profile') return page('profile', <ProfilePage email={email} admin={admin} />)
   if (admin && route.name === 'users') return page('users', <UsersPage myId={userId} />)
   if (admin && route.name === 'audit') return page('audit', <AuditPage />)

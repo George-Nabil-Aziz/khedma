@@ -144,7 +144,8 @@ function message(list: { kid: Kid; birthday: string }[], today: string, lang: st
     ar ? `${m.kid.full_name} — ${when(m.birthday)} (${age(m.kid, m.birthday)} سنة)` : `${m.kid.full_name} — ${when(m.birthday)} (turns ${age(m.kid, m.birthday)})`
   if (list.length === 1)
     return {
-      title: ar ? `🎂 عيد ميلاد ${first.kid.full_name}` : `🎂 ${first.kid.full_name}'s birthday`,
+      // plain text only: a notification can't show bold (and Arabic has no bold letters to fake it with)
+      title: ar ? `🎂 عيد ميلاد: ${first.kid.full_name}` : `🎂 Birthday: ${first.kid.full_name}`,
       body: line(first),
       url: `#/child/${first.kid.client_id}`,
       tag: `bd-${first.kid.client_id}-${first.birthday}`,
