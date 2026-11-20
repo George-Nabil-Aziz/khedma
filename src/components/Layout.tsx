@@ -64,7 +64,7 @@ export function Layout({ email, admin, title, children }: { email: string; admin
       () => {},
       () => {},
     )
-    // signing out on purpose: this device stops getting my birthday notifications (the 12-hour
+    // signing out on purpose: this device stops getting my birthday notifications (the 30-day
     // idle sign-out keeps them — it is still my phone)
     await disablePush()
     await resetStore()

@@ -35,7 +35,7 @@ const input =
 const card = 'space-y-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900'
 
 /**
- * الإعدادات → التنبيهات: birthday reminders. Turned on per device; when they come (how many
+ * الإعدادات → الإشعارات: birthday reminders. Turned on per device; when they come (how many
  * times, which days, what time) is mine, the same on all my devices.
  */
 export function NotificationsPage() {
@@ -105,38 +105,41 @@ export function NotificationsPage() {
             {reminders.length === 0 && <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-500 dark:bg-slate-800/60">{t('noReminders')}</p>}
             <ul className="space-y-2">
               {reminders.map((r, i) => (
-                <li key={i} className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 p-2 dark:border-slate-700">
+                // a phone: the number and the bin at the sides, the two choices one under the other, full width
+                <li key={i} className="flex items-center gap-2 rounded-lg border border-slate-200 p-2 dark:border-slate-700">
                   <span className="grid size-7 shrink-0 place-items-center rounded-full bg-indigo-50 text-sm font-bold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">{i + 1}</span>
-                  <select
-                    value={r.when}
-                    onChange={e => change(reminders.map((x, j) => (j === i ? { ...x, when: e.target.value as When } : x)))}
-                    className={`${input} min-w-0 flex-1`}
-                    aria-label={t('remindWhen')}
-                  >
-                    {WHENS.map(w => (
-                      <option key={w} value={w}>
-                        {t(WHEN_LABEL[w])}
-                      </option>
-                    ))}
-                  </select>
-                  {/* whole hours only: the server checks once an hour, on the hour */}
-                  <select
-                    value={r.time.slice(0, 2) + ':00'}
-                    onChange={e => change(reminders.map((x, j) => (j === i ? { ...x, time: e.target.value } : x)))}
-                    className={`${input} w-36`}
-                    aria-label={t('remindTime')}
-                  >
-                    {HOURS.map(h => (
-                      <option key={h} value={h}>
-                        {hourLabel(h)}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row">
+                    <select
+                      value={r.when}
+                      onChange={e => change(reminders.map((x, j) => (j === i ? { ...x, when: e.target.value as When } : x)))}
+                      className={`${input} w-full min-w-0 sm:flex-1`}
+                      aria-label={t('remindWhen')}
+                    >
+                      {WHENS.map(w => (
+                        <option key={w} value={w}>
+                          {t(WHEN_LABEL[w])}
+                        </option>
+                      ))}
+                    </select>
+                    {/* whole hours only: the server checks once an hour, on the hour */}
+                    <select
+                      value={r.time.slice(0, 2) + ':00'}
+                      onChange={e => change(reminders.map((x, j) => (j === i ? { ...x, time: e.target.value } : x)))}
+                      className={`${input} w-full sm:w-36`}
+                      aria-label={t('remindTime')}
+                    >
+                      {HOURS.map(h => (
+                        <option key={h} value={h}>
+                          {hourLabel(h)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   <button
                     onClick={() => change(reminders.filter((_, j) => j !== i))}
                     title={t('removeReminder')}
                     aria-label={t('removeReminder')}
-                    className="grid size-9 place-items-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10"
+                    className="grid size-9 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10"
                   >
                     <TrashIcon />
                   </button>

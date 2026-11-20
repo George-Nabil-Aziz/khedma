@@ -1,17 +1,17 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import { load, save } from './storage'
 import { getState, resetStore, sync, useStore } from './store'
 
 /*
- * Sign out after 12 hours with no activity. The last activity time sits in localStorage, so it is
- * shared by every open tab and still counts when the app was closed: opening it the next day
+ * Sign out after 30 days with no activity. The last activity time sits in localStorage, so it is
+ * shared by every open tab and still counts when the app was closed: opening it a month later
  * signs out straight away.
  * Changes not sent yet would be wiped by signing out, so in that case it tries to send them
  * first, and waits (checking again later) while they still can't go — e.g. offline.
  */
 
-const LIMIT = 12 * 60 * 60 * 1000
+const LIMIT = 30 * 24 * 60 * 60 * 1000
 const LAST_ACTIVE = 'lastActive' // cleared by resetStore()
 const EVENTS = ['pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll'] as const
 
@@ -20,7 +20,7 @@ const expired = () => Date.now() - lastActive() >= LIMIT
 
 let lastWrite = 0
 function touch() {
-  // the first click after the 12 hours must not count as activity — it signs out instead
+  // the first click after the 30 days must not count as activity — it signs out instead
   if (expired()) return void check()
   const now = Date.now()
   if (now - lastWrite < 30_000) return // one write per 30 s is plenty
@@ -63,9 +63,14 @@ export async function signOutExpired() {
   await supabase.auth.signOut({ scope: 'local' })
 }
 
-/** Mounted while signed in. Starts counting once the local data is loaded (it holds the unsent changes). */
+/**
+ * Mounted while signed in. Starts counting once the local data is loaded (it holds the unsent changes).
+ * Returns true while the 30 days were already over when the app opened and it is signing out, so
+ * nothing is shown meanwhile. Turns false if it can't sign out yet (changes not sent, e.g. offline).
+ */
 export function useIdleSignOut() {
   const { loaded, syncError } = useStore()
+  const [expiring, setExpiring] = useState(() => lastActive() > 0 && expired())
 
   // A sync turned down because the sign-in is over: without signing out, new changes would only
   // pile up on this device.
@@ -76,7 +81,7 @@ export function useIdleSignOut() {
   useEffect(() => {
     if (!loaded) return
     if (!lastActive()) save(LAST_ACTIVE, String(Date.now())) // just signed in
-    check()
+    check().finally(() => setExpiring(false))
     const onVisible = () => document.visibilityState === 'visible' && check()
     EVENTS.forEach(e => window.addEventListener(e, touch, { passive: true }))
     document.addEventListener('visibilitychange', onVisible)
@@ -87,4 +92,6 @@ export function useIdleSignOut() {
       clearInterval(timer)
     }
   }, [loaded])
+
+  return expiring
 }

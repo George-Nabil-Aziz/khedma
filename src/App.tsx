@@ -4,6 +4,7 @@ import { supabase } from './lib/supabase'
 import { useI18n, type TKey } from './lib/i18n'
 import { useRoute } from './lib/router'
 import { useIdleSignOut } from './lib/idle'
+import { keepPushOn } from './lib/push'
 import { activeClasses, getState, startStore, useStore } from './lib/store'
 import { Layout } from './components/Layout'
 import { AccountGate } from './components/AccountGate'
@@ -65,15 +66,17 @@ function toChildren() {
 }
 
 function Routes({ email, userId, admin }: { email: string; userId: string; admin: boolean }) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const route = useRoute()
   const { classes, lastSyncAt, syncError } = useStore()
 
   // Mounted only once AccountGate let the account in — then start loading / syncing.
   useEffect(() => {
     startStore(userId)
+    keepPushOn(lang)
   }, [userId])
-  useIdleSignOut()
+  // opened after 30 days idle: straight to signing in, never the app first and then out on a tap
+  if (useIdleSignOut()) return <div className="h-full" />
 
   const page = (title: TKey, body: ReactNode) => (
     <Layout email={email} admin={admin} title={t(title)}>

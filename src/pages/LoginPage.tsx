@@ -60,7 +60,7 @@ function SignIn({ onForgot }: { onForgot: () => void }) {
     e.preventDefault()
     setBusy(true)
     setError('')
-    // start the 12-hour idle clock (lib/idle.ts) afresh — before signing in, as the app opens right away
+    // start the 30-day idle clock (lib/idle.ts) afresh — before signing in, as the app opens right away
     save('lastActive', String(Date.now()))
     // and it opens on الأولاد, not on the page the last account was on
     go('/')

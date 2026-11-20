@@ -1,9 +1,10 @@
 import { supabase } from './supabase'
+import { load, save } from './storage'
 
 /*
  * Birthday notifications on this device. The browser gives a "subscription" (where to send to);
  * it is saved in push_subscriptions, and the khedma-birthdays Edge Function sends the reminders
- * picked in الإعدادات → التنبيهات (notification_settings) to every device of mine.
+ * picked in الإعدادات → الإشعارات (notification_settings) to every device of mine.
  * iPhone: only inside the installed app (iOS 16.4+), not in Safari itself.
  */
 
@@ -48,22 +49,53 @@ async function saveSubscription(sub: PushSubscription) {
   return error?.message ?? null
 }
 
+// "1" once I turned notifications off here myself (إيقاف, or signing out): then they stay off
+// until I turn them on again. Not cleared by signing out.
+const OFF = 'pushOff'
+
+/** This device's subscription, made now if the browser has none (the permission is already given). */
+async function subscribe(reg: ServiceWorkerRegistration): Promise<PushSubscription | string> {
+  const sub = await reg.pushManager.getSubscription()
+  if (sub) return sub
+  const { data, error } = await supabase.functions.invoke(FN, { body: { action: 'key' } })
+  if (error || !data?.key) return error?.message ?? 'No key'
+  return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(data.key) })
+}
+
 /** Turns notifications on here. Returns an error key / message, or null when done. */
 export async function enablePush(): Promise<'denied' | 'noWorker' | string | null> {
   if ((await Notification.requestPermission()) !== 'granted') return 'denied'
   const reg = await worker()
   if (!reg) return 'noWorker'
-  let sub = await reg.pushManager.getSubscription()
-  if (!sub) {
-    const { data, error } = await supabase.functions.invoke(FN, { body: { action: 'key' } })
-    if (error || !data?.key) return error?.message ?? 'No key'
-    sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(data.key) })
-  }
+  const sub = await subscribe(reg)
+  if (typeof sub === 'string') return sub
+  save(OFF, '')
   return saveSubscription(sub)
+}
+
+/**
+ * On every app start, without asking: once notifications were allowed on this device, keep them
+ * on. The browser may have dropped or renewed the subscription, or the server dropped it, and then
+ * the reminders would stop coming without anyone noticing. Skipped when I turned them off myself.
+ * The permission itself can only be given by me (the browser asks), so a blocked one stays blocked.
+ */
+export async function keepPushOn(lang: string) {
+  if (!pushSupported() || Notification.permission !== 'granted' || load(OFF) === '1') return
+  try {
+    const reg = await worker()
+    if (!reg) return
+    const sub = await subscribe(reg)
+    if (typeof sub === 'string' || (await saveSubscription(sub))) return
+    // the server sends only the times I saved: someone who never saved any gets the usual ones
+    if (!(await loadReminders())) await saveReminders(DEFAULT_REMINDERS, lang)
+  } catch {
+    /* offline, or the browser refused: try again next time */
+  }
 }
 
 /** Stops notifications on this device (used on sign-out too, so the next person doesn't get mine). */
 export async function disablePush() {
+  save(OFF, '1')
   const sub = await currentSubscription().catch(() => null)
   if (!sub) return
   await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint).then(

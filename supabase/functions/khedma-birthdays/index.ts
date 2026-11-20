@@ -1,5 +1,5 @@
 // Supabase Edge Function: khedma-birthdays
-// Sends the birthday reminders each servant picked (الإعدادات → التنبيهات) as push notifications.
+// Sends the birthday reminders each servant picked (الإعدادات → الإشعارات) as push notifications.
 //   - pg_cron calls it every hour (027_birthday_cron.sql) with the x-cron-secret header.
 //   - The app calls it signed in for { action: 'key' } (the public key, to turn notifications on)
 //     and { action: 'test' } (a test notification to my own devices).
@@ -54,7 +54,7 @@ Deno.serve(async req => {
     const { data } = await db.from('push_subscriptions').select('*').eq('user_id', caller.user.id)
     const subs = (data ?? []) as Sub[]
     const ar = body.lang !== 'en'
-    const payload = { title: ar ? '🎂 تجربة' : '🎂 Test', body: ar ? 'التنبيهات شغالة على الجهاز ده' : 'Notifications work on this device', url: '#/' }
+    const payload = { title: ar ? '🎂 تجربة' : '🎂 Test', body: ar ? 'الإشعارات شغالة على الجهاز ده' : 'Notifications work on this device', url: '#/' }
     const sent = await Promise.all(subs.map(s => push(s, payload)))
     return json({ devices: subs.length, sent: sent.filter(Boolean).length })
   }
