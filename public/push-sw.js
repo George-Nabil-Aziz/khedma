@@ -14,7 +14,9 @@ self.addEventListener('push', event => {
       body: data.body || '',
       tag: data.tag,
       icon: 'pwa-192x192.png',
-      badge: 'pwa-64x64.png',
+      // the small icon in the phone's status bar: Android shows only its shape, so the white cross on
+      // nothing (a full square would show as a plain white square)
+      badge: 'badge-96x96.png',
       lang: 'ar',
       dir: 'auto',
       data: { url: data.url || '#/' },
