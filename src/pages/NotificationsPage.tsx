@@ -221,7 +221,7 @@ function ThisDevice({ onEnabled }: { onEnabled: () => void }) {
     setNote('error' in r ? { text: r.error, ok: false } : { text: t('notifTestSent').replace('{n}', String(r.sent)), ok: r.sent > 0 })
   }
 
-  const btn = 'rounded-lg px-4 py-2 font-semibold disabled:opacity-50'
+  const btn = 'whitespace-nowrap rounded-lg px-4 py-2 font-semibold disabled:opacity-50'
 
   return (
     <section className={card}>
@@ -245,8 +245,9 @@ function ThisDevice({ onEnabled }: { onEnabled: () => void }) {
       ) : denied ? (
         <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">{t('notifDenied')}</p>
       ) : on ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="flex-1 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">{t('notifOn')}</span>
+        // a phone: the green line on its own, the two buttons under it, half the width each
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+          <span className="col-span-2 rounded-lg text-center sm:flex-1 sm:text-start bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">{t('notifOn')}</span>
           <button onClick={test} disabled={busy || !online} className={`${btn} border border-indigo-200 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-500/30 dark:text-indigo-300 dark:hover:bg-indigo-500/10`}>
             {t('notifTest')}
           </button>
