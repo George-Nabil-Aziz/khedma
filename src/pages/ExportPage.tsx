@@ -25,6 +25,9 @@ export function ExportPage() {
   // الفترة of كشف المتابعة: the whole year, one of its four quarters, or a month picked from a list
   const [period, setPeriod] = useState<'year' | 'month' | number>('year') // a number = that quarter
   const [month, setMonth] = useState('')
+  // كشف المتابعة: الافتقاد too, or الحضور only; the whole year as one sheet per quarter, or one sheet
+  const [visits, setVisits] = useState(true)
+  const [byQuarter, setByQuarter] = useState(true)
   const months = useMemo(() => (c ? classMonths(c) : []), [c, store.yearEndWeeks])
   const quarters = useMemo(() => (c ? classQuarters(c) : []), [c, store.yearEndWeeks])
 
@@ -84,9 +87,16 @@ export function ExportPage() {
           : period === 'month'
             ? { months: [month], label: months.find(m => m.value === month)?.label ?? month }
             : { months: quarters[period].months, label: `${quarters[period].label} (${quarters[period].range})` }
-      const sheet = table === 'children' ? childrenSheet(c, header, picked) : attendanceSheet(c, header, chosen)
-      if (format === 'excel') await (await import('../lib/exportExcel')).exportExcel(sheet)
-      else await (await import('../lib/exportPdf')).exportPdf(sheet)
+      const sheets =
+        table === 'children'
+          ? [childrenSheet(c, header, picked)]
+          : period === 'year' && byQuarter && quarters.length > 1
+            ? quarters.map(q => ({ ...attendanceSheet(c, header, { months: q.months, label: q.label }, visits), tab: q.label }))
+            : [attendanceSheet(c, header, chosen, visits)]
+      // the year in quarters: one file, named after the year
+      const fileName = sheets.length > 1 ? attendanceSheet(c, header, chosen, visits).fileName : sheets[0].fileName
+      if (format === 'excel') await (await import('../lib/exportExcel')).exportExcel(sheets, fileName)
+      else await (await import('../lib/exportPdf')).exportPdf(sheets, fileName)
     } catch (e) {
       setError(`${t('exportFailed')}: ${(e as Error).message}`)
     } finally {
@@ -130,6 +140,12 @@ export function ExportPage() {
           <div className="mt-4 space-y-2">
             <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">{t('exportPeriod')}</span>
             <Period on={period === 'year'} onClick={() => setPeriod('year')} title={t('wholeYear')} sub={c.service_year} />
+            {period === 'year' && quarters.length > 1 && (
+              <div className="grid grid-cols-2 gap-2 ps-4">
+                <Period small on={byQuarter} onClick={() => setByQuarter(true)} title={t('yearByQuarter')} sub={t('yearByQuarterHint')} />
+                <Period small on={!byQuarter} onClick={() => setByQuarter(false)} title={t('yearOneSheet')} sub={t('yearOneSheetHint')} />
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {quarters.map((q, i) => (
                 <Period key={i} on={period === i} onClick={() => setPeriod(i)} title={q.label} sub={q.range} />
@@ -145,6 +161,11 @@ export function ExportPage() {
                 ))}
               </select>
             )}
+            <span className="block pt-2 text-sm font-semibold text-slate-600 dark:text-slate-300">{t('exportWhat')}</span>
+            <div className="grid grid-cols-2 gap-2">
+              <Period on={visits} onClick={() => setVisits(true)} title={t('attendanceAndVisits')} />
+              <Period on={!visits} onClick={() => setVisits(false)} title={t('attendanceOnly')} />
+            </div>
           </div>
         )}
       </Step>
@@ -186,12 +207,12 @@ export function ExportPage() {
 }
 
 /** One choice of الفترة: a box, filled when chosen. */
-function Period({ on, onClick, title, sub }: { on: boolean; onClick: () => void; title: string; sub?: string }) {
+function Period({ on, onClick, title, sub, small }: { on: boolean; onClick: () => void; title: string; sub?: string; small?: boolean }) {
   return (
     <button
       onClick={onClick}
       aria-pressed={on}
-      className={`w-full rounded-lg border px-3 py-2 text-center ${
+      className={`w-full rounded-lg border px-3 text-center ${small ? 'py-1.5 text-sm' : 'py-2'} ${
         on ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-500/20 dark:bg-indigo-500/10' : 'border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800'
       }`}
     >

@@ -14,9 +14,17 @@ const thin = { style: 'thin' as const, color: { argb: 'FF000000' } }
 const box = { top: thin, left: thin, bottom: thin, right: thin }
 const solid = (argb: string): ExcelJS.Fill => ({ type: 'pattern', pattern: 'solid', fgColor: { argb }, bgColor: { argb } })
 
-export async function exportExcel(sheet: Sheet) {
+/** One sheet, or several (the year's quarters) as tabs of one file. */
+export async function exportExcel(sheets: Sheet[], fileName = sheets[0].fileName) {
   const wb = new ExcelJS.Workbook()
-  const ws = wb.addWorksheet(sheet.kind === 'children' ? 'الأولاد' : 'المتابعة', {
+  const logo = await logoBytes()
+  for (const sheet of sheets) addSheet(wb, sheet, logo)
+  const buffer = await wb.xlsx.writeBuffer()
+  download(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `${fileName}.xlsx`)
+}
+
+function addSheet(wb: ExcelJS.Workbook, sheet: Sheet, logo: Awaited<ReturnType<typeof logoBytes>>) {
+  const ws = wb.addWorksheet(sheet.tab ?? (sheet.kind === 'children' ? 'الأولاد' : 'المتابعة'), {
     properties: { tabColor: { argb: 'FF92D050' } },
     views: [{ rightToLeft: true }],
     pageSetup: {
@@ -46,7 +54,6 @@ export async function exportExcel(sheet: Sheet) {
   // the paper sheet's own places need its 16 columns (or more); fewer columns get the flexible header
   const paper = sheet.kind === 'children' && cols >= 15
   const room = cols - 2 // columns beside the logo
-  const logo = await logoBytes()
   if (logo) {
     const id = wb.addImage({ buffer: logo, extension: 'jpeg' })
     ws.addImage(id, { tl: { col: paper ? 1.03 : 0.05, row: 0 }, ext: { width: 146, height: 80 } })
@@ -183,10 +190,7 @@ export async function exportExcel(sheet: Sheet) {
     r++
   }
 
-  if (sheet.kind === 'attendance') ws.views = [{ rightToLeft: true, state: 'frozen', xSplit: 3, ySplit: h2 }]
-
-  const buffer = await wb.xlsx.writeBuffer()
-  download(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `${sheet.fileName}.xlsx`)
+  if (sheet.kind === 'attendance') ws.views = [{ rightToLeft: true, state: 'frozen', xSplit: sheet.lead ?? 3, ySplit: h2 }]
 }
 
 /** Width units one character of the sheet's font takes (on the safe side), and of the title's. */

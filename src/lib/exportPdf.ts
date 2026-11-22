@@ -18,7 +18,8 @@ const esc = (v: unknown) =>
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
 
-export async function exportPdf(sheet: Sheet) {
+/** One sheet, or several (the year's quarters) one after the other, each starting on a new page. */
+export async function exportPdf(sheets: Sheet[], fileName = sheets[0].fileName) {
   await document.fonts.ready
   const host = document.createElement('div')
   host.setAttribute('dir', 'rtl')
@@ -29,7 +30,7 @@ export async function exportPdf(sheet: Sheet) {
   const pw = pdf.internal.pageSize.getWidth()
   const ph = pdf.internal.pageSize.getHeight()
   try {
-    const parts = byDays(sheet)
+    const parts = sheets.flatMap(byDays)
     const pages: { html: string }[] = []
     for (const part of parts) {
       // measure every row at page width, then fill pages
@@ -66,7 +67,7 @@ export async function exportPdf(sheet: Sheet) {
   } finally {
     host.remove()
   }
-  download(pdf.output('blob'), `${sheet.fileName}.pdf`)
+  download(pdf.output('blob'), `${fileName}.pdf`)
 }
 
 /** Rows kept together on one page: a child's الحضور and الافتقاد, a band with the row after it. */
@@ -92,13 +93,14 @@ function byDays(sheet: Sheet): Sheet[] {
   const out: Sheet[] = []
   const groups = Math.ceil(days / MAX_DAYS)
   const size = Math.ceil(days / groups)
+  const lead = sheet.lead ?? 3
   for (let from = 0; from < days; from += size) {
     const to = Math.min(days, from + size)
-    const keep = (cells: unknown[]) => [...cells.slice(0, 3), ...cells.slice(3 + from, 3 + to), cells[cells.length - 1]]
+    const keep = (cells: unknown[]) => [...cells.slice(0, lead), ...cells.slice(lead + from, lead + to), cells[cells.length - 1]]
     // the months over these days only
     const months: HeadCell[] = []
     let k = 0
-    for (const m of sheet.head1.slice(3, -1)) {
+    for (const m of sheet.head1.slice(lead, -1)) {
       const a = Math.max(k, from)
       const b = Math.min(k + m.span, to)
       if (b > a) months.push({ ...m, span: b - a })
@@ -107,7 +109,7 @@ function byDays(sheet: Sheet): Sheet[] {
     out.push({
       ...sheet,
       widths: keep(sheet.widths) as number[],
-      head1: [...sheet.head1.slice(0, 3), ...months, sheet.head1[sheet.head1.length - 1]],
+      head1: [...sheet.head1.slice(0, lead), ...months, sheet.head1[sheet.head1.length - 1]],
       head2: sheet.head2.slice(from, to),
       rows: sheet.rows.map(r => ('band' in r ? r : { ...r, cells: keep(r.cells) as typeof r.cells })),
     })
@@ -192,7 +194,7 @@ function header(sheet: Sheet): string {
   const pairs = SHEET_LABELS.map(l => box(l.label, '#deeaf6', 'text-decoration:underline;') + box(sheet.header[l.key], '#f2f2f2', 'text-align:center;')).join('')
   return `<div data-header style="display:flex;align-items:center;gap:16px;margin-bottom:8px;">
     <img src="${logoUrl()}" style="width:146px;height:80px;object-fit:contain;flex:none" />
-    <div style="flex:1;text-align:center;font-size:28px;font-weight:800;line-height:1.3">${esc(sheet.header.title)}</div>
+    <div style="flex:1;text-align:center;font-size:28px;font-weight:800;line-height:1.3">${esc(sheet.header.title)}${sheet.tab ? `<div style="font-size:16px;font-weight:700">${esc(sheet.tab)}</div>` : ''}</div>
     <div style="display:grid;grid-template-columns:auto minmax(120px,190px) auto minmax(120px,190px);gap:3px 6px;flex:none">${pairs}</div>
   </div>`
 }

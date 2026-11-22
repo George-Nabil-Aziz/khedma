@@ -53,8 +53,7 @@ Deno.serve(async req => {
   if (body.action === 'test') {
     const { data } = await db.from('push_subscriptions').select('*').eq('user_id', caller.user.id)
     const subs = (data ?? []) as Sub[]
-    const ar = body.lang !== 'en'
-    const payload = { title: ar ? '🎂 تجربة' : '🎂 Test', body: ar ? 'الإشعارات شغالة على الجهاز ده' : 'Notifications work on this device', url: '#/' }
+    const payload = await testMessage(caller.user.id, body.lang === 'en' ? 'en' : 'ar')
     const sent = await Promise.all(subs.map(s => push(s, payload)))
     return json({ devices: subs.length, sent: sent.filter(Boolean).length })
   }
@@ -126,6 +125,44 @@ async function run() {
     for (const s of subsOf.get(d.user) ?? []) if (await push(s, payload)) sent++
   }
   return { sent }
+}
+
+/**
+ * The test: exactly what a real reminder looks like, about the child of my classes whose birthday
+ * comes next (a made-up name when my classes have no birthdays yet).
+ */
+async function testMessage(user: string, lang: string) {
+  const today = cairoNow().day
+  const { data: members } = await db.from('class_members').select('class_id').eq('user_id', user).is('left_at', null)
+  const classIds = (members ?? []).map(m => m.class_id)
+  let next: { kid: Kid; birthday: string } | null = null
+  if (classIds.length) {
+    const { data } = await db
+      .from('children')
+      .select('client_id,full_name,birth_date,class_id')
+      .in('class_id', classIds)
+      .is('moved_out_on', null)
+      .not('birth_date', 'is', null)
+    for (const kid of (data ?? []) as Kid[]) {
+      const birthday = nextBirthday(kid.birth_date, today)
+      if (birthday && (!next || birthday < next.birthday)) next = { kid, birthday }
+    }
+  }
+  if (!next) {
+    const birthday = addDays(today, 1)
+    next = { kid: { client_id: '', full_name: lang === 'en' ? 'Child name' : 'اسم الطفل', birth_date: `${Number(birthday.slice(0, 4)) - 10}${birthday.slice(4)}`, class_id: '' }, birthday }
+  }
+  const m = message([next], today, lang)
+  return { ...m, url: next.kid.client_id ? m.url : '#/', tag: 'bd-test' }
+}
+
+/** The first day from `today` on that is this child's birthday. */
+function nextBirthday(birthDate: string, today: string): string | null {
+  for (let n = 0; n <= 366; n++) {
+    const day = addDays(today, n)
+    if (sameBirthday(birthDate, day)) return day
+  }
+  return null
 }
 
 /** The notification's words: one child, or all of them in one notification. */

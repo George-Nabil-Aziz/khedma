@@ -300,7 +300,8 @@ function PhoneGroup({
                 placeholder="01xxxxxxxxx"
                 className={inputClass(!!errors[`phone:${i}`])}
                 value={p.number}
-                onChange={e => update(i, { number: e.target.value })}
+                // a number pasted from WhatsApp or the contacts comes with spaces (and invisible direction marks): dropped
+                onChange={e => update(i, { number: e.target.value.replace(/[\s\p{Cf}]/gu, '') })}
               />
               <button
                 type="button"

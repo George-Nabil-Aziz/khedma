@@ -30,6 +30,10 @@ export type Sheet = {
   alignStart: number[]
   /** A file name without extension. */
   fileName: string
+  /** كشف المتابعة: the columns before the days (م, the name, and البيان when it has الافتقاد too). */
+  lead?: number
+  /** The Excel tab's name, when not the table's own (a quarter of the year). */
+  tab?: string
 }
 
 export const SHEET_LABELS: { key: keyof SheetInfo | 'year'; label: string }[] = [
@@ -305,8 +309,11 @@ function classDays(c: ClassInfo, months: string[] | null): Date[] {
 
 const VISIT_SIGN = { phone: '📞', home: '🏠', done: '✓' } as const
 
-/** `period`: the months to show ("yyyy-mm"; null = the whole year), and their name for the file. */
-export function attendanceSheet(c: ClassInfo, header: Sheet['header'], period: { months: string[] | null; label: string }): Sheet {
+/**
+ * `period`: the months to show ("yyyy-mm"; null = the whole year), and their name for the file.
+ * `visits`: a الافتقاد row under each child's الحضور; without it, one row per child and no البيان.
+ */
+export function attendanceSheet(c: ClassInfo, header: Sheet['header'], period: { months: string[] | null; label: string }, visits = true): Sheet {
   const s = getState()
   const days = classDays(c, period.months)
   const dates = days.map(iso)
@@ -314,13 +321,14 @@ export function attendanceSheet(c: ClassInfo, header: Sheet['header'], period: {
 
   const pair = (r: ViewRow, n: number): SheetRow[] => {
     const att = dates.map(d => (isChecked(s, r.client_id, d, 'attendance') ? YES : null))
-    const visits = dates.map(d => {
+    if (!visits) return [{ cells: [n, r.full_name, ...att, att.filter(Boolean).length] }]
+    const seen = dates.map(d => {
       const v = visitOf(s, r.client_id, d)
       return v ? VISIT_SIGN[v] : null
     })
     return [
       { cells: [n, r.full_name, 'الحضور', ...att, att.filter(Boolean).length], merge: 2 },
-      { cells: [null, null, 'الافتقاد', ...visits, visits.filter(Boolean).length], shade: true },
+      { cells: [null, null, 'الافتقاد', ...seen, seen.filter(Boolean).length], shade: true },
     ]
   }
 
@@ -349,18 +357,19 @@ export function attendanceSheet(c: ClassInfo, header: Sheet['header'], period: {
   return {
     kind: 'attendance',
     header,
-    widths: [4, 24, 9, ...days.map(() => 5), 6],
+    widths: [4, 24, ...(visits ? [9] : []), ...days.map(() => 5), 6],
     head1: [
       { label: 'م', span: 1, down: true },
       { label: 'إسم الطفل', span: 1, down: true },
-      { label: 'البيان', span: 1, down: true },
+      ...(visits ? [{ label: 'البيان', span: 1, down: true }] : []),
       ...months,
       { label: 'المجموع', span: 1, down: true },
     ],
     head2,
     rows,
     alignStart: [1],
-    fileName: safe(`كشف المتابعة - ${who(c, header)} - ${period.label}`),
+    lead: visits ? 3 : 2,
+    fileName: safe(`${visits ? 'كشف المتابعة' : 'كشف الحضور'} - ${who(c, header)} - ${period.label}`),
   }
 }
 
