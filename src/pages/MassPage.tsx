@@ -33,7 +33,7 @@ import { Loading } from '../components/Loading'
 import { SortableList } from '../components/SortableList'
 import { toast } from '../components/Toast'
 import { confirmDialog } from '../components/ConfirmDialog'
-import { ArrowBackIcon, ChurchIcon, CloudOffIcon, PencilIcon, PhoneIcon, ChevronDownIcon, GripIcon, PlusIcon, TrashIcon, WhatsAppIcon, XIcon } from '../components/Icons'
+import { ArrowBackIcon, ChurchIcon, CloudOffIcon, PencilIcon, PhoneIcon, ChevronDownIcon, CopyIcon, GripIcon, ImageIcon, SheetIcon, PlusIcon, TrashIcon, WhatsAppIcon, XIcon } from '../components/Icons'
 
 const input =
   'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800'
@@ -309,7 +309,7 @@ const keyOf = (service: string, slot: number) => `${service}#${slot}`
 const VIEW_KEY = 'massView'
 const COLLAPSED_KEY = 'massCollapsed'
 /** A button of the export row. */
-const outBtn = 'min-w-0 truncate rounded-lg border border-slate-300 px-3 py-1.5 text-center text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
+const outBtn = 'flex min-w-0 items-center justify-center gap-1.5 rounded-lg px-2 py-3 text-sm font-bold text-white disabled:opacity-60 sm:gap-2 sm:px-5'
 
 /** The schedule of one mass: per service, a class of servants and one of its children. */
 export function MassPage({ id }: { id: string }) {
@@ -317,7 +317,6 @@ export function MassPage({ id }: { id: string }) {
   const { online } = useStore()
   const { masses, classes, children, loaded, groups } = useMass()
   const [exporting, setExporting] = useState(false)
-  const [textOpen, setTextOpen] = useState(false)
   const [rows, setRows] = useState<Record<string, MassAssignment> | null>(null)
   const [error, setError] = useState('')
   // جدول (the sheet) or كروت (cards): remembered on this device
@@ -498,28 +497,21 @@ export function MassPage({ id }: { id: string }) {
       await massImage(sheetData(), headings())
     })
 
-  // نص: WhatsApp-formatted text — copied, or sent to WhatsApp (the share sheet on a phone)
-  async function textAction(kind: 'copy' | 'whatsapp') {
+  // نص: the WhatsApp-formatted text goes to the clipboard at once; if that is blocked, the share sheet
+  async function copyText() {
     const { massText } = await import('../lib/massShare')
     const text = massText(sheetData())
-    if (kind === 'copy') {
+    try {
+      await navigator.clipboard.writeText(text)
+      toast(t('massTextCopied'))
+    } catch {
       try {
-        await navigator.clipboard.writeText(text)
-        toast(t('copied'))
-      } catch {
-        toast(t('massCopyFailed'))
-      }
-      return
-    }
-    if (matchMedia('(pointer: coarse)').matches && navigator.share) {
-      try {
+        if (!navigator.share) throw new Error('no share')
         await navigator.share({ text })
-        return
       } catch (e) {
-        if ((e as Error).name === 'AbortError') return // closed on purpose
+        if ((e as Error).name !== 'AbortError') toast(t('massCopyFailed'))
       }
     }
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener')
   }
 
   const toggle = (on: boolean) =>
@@ -553,29 +545,20 @@ export function MassPage({ id }: { id: string }) {
         </div>
       </div>
 
-      {/* the ways out: Excel, a picture, a text — one row on a phone */}
-      <div className="space-y-2">
-        <div className="grid grid-cols-3 gap-2 sm:flex">
-          <button onClick={exportExcel} disabled={exporting} className={outBtn}>
-            {t('massExport')}
-          </button>
-          <button onClick={exportImage} disabled={exporting} className={outBtn}>
-            {t('massImage')}
-          </button>
-          <button onClick={() => setTextOpen(o => !o)} aria-expanded={textOpen} className={`${outBtn} ${textOpen ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300' : ''}`}>
-            {t('massText')}
-          </button>
-        </div>
-        {textOpen && (
-          <div className="grid grid-cols-2 gap-2 sm:flex">
-            <button onClick={() => textAction('copy')} className={outBtn}>
-              {t('copy')}
-            </button>
-            <button onClick={() => textAction('whatsapp')} className={outBtn}>
-              {t('massWhatsapp')}
-            </button>
-          </div>
-        )}
+      {/* the ways out, styled like the export page's buttons: Excel, a picture, the text — one row of three */}
+      <div className="grid grid-cols-3 gap-2 sm:flex">
+        <button onClick={exportExcel} disabled={exporting} className={`${outBtn} bg-emerald-600 hover:bg-emerald-700`}>
+          <SheetIcon className="size-5 shrink-0" />
+          <span className="truncate">Excel</span>
+        </button>
+        <button onClick={exportImage} disabled={exporting} className={`${outBtn} bg-sky-600 hover:bg-sky-700`}>
+          <ImageIcon className="size-5 shrink-0" />
+          <span className="truncate">{t('massImage')}</span>
+        </button>
+        <button onClick={copyText} className={`${outBtn} bg-indigo-600 hover:bg-indigo-700`}>
+          <CopyIcon className="size-5 shrink-0" />
+          <span className="truncate">{t('massText')}</span>
+        </button>
       </div>
 
       {view === 'counts' ? (

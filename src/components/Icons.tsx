@@ -140,6 +140,9 @@ export const DownloadIcon = ({ className = 'size-5' }: P) => (
 export const FileTextIcon = ({ className = 'size-5' }: P) => (
   <svg {...base} className={className}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" /></svg>
 )
+export const ImageIcon = ({ className = 'size-5' }: P) => (
+  <svg {...base} className={className}><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21" /></svg>
+)
 export const SheetIcon = ({ className = 'size-5' }: P) => (
   <svg {...base} className={className}><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M3 15h18M9 3v18" /></svg>
 )

@@ -807,6 +807,7 @@ const dict = {
   massText: { ar: "نص", en: "Text" },
   massWhatsapp: { ar: "واتساب", en: "WhatsApp" },
   massCopyFailed: { ar: "ماتنسخش", en: "Could not copy" },
+  massTextCopied: { ar: "اتنسخ النص ✓", en: "Text copied ✓" },
 } satisfies Record<string, Record<Lang, string>>;
 
 export type TKey = keyof typeof dict;
