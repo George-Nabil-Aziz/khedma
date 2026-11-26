@@ -797,6 +797,8 @@ const dict = {
   massCount: { ar: "العدد", en: "Count" },
   massExport: { ar: "تصدير Excel", en: "Export Excel" },
   massColor: { ar: "لون الفصل", en: "Class colour" },
+  massTotalServices: { ar: "إجمالي الخدمات", en: "Total services" },
+  massTotalLines: { ar: "إجمالي الأولاد المطلوبين", en: "Total children needed" },
 } satisfies Record<string, Record<Lang, string>>;
 
 export type TKey = keyof typeof dict;

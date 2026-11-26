@@ -122,37 +122,36 @@ export function copticDate(iso: string): string {
 // ---- a colour per class ----------------------------------------------------------------------
 
 /**
- * Soft colours for the servant classes, picked by the class's position (wrapping round), so a
- * class always has the same one. `fill`: a light tint, a deeper muted one in dark mode, text kept
- * readable; `dot`: the small mark beside the name. (Whole class names, so Tailwind sees them.)
+ * The colours of the servant classes: ten clearly different hues, a medium tint in light mode and a
+ * deeper muted one in dark mode, text kept readable. A class keeps the colour stored for it (038/039);
+ * without one it takes the palette by position, wrapping round. The order keeps neighbours far apart on
+ * the wheel. `fill`: the cell / select; `dot`: the mark beside a name; `hex`: the Excel tint. (Whole
+ * class names, so Tailwind sees them.)
  */
-const MASS_COLORS = [
-  { fill: 'bg-sky-100 text-slate-900 dark:bg-sky-900 dark:text-sky-50', dot: 'bg-sky-400 dark:bg-sky-500' },
-  { fill: 'bg-emerald-100 text-slate-900 dark:bg-emerald-900 dark:text-emerald-50', dot: 'bg-emerald-400 dark:bg-emerald-500' },
-  { fill: 'bg-amber-100 text-slate-900 dark:bg-amber-900 dark:text-amber-50', dot: 'bg-amber-400 dark:bg-amber-500' },
-  { fill: 'bg-rose-100 text-slate-900 dark:bg-rose-900 dark:text-rose-50', dot: 'bg-rose-400 dark:bg-rose-500' },
-  { fill: 'bg-violet-100 text-slate-900 dark:bg-violet-900 dark:text-violet-50', dot: 'bg-violet-400 dark:bg-violet-500' },
-  { fill: 'bg-teal-100 text-slate-900 dark:bg-teal-900 dark:text-teal-50', dot: 'bg-teal-400 dark:bg-teal-500' },
-  { fill: 'bg-orange-100 text-slate-900 dark:bg-orange-900 dark:text-orange-50', dot: 'bg-orange-400 dark:bg-orange-500' },
-  { fill: 'bg-lime-100 text-slate-900 dark:bg-lime-900 dark:text-lime-50', dot: 'bg-lime-500 dark:bg-lime-500' },
-  { fill: 'bg-fuchsia-100 text-slate-900 dark:bg-fuchsia-900 dark:text-fuchsia-50', dot: 'bg-fuchsia-400 dark:bg-fuchsia-500' },
-  { fill: 'bg-cyan-100 text-slate-900 dark:bg-cyan-900 dark:text-cyan-50', dot: 'bg-cyan-400 dark:bg-cyan-500' },
+export const MASS_PALETTE = [
+  { key: 'red', fill: 'bg-red-200 text-slate-900 dark:bg-red-900 dark:text-red-50', dot: 'bg-red-500', hex: 'FECACA' },
+  { key: 'blue', fill: 'bg-blue-200 text-slate-900 dark:bg-blue-900 dark:text-blue-50', dot: 'bg-blue-500', hex: 'BFDBFE' },
+  { key: 'green', fill: 'bg-green-200 text-slate-900 dark:bg-green-900 dark:text-green-50', dot: 'bg-green-500', hex: 'BBF7D0' },
+  { key: 'orange', fill: 'bg-orange-200 text-slate-900 dark:bg-orange-900 dark:text-orange-50', dot: 'bg-orange-500', hex: 'FED7AA' },
+  { key: 'purple', fill: 'bg-purple-200 text-slate-900 dark:bg-purple-900 dark:text-purple-50', dot: 'bg-purple-500', hex: 'E9D5FF' },
+  { key: 'teal', fill: 'bg-teal-200 text-slate-900 dark:bg-teal-900 dark:text-teal-50', dot: 'bg-teal-500', hex: '99F6E4' },
+  { key: 'yellow', fill: 'bg-yellow-200 text-slate-900 dark:bg-yellow-800 dark:text-yellow-50', dot: 'bg-yellow-500', hex: 'FEF08A' },
+  { key: 'pink', fill: 'bg-pink-200 text-slate-900 dark:bg-pink-900 dark:text-pink-50', dot: 'bg-pink-500', hex: 'FBCFE8' },
+  { key: 'brown', fill: 'bg-[#e0c9ae] text-slate-900 dark:bg-[#6b4f3a] dark:text-amber-50', dot: 'bg-[#8b5e3c]', hex: 'E0C9AE' },
+  { key: 'slate', fill: 'bg-slate-300 text-slate-900 dark:bg-slate-600 dark:text-slate-50', dot: 'bg-slate-500', hex: 'CBD5E1' },
 ]
-
-const COLOR_KEYS = ['sky', 'emerald', 'amber', 'rose', 'violet', 'teal', 'orange', 'lime', 'fuchsia', 'cyan'] as const
-/** Light tints for Excel (the same hues, Tailwind's 100 level). */
-const COLOR_HEX = ['E0F2FE', 'D1FAE5', 'FEF3C7', 'FFE4E6', 'EDE9FE', 'CCFBF1', 'FFEDD5', 'ECFCCB', 'FAE8FF', 'CFFAFE']
-
-/** The palette: a name (what 038 stores), the classes for the schedule and the dot, the Excel tint. */
-export const MASS_PALETTE = MASS_COLORS.map((c, i) => ({ ...c, key: COLOR_KEYS[i], hex: COLOR_HEX[i] }))
 export type MassColor = (typeof MASS_PALETTE)[number]
 
-/** The colour of a class: the stored one (038), else the palette by position (wrapping round); null for no class. */
+/** The names 038 stored before the palette changed (039) → the colour they became; keeps the site right before 039 runs. */
+const OLD_COLOR_KEYS: Record<string, string> = { sky: 'blue', emerald: 'green', amber: 'yellow', rose: 'red', violet: 'purple', teal: 'teal', orange: 'orange', lime: 'brown', fuchsia: 'pink', cyan: 'slate' }
+
+/** The colour of a class: the stored one, else the palette by position (wrapping round); null for no class. */
 export function classColor(classes: MassClass[], id: string | null | undefined): MassColor | null {
   const i = classes.findIndex(c => c.id === id)
   if (i < 0) return null
-  const stored = MASS_PALETTE.find(c => c.key === classes[i].color)
-  if (stored) return stored
+  const stored = classes[i].color
+  const found = stored ? MASS_PALETTE.find(c => c.key === (OLD_COLOR_KEYS[stored] ?? stored)) : undefined
+  if (found) return found
   const n = (classes[i].position ?? i + 1) - 1
   return MASS_PALETTE[((n % MASS_PALETTE.length) + MASS_PALETTE.length) % MASS_PALETTE.length]
 }
@@ -331,7 +330,16 @@ export async function saveClass(id: string | null, name: string): Promise<string
   // a new class gets the first palette colour nobody uses yet, else wraps round
   const used = new Set(state.classes.map(c => classColor(state.classes, c.id)?.key))
   const color = (MASS_PALETTE.find(c => !used.has(c.key)) ?? MASS_PALETTE[state.classes.length % MASS_PALETTE.length]).key
-  return write(() => supabase.from('mass_classes').insert(state.colorsReady ? { name: n, position, color } : { name: n, position }))
+  if (state.colorsReady) {
+    const first = await supabase.from('mass_classes').insert({ name: n, position, color })
+    if (!first.error) {
+      await loadMass()
+      return null
+    }
+    if (!first.error.message.includes('color_check')) return first.error.message
+    // 039 not run yet: the old check refuses the new colour names — add it without a colour
+  }
+  return write(() => supabase.from('mass_classes').insert({ name: n, position }))
 }
 
 /** Picks a class's colour (038): shown at once, saved at once. */

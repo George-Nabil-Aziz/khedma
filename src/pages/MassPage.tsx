@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState, type FormEvent } from 'react'
 import { useI18n } from '../lib/i18n'
-import { go } from '../lib/router'
+import { go, type Path } from '../lib/router'
 import { useStore } from '../lib/store'
 import { dmy } from '../lib/serviceYear'
 import {
@@ -47,8 +47,9 @@ const massDay = (iso: string) => `${dmy(iso)} · ${copticDate(iso)}`
 function MassDay({ iso, className = '' }: { iso: string; className?: string }) {
   return (
     <span className={`inline-flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 ${className}`}>
-      <span dir="ltr">{dmy(iso)}</span>
-      <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-[0.8em] font-semibold text-indigo-700 ring-1 ring-indigo-200 dark:bg-indigo-500/15 dark:text-indigo-300 dark:ring-indigo-500/30">{copticDate(iso)}</span>
+      <span dir="ltr" className="whitespace-nowrap">{dmy(iso)}</span>
+      {/* a pill that may drop under the date on a very narrow screen, but never breaks inside itself */}
+      <span className="shrink-0 whitespace-nowrap rounded-full bg-indigo-50 px-2.5 py-0.5 text-[0.8em] font-semibold text-indigo-700 ring-1 ring-indigo-200 dark:bg-indigo-500/15 dark:text-indigo-300 dark:ring-indigo-500/30">{copticDate(iso)}</span>
     </span>
   )
 }
@@ -78,7 +79,7 @@ function CountsTable({ rows }: { rows: Record<string, MassAssignment> }) {
         {t('massChildrenServing')}: <span dir="ltr">{counts.length}</span>
       </p>
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <table className="w-full min-w-[480px] border-collapse text-start">
+        <table className="w-full min-w-[420px] border-collapse text-start">
           <thead>
             <tr>
               <th className={`${th} w-12`}>#</th>
@@ -150,50 +151,57 @@ function Num({ n }: { n: number }) {
   )
 }
 
-/** The tabs of القداس: the masses, the names to pick from, and sharing. */
+/**
+ * A bar of equal-width tabs in one row — the phone look of the app's other tab bars (boxes, the open
+ * one filled with the accent); short text that never wraps, so four fit at 360px.
+ */
+function TabBar({ cols, tabs }: { cols: 3 | 4; tabs: { on: boolean; label: string; path: Path }[] }) {
+  return (
+    <nav className={`grid max-w-xl gap-1.5 ${cols === 4 ? 'grid-cols-4' : 'grid-cols-3'}`}>
+      {tabs.map(x => (
+        <button
+          key={x.path}
+          onClick={() => go(x.path)}
+          aria-current={x.on ? 'page' : undefined}
+          className={`min-w-0 truncate rounded-lg border px-1 py-2 text-center text-xs font-semibold sm:text-sm ${
+            x.on ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-200 bg-white text-slate-600 hover:text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:text-slate-200'
+          }`}
+        >
+          {x.label}
+        </button>
+      ))}
+    </nav>
+  )
+}
+
+/** The tabs of القداس: the masses, the names to pick from, the services, and sharing. */
 export function MassTabs({ active }: { active: 'masses' | 'names' | 'services' | 'share' }) {
   const { t } = useI18n()
-  const tab = (on: boolean) =>
-    `rounded-lg px-4 py-2 text-sm font-semibold ${
-      on ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
-    }`
   return (
-    <nav className="flex gap-2">
-      <button className={tab(active === 'masses')} onClick={() => go('/masses')}>
-        {t('massList')}
-      </button>
-      <button className={tab(active === 'names')} onClick={() => go('/mass-names')}>
-        {t('massNames')}
-      </button>
-      <button className={tab(active === 'services')} onClick={() => go('/mass-services')}>
-        {t('massServices')}
-      </button>
-      <button className={tab(active === 'share')} onClick={() => go('/mass-share')}>
-        {t('share')}
-      </button>
-    </nav>
+    <TabBar
+      cols={4}
+      tabs={[
+        { on: active === 'masses', label: t('massList'), path: '/masses' },
+        { on: active === 'names', label: t('massNames'), path: '/mass-names' },
+        { on: active === 'services', label: t('massServices'), path: '/mass-services' },
+        { on: active === 'share', label: t('share'), path: '/mass-share' },
+      ]}
+    />
   )
 }
 
 /** The three sub-tabs of الأسماء: classes with their children, only the classes, only the children. */
 function NamesTabs({ active }: { active: 'names' | 'servants' | 'children' }) {
   const { t } = useI18n()
-  const tab = (on: boolean) =>
-    `rounded-full border px-3 py-1 text-sm font-semibold ${
-      on ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300' : 'border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
-    }`
   return (
-    <nav className="flex flex-wrap gap-2">
-      <button className={tab(active === 'names')} onClick={() => go('/mass-names')}>
-        {t('massAll')}
-      </button>
-      <button className={tab(active === 'servants')} onClick={() => go('/mass-servants')}>
-        {t('massServants')}
-      </button>
-      <button className={tab(active === 'children')} onClick={() => go('/mass-children')}>
-        {t('massChildren')}
-      </button>
-    </nav>
+    <TabBar
+      cols={3}
+      tabs={[
+        { on: active === 'names', label: t('massAll'), path: '/mass-names' },
+        { on: active === 'servants', label: t('massServants'), path: '/mass-servants' },
+        { on: active === 'children', label: t('massChildren'), path: '/mass-children' },
+      ]}
+    />
   )
 }
 
@@ -480,7 +488,7 @@ export function MassPage({ id }: { id: string }) {
   }
 
   const toggle = (on: boolean) =>
-    `rounded-md px-3 py-1 text-sm font-semibold ${on ? 'bg-white text-indigo-700 shadow-sm dark:bg-slate-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-300'}`
+    `min-w-0 truncate rounded-md px-3 py-1.5 text-center text-sm font-semibold sm:py-1 ${on ? 'bg-white text-indigo-700 shadow-sm dark:bg-slate-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-300'}`
 
   return (
     <div className="mx-auto max-w-5xl space-y-5 pb-16">
@@ -491,12 +499,13 @@ export function MassPage({ id }: { id: string }) {
       <OfflineNote />
       {error && <p className={errorBox}>{error}</p>}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <h2 className="flex min-w-0 flex-1 items-center gap-2 text-xl font-bold">
+      {/* phone: the date, then the view bar full width, then export; wider screens: date and view bar on one row */}
+      <div className="space-y-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:space-y-0">
+        <h2 className="flex min-w-0 items-center gap-2 text-xl font-bold sm:flex-1">
           <ChurchIcon className="size-6 shrink-0 text-indigo-600 dark:text-indigo-300" />
           <MassDay iso={mass.mass_date} />
         </h2>
-        <div role="group" aria-label={t('massView')} className="flex rounded-lg bg-slate-100 p-0.5 dark:bg-slate-800">
+        <div role="group" aria-label={t('massView')} className="grid grid-cols-3 rounded-lg bg-slate-100 p-0.5 sm:flex dark:bg-slate-800">
           <button className={toggle(view === 'table')} aria-pressed={view === 'table'} onClick={() => setView('table')}>
             {t('massViewTable')}
           </button>
@@ -510,7 +519,7 @@ export function MassPage({ id }: { id: string }) {
       </div>
 
       <div className="flex">
-        <button onClick={exportExcel} disabled={exporting} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+        <button onClick={exportExcel} disabled={exporting} className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50 sm:w-auto dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
           {t('massExport')}
         </button>
       </div>
@@ -678,6 +687,11 @@ export function MassServicesPage() {
         <ServicesReorder onClose={() => setReordering(false)} />
       ) : (
         <>
+          {/* totals from the list as it is now: services, and lines to fill (a two-line service counts twice) */}
+          <p className="rounded-xl bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
+            {t('massTotalServices')}: <span dir="ltr">{groups.reduce((n, g) => n + g.items.length, 0)}</span> · {t('massTotalLines')}:{' '}
+            <span dir="ltr">{groups.reduce((n, g) => n + g.items.reduce((m, it) => m + (it.double ? 2 : 1), 0), 0)}</span>
+          </p>
           <div className="flex items-center gap-2">
             <p className="min-w-0 flex-1 text-sm text-slate-500">{t('massServicesHelp')}</p>
             <button onClick={() => setReordering(true)} disabled={off} className="shrink-0 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
@@ -690,6 +704,11 @@ export function MassServicesPage() {
               <div className="flex items-center gap-1 bg-indigo-50 p-2 dark:bg-indigo-500/10">
                 <Num n={gi + 1} />
                 <EditText value={g.title} label={g.title} disabled={off} onSave={v => renameGroup(g.key, v)} />
+                {/* how many services in the group, and (when a two-line one makes it more) how many lines */}
+                <span dir="ltr" title={t('massTotalServices')} className="shrink-0 rounded-full bg-white px-2 py-0.5 text-xs font-bold text-indigo-700 ring-1 ring-indigo-200 dark:bg-slate-900 dark:text-indigo-300 dark:ring-indigo-500/30">
+                  {g.items.length}
+                  {g.items.some(it => it.double) && ` / ${g.items.reduce((m, it) => m + (it.double ? 2 : 1), 0)}`}
+                </span>
               </div>
               {g.items.map((it, ii) => (
                 <div key={it.key} className="space-y-2 border-t border-slate-100 p-2 dark:border-slate-800">
