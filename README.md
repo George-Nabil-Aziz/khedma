@@ -22,6 +22,7 @@ Run these once, in order, in the Supabase SQL Editor:
 14. `supabase/035_mass.sql`: القداس (admins only) — the mass schedule, plus the servant classes and children to pick from (10 classes, 53 children, seeded; safe to re-run). Run it after 034.
 15. `supabase/036_mass_sharing.sql`: share القداس with a one-time code (the same input as class codes), mass members who can leave or be removed by an admin. Run it after 035.
 16. `supabase/037_mass_services.sql`: القداس → الخدمات, the editable names of the schedule (group titles, service names, labels of two-line services). Run it after 036; until then the built-in names show.
+17. `supabase/038_mass_class_color.sql`: each servant class keeps its own colour, changeable from the names pages. Run it after 037; until then the colours follow the class order and cannot be changed.
 
 Anyone can create an account from the sign-in page, but a new account sees no children until it creates a class or joins one with a share code. Turn on **Allow new users to sign up** in Supabase only **after** running 006. The admin can also add servants from the **Users** page.
 

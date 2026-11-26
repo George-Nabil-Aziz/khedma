@@ -4,7 +4,10 @@ import { go } from '../lib/router'
 import { useStore } from '../lib/store'
 import { dmy } from '../lib/serviceYear'
 import {
+  MASS_PALETTE,
   classColor,
+  massCounts,
+  setClassColor,
   renameGroup,
   saveServiceOrder,
   renameService,
@@ -62,11 +65,80 @@ function OfflineNote() {
   )
 }
 
+/** العدد: how many lines of this mass each child serves in. */
+function CountsTable({ rows }: { rows: Record<string, MassAssignment> }) {
+  const { t } = useI18n()
+  const { classes, children } = useMass()
+  const counts = massCounts(rows, children, classes)
+  const th = 'border border-slate-200 bg-slate-100 px-3 py-2 text-start text-sm font-bold dark:border-slate-700 dark:bg-slate-800'
+  const td = 'border border-slate-200 px-3 py-2 dark:border-slate-700'
+  return (
+    <div className="space-y-3">
+      <p className="font-semibold">
+        {t('massChildrenServing')}: <span dir="ltr">{counts.length}</span>
+      </p>
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        <table className="w-full min-w-[480px] border-collapse text-start">
+          <thead>
+            <tr>
+              <th className={`${th} w-12`}>#</th>
+              <th className={th}>{t('massServed')}</th>
+              <th className={th}>{t('massServant')}</th>
+              <th className={`${th} w-20`}>{t('massCount')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {counts.map((x, i) => (
+              <tr key={x.child.id}>
+                <td className={`${td} text-center text-slate-500`}>{i + 1}</td>
+                <td className={`${td} font-semibold`}>{x.child.name}</td>
+                <td className={`${td} ${classColor(classes, x.cls?.id)?.fill ?? ''}`}>{x.cls?.name}</td>
+                <td className={`${td} text-center font-bold`}>{x.count}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 /** The colour dot of a class, so the colours on the schedule can be matched to names. */
-function ClassDot({ id }: { id: string }) {
-  const { classes } = useMass()
+function ClassDot({ id, onClick }: { id: string; onClick?: () => void }) {
+  const { t } = useI18n()
+  const { online } = useStore()
+  const { classes, colorsReady } = useMass()
   const c = classColor(classes, id)
-  return c ? <span aria-hidden className={`size-2.5 shrink-0 rounded-full ${c.dot}`} /> : null
+  if (!c) return null
+  if (!onClick || !colorsReady) return <span aria-hidden className={`size-2.5 shrink-0 rounded-full ${c.dot}`} />
+  // tap the dot to pick another colour; a roomy button around a small dot, easy to hit on a phone
+  return (
+    <button type="button" onClick={onClick} disabled={!online} title={t('massColor')} aria-label={t('massColor')} className="-m-2 grid size-7 shrink-0 place-items-center rounded-full disabled:opacity-60">
+      <span className={`size-3 rounded-full ring-2 ring-white/80 dark:ring-slate-900/80 ${c.dot}`} />
+    </button>
+  )
+}
+
+/** The palette as swatches: tap one to give the class that colour (saved at once). */
+function ColorRow({ id, onDone }: { id: string; onDone: () => void }) {
+  const { t } = useI18n()
+  const { classes } = useMass()
+  const current = classColor(classes, id)?.key
+  async function pick(key: string) {
+    onDone()
+    if (key === current) return
+    const err = await setClassColor(id, key)
+    if (err) toast(err)
+  }
+  return (
+    <div className="flex flex-wrap gap-2 border-t border-slate-100 px-3 py-2.5 dark:border-slate-800" role="group" aria-label={t('massColor')}>
+      {MASS_PALETTE.map(c => (
+        <button key={c.key} type="button" onClick={() => pick(c.key)} aria-label={c.key} aria-pressed={c.key === current} className={`grid size-9 place-items-center rounded-full ${c.fill} ${c.key === current ? 'ring-2 ring-indigo-500' : 'ring-1 ring-slate-300 dark:ring-slate-600'}`}>
+          <span className={`size-3 rounded-full ${c.dot}`} />
+        </button>
+      ))}
+    </div>
+  )
 }
 
 /** A small muted running number before an entry; a fixed width so the names line up. */
@@ -232,11 +304,15 @@ export function MassPage({ id }: { id: string }) {
   const { t } = useI18n()
   const { online } = useStore()
   const { masses, classes, children, loaded, groups } = useMass()
+  const [exporting, setExporting] = useState(false)
   const [rows, setRows] = useState<Record<string, MassAssignment> | null>(null)
   const [error, setError] = useState('')
   // جدول (the sheet) or كروت (cards): remembered on this device
-  const [view, setViewState] = useState<'table' | 'cards'>(() => (load(VIEW_KEY) === 'cards' ? 'cards' : 'table'))
-  const setView = (v: 'table' | 'cards') => {
+  const [view, setViewState] = useState<'table' | 'cards' | 'counts'>(() => {
+    const v = load(VIEW_KEY)
+    return v === 'cards' || v === 'counts' ? v : 'table'
+  })
+  const setView = (v: 'table' | 'cards' | 'counts') => {
     setViewState(v)
     save(VIEW_KEY, v)
   }
@@ -275,6 +351,8 @@ export function MassPage({ id }: { id: string }) {
 
   const select = 'w-full min-w-0 rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-slate-700'
   const plain = 'bg-white dark:bg-slate-800'
+  const dim = 'text-slate-400 dark:text-slate-500' // the placeholder shows muted while the field is empty
+  const normal = 'text-slate-900 dark:text-slate-100' // the options of an empty field keep normal text
 
   /**
    * The two dropdowns of one line, the same in both views: servant class, then a child. With no
@@ -291,27 +369,27 @@ export function MassPage({ id }: { id: string }) {
         <XIcon className="size-4" />
       </button>
     )
-    const option = (c: { id: string; name: string }) => (
-      <option key={c.id} value={c.id}>
+    const option = (c: { id: string; name: string }, plainText = false) => (
+      <option key={c.id} value={c.id} className={plainText ? normal : undefined}>
         {c.name}
       </option>
     )
     return [
       <div key="s" className="flex items-center gap-1">
-        <select className={`${select} ${color?.fill ?? plain}`} disabled={!online} value={classId} aria-label={t('massServant')} onChange={e => change(service, slot, { class_id: e.target.value || null, child_id: null })}>
+        <select className={`${select} ${color?.fill ?? `${plain} ${dim}`}`} disabled={!online} value={classId} aria-label={t('massServant')} onChange={e => change(service, slot, { class_id: e.target.value || null, child_id: null })}>
           <option value="" disabled hidden>{t('pickServant')}</option>
-          {classes.map(option)}
+          {classes.map(c => option(c, !color))}
         </select>
         {classId && clear(t('massServant'), () => change(service, slot, { class_id: null, child_id: null }))}
       </div>,
       <div key="c" className="flex items-center gap-1">
-        <select className={`${select} ${plain}`} disabled={!online} value={childId} aria-label={t('massServed')} onChange={e => change(service, slot, { class_id: classId || children.find(c => c.id === e.target.value)?.class_id || null, child_id: e.target.value || null })}>
+        <select className={`${select} ${plain} ${childId ? '' : dim}`} disabled={!online} value={childId} aria-label={t('massServed')} onChange={e => change(service, slot, { class_id: classId || children.find(c => c.id === e.target.value)?.class_id || null, child_id: e.target.value || null })}>
           <option value="" disabled hidden>{t('pickChild')}</option>
           {classId
-            ? children.filter(c => c.class_id === classId).map(option)
+            ? children.filter(c => c.class_id === classId).map(c => option(c, !childId))
             : classes.map(cl => (
                 <optgroup key={cl.id} label={cl.name}>
-                  {children.filter(c => c.class_id === cl.id).map(option)}
+                  {children.filter(c => c.class_id === cl.id).map(c => option(c, !childId))}
                 </optgroup>
               ))}
         </select>
@@ -382,6 +460,25 @@ export function MassPage({ id }: { id: string }) {
     </div>
   )
 
+  // the file is built only when asked for (exceljs is a big library)
+  async function exportExcel() {
+    setExporting(true)
+    try {
+      const { exportMass } = await import('../lib/exportMass')
+      await exportMass({
+        dateText: dmy(mass!.mass_date),
+        groups,
+        rows: rows ?? {},
+        classes,
+        children,
+        labels: { servant: t('massServant'), served: t('massServed'), service: t('massService'), counts: t('massViewCounts'), childrenServing: t('massChildrenServing'), count: t('massCount') },
+      })
+    } catch (e) {
+      toast((e as Error).message)
+    }
+    setExporting(false)
+  }
+
   const toggle = (on: boolean) =>
     `rounded-md px-3 py-1 text-sm font-semibold ${on ? 'bg-white text-indigo-700 shadow-sm dark:bg-slate-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-300'}`
 
@@ -406,10 +503,21 @@ export function MassPage({ id }: { id: string }) {
           <button className={toggle(view === 'cards')} aria-pressed={view === 'cards'} onClick={() => setView('cards')}>
             {t('massViewCards')}
           </button>
+          <button className={toggle(view === 'counts')} aria-pressed={view === 'counts'} onClick={() => setView('counts')}>
+            {t('massViewCounts')}
+          </button>
         </div>
       </div>
 
-      {view === 'table' ? (
+      <div className="flex">
+        <button onClick={exportExcel} disabled={exporting} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+          {t('massExport')}
+        </button>
+      </div>
+
+      {view === 'counts' ? (
+        <CountsTable rows={rows} />
+      ) : view === 'table' ? (
         sheet
       ) : (
         <>
@@ -697,6 +805,7 @@ export function MassServantsPage() {
   const { online } = useStore()
   const { classes, children, loaded, error } = useMass()
   const [edit, setEdit] = useState<string | 'new' | null>(null)
+  const [picking, setPicking] = useState<string | null>(null) // the class whose colour is being picked
 
   useEffect(() => {
     loadMass()
@@ -737,11 +846,12 @@ export function MassServantsPage() {
           edit === c.id ? (
             <ClassForm key={c.id} title={t('editMassClass')} initial={c.name} id={c.id} onDone={() => setEdit(null)} />
           ) : (
-            <div key={c.id} className="flex items-center gap-1 border-t border-slate-100 ps-1 pe-1 first:border-t-0 dark:border-slate-800">
+            <Fragment key={c.id}>
+            <div className="flex items-center gap-1 border-t border-slate-100 ps-1 pe-1 first:border-t-0 dark:border-slate-800">
               <Num n={i + 1} />
               <div className="min-w-0 flex-1 py-2">
                 <div className="flex items-center gap-2 font-semibold">
-                  <ClassDot id={c.id} />
+                  <ClassDot id={c.id} onClick={() => setPicking(p => (p === c.id ? null : c.id))} />
                   <span className="min-w-0">{c.name}</span>
                 </div>
                 <div className="text-sm text-slate-500">{children.filter(x => x.class_id === c.id).length} {t('massChildren')}</div>
@@ -753,6 +863,8 @@ export function MassServantsPage() {
                 <TrashIcon />
               </button>
             </div>
+            {picking === c.id && <ColorRow id={c.id} onDone={() => setPicking(null)} />}
+            </Fragment>
           ),
         )}
       </section>
@@ -883,6 +995,7 @@ function ClassCard({ num, id, name, onEdit, onDelete }: { num: number; id: strin
   const { online } = useStore()
   const { children } = useMass()
   const [editing, setEditing] = useState<string | 'new' | null>(null)
+  const [picking, setPicking] = useState(false)
   const mine = children.filter(c => c.class_id === id)
 
   async function remove(childId: string, childName: string) {
@@ -897,7 +1010,7 @@ function ClassCard({ num, id, name, onEdit, onDelete }: { num: number; id: strin
       <div className="flex items-center gap-1 bg-indigo-50 ps-1 pe-1 dark:bg-indigo-500/10">
         <Num n={num} />
         <h3 className="flex min-w-0 flex-1 items-center gap-2 py-2 font-bold text-indigo-700 dark:text-indigo-300">
-          <ClassDot id={id} />
+          <ClassDot id={id} onClick={() => setPicking(p => !p)} />
           <span className="min-w-0">{name}</span>
         </h3>
         <button onClick={onEdit} disabled={!online} title={t('editMassClass')} aria-label={t('editMassClass')} className={`${iconBtn} text-slate-500`}>
@@ -907,6 +1020,7 @@ function ClassCard({ num, id, name, onEdit, onDelete }: { num: number; id: strin
           <TrashIcon />
         </button>
       </div>
+      {picking && <ColorRow id={id} onDone={() => setPicking(false)} />}
 
       {mine.map((c, i) =>
         editing === c.id ? (

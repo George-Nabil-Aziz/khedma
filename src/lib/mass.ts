@@ -139,17 +139,27 @@ const MASS_COLORS = [
   { fill: 'bg-cyan-100 text-slate-900 dark:bg-cyan-900 dark:text-cyan-50', dot: 'bg-cyan-400 dark:bg-cyan-500' },
 ]
 
-/** The colour of a class (by its position, else its place in the list), or null for no class. */
-export function classColor(classes: MassClass[], id: string | null | undefined) {
+const COLOR_KEYS = ['sky', 'emerald', 'amber', 'rose', 'violet', 'teal', 'orange', 'lime', 'fuchsia', 'cyan'] as const
+/** Light tints for Excel (the same hues, Tailwind's 100 level). */
+const COLOR_HEX = ['E0F2FE', 'D1FAE5', 'FEF3C7', 'FFE4E6', 'EDE9FE', 'CCFBF1', 'FFEDD5', 'ECFCCB', 'FAE8FF', 'CFFAFE']
+
+/** The palette: a name (what 038 stores), the classes for the schedule and the dot, the Excel tint. */
+export const MASS_PALETTE = MASS_COLORS.map((c, i) => ({ ...c, key: COLOR_KEYS[i], hex: COLOR_HEX[i] }))
+export type MassColor = (typeof MASS_PALETTE)[number]
+
+/** The colour of a class: the stored one (038), else the palette by position (wrapping round); null for no class. */
+export function classColor(classes: MassClass[], id: string | null | undefined): MassColor | null {
   const i = classes.findIndex(c => c.id === id)
   if (i < 0) return null
+  const stored = MASS_PALETTE.find(c => c.key === classes[i].color)
+  if (stored) return stored
   const n = (classes[i].position ?? i + 1) - 1
-  return MASS_COLORS[((n % MASS_COLORS.length) + MASS_COLORS.length) % MASS_COLORS.length]
+  return MASS_PALETTE[((n % MASS_PALETTE.length) + MASS_PALETTE.length) % MASS_PALETTE.length]
 }
 
 // ---- data -------------------------------------------------------------------------------------
 
-export type MassClass = { id: string; name: string; position: number | null }
+export type MassClass = { id: string; name: string; position: number | null; /** a palette name (038); absent before 038 */ color?: string | null }
 export type MassChild = { id: string; class_id: string; name: string; phone: string | null; note: string | null; position: number | null }
 export type Mass = { id: string; mass_date: string; notes: string | null }
 export type MassAssignment = { mass_id: string; service_key: string; slot: number; class_id: string | null; child_id: string | null }
@@ -168,9 +178,11 @@ type State = {
   groups: MassGroup[]
   /** false until the 037 tables were read: then the built-in names are shown and renaming is off */
   servicesReady: boolean
+  /** false until 038 is run: the colour is then the palette by position and cannot be changed */
+  colorsReady: boolean
 }
 
-const EMPTY: State = { masses: [], classes: [], children: [], loaded: false, error: null, groups: MASS_GROUPS, servicesReady: false }
+const EMPTY: State = { masses: [], classes: [], children: [], loaded: false, error: null, groups: MASS_GROUPS, servicesReady: false, colorsReady: false }
 
 let state: State = EMPTY
 const listeners = new Set<() => void>()
@@ -196,10 +208,17 @@ export async function loadMass() {
   if (!navigator.onLine) return set({ loaded: true })
   const [masses, classes, children] = await Promise.all([
     supabase.from('masses').select('id,mass_date,notes').order('mass_date', { ascending: false }),
-    supabase.from('mass_classes').select('id,name,position'),
+    supabase.from('mass_classes').select('id,name,position,color'),
     supabase.from('mass_children').select('id,class_id,name,phone,note,position'),
   ])
-  const error = masses.error ?? classes.error ?? children.error
+  // no colour column yet (038 not run): ask again without it, and carry on with the palette by position
+  let colorsReady = !classes.error
+  let classRows = classes
+  if (classes.error) {
+    classRows = await supabase.from('mass_classes').select('id,name,position')
+    colorsReady = false
+  }
+  const error = masses.error ?? classRows.error ?? children.error
   if (error) return set({ loaded: true, error: error.message })
   // the 037 names: missing tables or any failure → the built-in names, silently
   const [g, sv] = await Promise.all([supabase.from('mass_service_groups').select('key,title,position'), supabase.from('mass_services').select('key,name,slot_labels,position')])
@@ -210,7 +229,8 @@ export async function loadMass() {
     loaded: true,
     error: null,
     masses: masses.data as Mass[],
-    classes: (classes.data as MassClass[]).sort(byPosition),
+    colorsReady,
+    classes: (classRows.data as MassClass[]).sort(byPosition),
     children: (children.data as MassChild[]).sort(byPosition),
   })
 }
@@ -308,7 +328,15 @@ export async function saveClass(id: string | null, name: string): Promise<string
   const n = name.trim()
   if (id) return write(() => supabase.from('mass_classes').update({ name: n }).eq('id', id))
   const position = Math.max(0, ...state.classes.map(c => c.position ?? 0)) + 1
-  return write(() => supabase.from('mass_classes').insert({ name: n, position }))
+  // a new class gets the first palette colour nobody uses yet, else wraps round
+  const used = new Set(state.classes.map(c => classColor(state.classes, c.id)?.key))
+  const color = (MASS_PALETTE.find(c => !used.has(c.key)) ?? MASS_PALETTE[state.classes.length % MASS_PALETTE.length]).key
+  return write(() => supabase.from('mass_classes').insert(state.colorsReady ? { name: n, position, color } : { name: n, position }))
+}
+
+/** Picks a class's colour (038): shown at once, saved at once. */
+export async function setClassColor(id: string, color: string): Promise<string | null> {
+  return write(() => supabase.from('mass_classes').update({ color }).eq('id', id))
 }
 
 export const deleteClass = (id: string) => write(() => supabase.from('mass_classes').delete().eq('id', id))
@@ -382,4 +410,14 @@ export async function leaveMass(): Promise<string | null> {
   if (error) return error.message
   await refreshMassAccess()
   return null
+}
+
+/** How many lines of this mass each child serves in: only children with at least one, most first, then by name. */
+export function massCounts(rows: Record<string, MassAssignment>, children: MassChild[], classes: MassClass[]) {
+  const n = new Map<string, number>()
+  for (const a of Object.values(rows)) if (a.child_id) n.set(a.child_id, (n.get(a.child_id) ?? 0) + 1)
+  return children
+    .filter(c => n.has(c.id))
+    .map(child => ({ child, cls: classes.find(c => c.id === child.class_id), count: n.get(child.id)! }))
+    .sort((x, y) => y.count - x.count || x.child.name.localeCompare(y.child.name, 'ar'))
 }

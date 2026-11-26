@@ -792,6 +792,11 @@ const dict = {
   massSlotLabel: { ar: "اسم السطر {n} (فاضي = رقم بس)", en: "Line {n} name (empty = just the number)" },
   massSaved: { ar: "اتحفظ ✓", en: "Saved ✓" },
   massReorder: { ar: "ترتيب", en: "Reorder" },
+  massViewCounts: { ar: "العدد", en: "Counts" },
+  massChildrenServing: { ar: "عدد الأولاد الخادمين", en: "Children serving" },
+  massCount: { ar: "العدد", en: "Count" },
+  massExport: { ar: "تصدير Excel", en: "Export Excel" },
+  massColor: { ar: "لون الفصل", en: "Class colour" },
 } satisfies Record<string, Record<Lang, string>>;
 
 export type TKey = keyof typeof dict;
