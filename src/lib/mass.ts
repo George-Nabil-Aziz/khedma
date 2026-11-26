@@ -119,6 +119,34 @@ export function copticDate(iso: string): string {
   return `${(n % 30) + 1} ${COPTIC_MONTHS[Math.floor(n / 30)]} ${afterNewYear ? y - 283 : y - 284}`
 }
 
+// ---- a colour per class ----------------------------------------------------------------------
+
+/**
+ * Soft colours for the servant classes, picked by the class's position (wrapping round), so a
+ * class always has the same one. `fill`: a light tint, a deeper muted one in dark mode, text kept
+ * readable; `dot`: the small mark beside the name. (Whole class names, so Tailwind sees them.)
+ */
+const MASS_COLORS = [
+  { fill: 'bg-sky-100 text-slate-900 dark:bg-sky-900 dark:text-sky-50', dot: 'bg-sky-400 dark:bg-sky-500' },
+  { fill: 'bg-emerald-100 text-slate-900 dark:bg-emerald-900 dark:text-emerald-50', dot: 'bg-emerald-400 dark:bg-emerald-500' },
+  { fill: 'bg-amber-100 text-slate-900 dark:bg-amber-900 dark:text-amber-50', dot: 'bg-amber-400 dark:bg-amber-500' },
+  { fill: 'bg-rose-100 text-slate-900 dark:bg-rose-900 dark:text-rose-50', dot: 'bg-rose-400 dark:bg-rose-500' },
+  { fill: 'bg-violet-100 text-slate-900 dark:bg-violet-900 dark:text-violet-50', dot: 'bg-violet-400 dark:bg-violet-500' },
+  { fill: 'bg-teal-100 text-slate-900 dark:bg-teal-900 dark:text-teal-50', dot: 'bg-teal-400 dark:bg-teal-500' },
+  { fill: 'bg-orange-100 text-slate-900 dark:bg-orange-900 dark:text-orange-50', dot: 'bg-orange-400 dark:bg-orange-500' },
+  { fill: 'bg-lime-100 text-slate-900 dark:bg-lime-900 dark:text-lime-50', dot: 'bg-lime-500 dark:bg-lime-500' },
+  { fill: 'bg-fuchsia-100 text-slate-900 dark:bg-fuchsia-900 dark:text-fuchsia-50', dot: 'bg-fuchsia-400 dark:bg-fuchsia-500' },
+  { fill: 'bg-cyan-100 text-slate-900 dark:bg-cyan-900 dark:text-cyan-50', dot: 'bg-cyan-400 dark:bg-cyan-500' },
+]
+
+/** The colour of a class (by its position, else its place in the list), or null for no class. */
+export function classColor(classes: MassClass[], id: string | null | undefined) {
+  const i = classes.findIndex(c => c.id === id)
+  if (i < 0) return null
+  const n = (classes[i].position ?? i + 1) - 1
+  return MASS_COLORS[((n % MASS_COLORS.length) + MASS_COLORS.length) % MASS_COLORS.length]
+}
+
 // ---- data -------------------------------------------------------------------------------------
 
 export type MassClass = { id: string; name: string; position: number | null }

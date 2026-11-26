@@ -4,6 +4,7 @@ import { go } from '../lib/router'
 import { useStore } from '../lib/store'
 import { dmy } from '../lib/serviceYear'
 import {
+  classColor,
   renameGroup,
   saveServiceOrder,
   renameService,
@@ -59,6 +60,13 @@ function OfflineNote() {
       {t('needsOnline')}
     </div>
   )
+}
+
+/** The colour dot of a class, so the colours on the schedule can be matched to names. */
+function ClassDot({ id }: { id: string }) {
+  const { classes } = useMass()
+  const c = classColor(classes, id)
+  return c ? <span aria-hidden className={`size-2.5 shrink-0 rounded-full ${c.dot}`} /> : null
 }
 
 /** A small muted running number before an entry; a fixed width so the names line up. */
@@ -265,7 +273,8 @@ export function MassPage({ id }: { id: string }) {
     }
   }
 
-  const select = 'w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800'
+  const select = 'w-full min-w-0 rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-slate-700'
+  const plain = 'bg-white dark:bg-slate-800'
 
   /**
    * The two dropdowns of one line, the same in both views: servant class, then a child. With no
@@ -276,6 +285,7 @@ export function MassPage({ id }: { id: string }) {
     const a = rows[keyOf(service, slot)]
     const classId = a?.class_id ?? ''
     const childId = a?.child_id ?? ''
+    const color = classColor(classes, classId) // the servant field takes its class's colour
     const clear = (label: string, onClear: () => void) => (
       <button type="button" onClick={onClear} disabled={!online} title={t('clear')} aria-label={`${t('clear')}: ${label}`} className="grid size-9 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-red-600 disabled:opacity-40 dark:hover:bg-slate-700">
         <XIcon className="size-4" />
@@ -288,14 +298,14 @@ export function MassPage({ id }: { id: string }) {
     )
     return [
       <div key="s" className="flex items-center gap-1">
-        <select className={select} disabled={!online} value={classId} aria-label={t('massServant')} onChange={e => change(service, slot, { class_id: e.target.value || null, child_id: null })}>
+        <select className={`${select} ${color?.fill ?? plain}`} disabled={!online} value={classId} aria-label={t('massServant')} onChange={e => change(service, slot, { class_id: e.target.value || null, child_id: null })}>
           <option value="" disabled hidden>{t('pickServant')}</option>
           {classes.map(option)}
         </select>
         {classId && clear(t('massServant'), () => change(service, slot, { class_id: null, child_id: null }))}
       </div>,
       <div key="c" className="flex items-center gap-1">
-        <select className={select} disabled={!online} value={childId} aria-label={t('massServed')} onChange={e => change(service, slot, { class_id: classId || null, child_id: e.target.value || null })}>
+        <select className={`${select} ${plain}`} disabled={!online} value={childId} aria-label={t('massServed')} onChange={e => change(service, slot, { class_id: classId || children.find(c => c.id === e.target.value)?.class_id || null, child_id: e.target.value || null })}>
           <option value="" disabled hidden>{t('pickChild')}</option>
           {classId
             ? children.filter(c => c.class_id === classId).map(option)
@@ -358,7 +368,7 @@ export function MassPage({ id }: { id: string }) {
                   const [servant, child] = pickers(it.key, slot)
                   return (
                     <tr key={keyOf(it.key, slot)}>
-                      <td className="border border-slate-200 p-1.5 dark:border-slate-700">{servant}</td>
+                      <td className={`border border-slate-200 p-1.5 dark:border-slate-700 ${classColor(classes, rows[keyOf(it.key, slot)]?.class_id)?.fill ?? ''}`}>{servant}</td>
                       <td className="border border-slate-200 p-1.5 dark:border-slate-700">{child}</td>
                       <td className="border border-slate-200 px-3 py-1.5 font-semibold dark:border-slate-700">{slotLabel(it, slot)}</td>
                     </tr>
@@ -730,7 +740,10 @@ export function MassServantsPage() {
             <div key={c.id} className="flex items-center gap-1 border-t border-slate-100 ps-1 pe-1 first:border-t-0 dark:border-slate-800">
               <Num n={i + 1} />
               <div className="min-w-0 flex-1 py-2">
-                <div className="font-semibold">{c.name}</div>
+                <div className="flex items-center gap-2 font-semibold">
+                  <ClassDot id={c.id} />
+                  <span className="min-w-0">{c.name}</span>
+                </div>
                 <div className="text-sm text-slate-500">{children.filter(x => x.class_id === c.id).length} {t('massChildren')}</div>
               </div>
               <button onClick={() => setEdit(c.id)} disabled={!online} title={t('editMassClass')} aria-label={t('editMassClass')} className={`${iconBtn} text-slate-500`}>
@@ -883,7 +896,10 @@ function ClassCard({ num, id, name, onEdit, onDelete }: { num: number; id: strin
     <section className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
       <div className="flex items-center gap-1 bg-indigo-50 ps-1 pe-1 dark:bg-indigo-500/10">
         <Num n={num} />
-        <h3 className="min-w-0 flex-1 py-2 font-bold text-indigo-700 dark:text-indigo-300">{name}</h3>
+        <h3 className="flex min-w-0 flex-1 items-center gap-2 py-2 font-bold text-indigo-700 dark:text-indigo-300">
+          <ClassDot id={id} />
+          <span className="min-w-0">{name}</span>
+        </h3>
         <button onClick={onEdit} disabled={!online} title={t('editMassClass')} aria-label={t('editMassClass')} className={`${iconBtn} text-slate-500`}>
           <PencilIcon />
         </button>
