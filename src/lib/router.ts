@@ -24,10 +24,12 @@ export type Route =
   | { name: 'trip'; id: string }
   | { name: 'masses' }
   | { name: 'mass-names' }
+  | { name: 'mass-servants' }
+  | { name: 'mass-children' }
   | { name: 'mass-share' }
   | { name: 'mass'; id: string } // #/mass/<id>
 
-const STATIC = ['new', 'sync', 'fields', 'attendance', 'audit', 'share', 'users', 'classes', 'profile', 'settings', 'trips', 'install', 'help', 'notifications', 'days', 'export', 'masses', 'mass-names', 'mass-share'] as const
+const STATIC = ['new', 'sync', 'fields', 'attendance', 'audit', 'share', 'users', 'classes', 'profile', 'settings', 'trips', 'install', 'help', 'notifications', 'days', 'export', 'masses', 'mass-names', 'mass-servants', 'mass-children', 'mass-share'] as const
 
 export type Path = '/' | `/${(typeof STATIC)[number]}` | `/child/${string}` | `/trip/${string}` | `/mass/${string}`
 

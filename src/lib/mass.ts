@@ -201,7 +201,7 @@ export type ChildInput = { name: string; phone: string | null; note: string | nu
 
 export async function saveChild(id: string | null, classId: string, d: ChildInput): Promise<string | null> {
   const row = { name: d.name.trim(), phone: clean(d.phone), note: clean(d.note) }
-  if (id) return write(() => supabase.from('mass_children').update(row).eq('id', id))
+  if (id) return write(() => supabase.from('mass_children').update({ ...row, class_id: classId }).eq('id', id))
   const position = Math.max(0, ...state.children.filter(c => c.class_id === classId).map(c => c.position ?? 0)) + 1
   return write(() => supabase.from('mass_children').insert({ ...row, class_id: classId, position }))
 }

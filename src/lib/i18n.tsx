@@ -778,6 +778,12 @@ const dict = {
   removeMassMemberConfirm: { ar: "\"{name}\" مش هيشوف القداس تاني. متأكد؟", en: "\"{name}\" will no longer see the mass section. Sure?" },
   leaveMass: { ar: "خروج من القداس", en: "Leave the mass section" },
   leaveMassConfirm: { ar: "هتخرج من قسم القداس ومش هتشوفه تاني غير برقم جديد. متأكد؟", en: "You will leave the mass section and need a new code to come back. Sure?" },
+  massServants: { ar: "الخدام", en: "Servants" },
+  massChildren: { ar: "الأولاد", en: "Children" },
+  noMassChildren: { ar: "مفيش أولاد", en: "No children" },
+  massView: { ar: "طريقة العرض", en: "View" },
+  massViewTable: { ar: "جدول", en: "Table" },
+  massViewCards: { ar: "كروت", en: "Cards" },
 } satisfies Record<string, Record<Lang, string>>;
 
 export type TKey = keyof typeof dict;

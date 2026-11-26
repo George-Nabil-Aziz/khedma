@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { Fragment, useEffect, useState, type FormEvent } from 'react'
 import { useI18n } from '../lib/i18n'
 import { go } from '../lib/router'
 import { useStore } from '../lib/store'
@@ -17,8 +17,10 @@ import {
   saveClass,
   useMass,
   type MassAssignment,
+  type MassClass,
 } from '../lib/mass'
 import { openPicker } from '../lib/picker'
+import { load, save } from '../lib/storage'
 import { telLink, whatsappLink } from '../lib/phones'
 import { Loading } from '../components/Loading'
 import { toast } from '../components/Toast'
@@ -32,6 +34,16 @@ const iconBtn = 'grid size-9 place-items-center rounded-lg hover:bg-slate-100 di
 
 /** "4-12-2026 · 25 هاتور" */
 const massDay = (iso: string) => `${dmy(iso)} · ${copticDate(iso)}`
+
+/** The same, as two parts: the Gregorian date, then the Coptic one in a soft badge of its own. */
+function MassDay({ iso, className = '' }: { iso: string; className?: string }) {
+  return (
+    <span className={`inline-flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 ${className}`}>
+      <span dir="ltr">{dmy(iso)}</span>
+      <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-[0.8em] font-semibold text-indigo-700 ring-1 ring-indigo-200 dark:bg-indigo-500/15 dark:text-indigo-300 dark:ring-indigo-500/30">{copticDate(iso)}</span>
+    </span>
+  )
+}
 
 function OfflineNote() {
   const { t } = useI18n()
@@ -62,6 +74,28 @@ export function MassTabs({ active }: { active: 'masses' | 'names' | 'share' }) {
       </button>
       <button className={tab(active === 'share')} onClick={() => go('/mass-share')}>
         {t('share')}
+      </button>
+    </nav>
+  )
+}
+
+/** The three sub-tabs of الأسماء: classes with their children, only the classes, only the children. */
+function NamesTabs({ active }: { active: 'names' | 'servants' | 'children' }) {
+  const { t } = useI18n()
+  const tab = (on: boolean) =>
+    `rounded-full border px-3 py-1 text-sm font-semibold ${
+      on ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300' : 'border-slate-200 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
+    }`
+  return (
+    <nav className="flex flex-wrap gap-2">
+      <button className={tab(active === 'names')} onClick={() => go('/mass-names')}>
+        {t('massNames')}
+      </button>
+      <button className={tab(active === 'servants')} onClick={() => go('/mass-servants')}>
+        {t('massServants')}
+      </button>
+      <button className={tab(active === 'children')} onClick={() => go('/mass-children')}>
+        {t('massChildren')}
       </button>
     </nav>
   )
@@ -118,7 +152,7 @@ export function MassesPage() {
             <span className="text-sm font-semibold">{t('massDate')}</span>
             <input type="date" required dir="ltr" className={input} value={date} onChange={e => setDate(e.target.value)} onClick={openPicker} disabled={busy} autoFocus />
           </label>
-          {date && <p className="text-sm text-slate-500">{massDay(date)}</p>}
+          {date && <MassDay iso={date} className="text-sm text-slate-500" />}
           {formError && <p className={errorBox}>{formError}</p>}
           <div className="flex gap-2">
             <button disabled={!online || busy || !date} className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
@@ -152,7 +186,7 @@ export function MassesPage() {
           <div key={m.id} className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white pe-2 hover:border-indigo-300 hover:shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:hover:border-indigo-500/40">
             <button onClick={() => go(`/mass/${m.id}`)} className="flex min-w-0 flex-1 items-center gap-2 p-4 text-start">
               <ChurchIcon className="size-5 shrink-0 text-indigo-600 dark:text-indigo-300" />
-              <span className="min-w-0 flex-1 truncate text-lg font-bold">{massDay(m.mass_date)}</span>
+              <MassDay iso={m.mass_date} className="min-w-0 flex-1 text-lg font-bold" />
             </button>
             <button onClick={() => remove(m.id, m.mass_date)} disabled={!online} title={t('deleteMass')} aria-label={t('deleteMass')} className={`${iconBtn} text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10`}>
               <TrashIcon />
@@ -167,6 +201,7 @@ export function MassesPage() {
 // ---- one mass -----------------------------------------------------------------
 
 const keyOf = (service: string, slot: number) => `${service}#${slot}`
+const VIEW_KEY = 'massView'
 
 /** The schedule of one mass: per service, a class of servants and one of its children. */
 export function MassPage({ id }: { id: string }) {
@@ -175,6 +210,12 @@ export function MassPage({ id }: { id: string }) {
   const { masses, classes, children, loaded } = useMass()
   const [rows, setRows] = useState<Record<string, MassAssignment> | null>(null)
   const [error, setError] = useState('')
+  // جدول (the sheet) or كروت (cards): remembered on this device
+  const [view, setViewState] = useState<'table' | 'cards'>(() => (load(VIEW_KEY) === 'cards' ? 'cards' : 'table'))
+  const setView = (v: 'table' | 'cards') => {
+    setViewState(v)
+    save(VIEW_KEY, v)
+  }
 
   useEffect(() => {
     loadMass()
@@ -208,37 +249,92 @@ export function MassPage({ id }: { id: string }) {
     }
   }
 
-  const line = (service: string, label: string, slot: number, double: boolean) => {
+  const select = 'w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800'
+
+  /** The two dropdowns of one line, the same in both views: servant class, then one of its children. */
+  const pickers = (service: string, slot: number) => {
     const a = rows[keyOf(service, slot)]
     const classId = a?.class_id ?? ''
     const pickable = children.filter(c => c.class_id === classId)
-    const select = 'w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800'
+    return [
+      <select key="s" className={select} disabled={!online} value={classId} aria-label={t('massServant')} onChange={e => change(service, slot, { class_id: e.target.value || null, child_id: null })}>
+        <option value="">{t('pickServant')}</option>
+        {classes.map(c => (
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
+        ))}
+      </select>,
+      <select key="c" className={select} disabled={!online || !classId} value={a?.child_id ?? ''} aria-label={t('massServed')} onChange={e => change(service, slot, { class_id: classId || null, child_id: e.target.value || null })}>
+        <option value="">{t('pickChild')}</option>
+        {pickable.map(c => (
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
+        ))}
+      </select>,
+    ]
+  }
+
+  const slotLabel = (label: string, slot: number, double: boolean) => (
+    <>
+      {label}
+      {double && <span className="ms-1 text-sm font-normal text-slate-500">({slot})</span>}
+    </>
+  )
+
+  // كروت: a card per group, a row per line (on a phone the service is the row's title)
+  const line = (service: string, label: string, slot: number, double: boolean) => {
+    const [servant, child] = pickers(service, slot)
     return (
       <div key={keyOf(service, slot)} className="grid gap-2 border-t border-slate-100 p-3 first:border-t-0 dark:border-slate-800 sm:grid-cols-3 sm:items-center">
-        {/* الخادم | المخدوم | الخدمة — on a phone the service comes first, as the card's title */}
-        <select className={select} disabled={!online} value={classId} aria-label={t('massServant')} onChange={e => change(service, slot, { class_id: e.target.value || null, child_id: null })}>
-          <option value="">{t('pickServant')}</option>
-          {classes.map(c => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        <select className={select} disabled={!online || !classId} value={a?.child_id ?? ''} aria-label={t('massServed')} onChange={e => change(service, slot, { class_id: classId || null, child_id: e.target.value || null })}>
-          <option value="">{t('pickChild')}</option>
-          {pickable.map(c => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        <span className="font-semibold max-sm:order-first">
-          {label}
-          {double && <span className="ms-1 text-sm font-normal text-slate-500">({slot})</span>}
-        </span>
+        {servant}
+        {child}
+        <span className="font-semibold max-sm:order-first">{slotLabel(label, slot, double)}</span>
       </div>
     )
   }
+
+  // جدول: the sheet — it keeps this layout on a phone and scrolls sideways inside its own box
+  const sheet = (
+    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      <table className="w-full min-w-[760px] border-collapse text-start">
+        <thead>
+          <tr className="bg-slate-100 text-sm dark:bg-slate-800">
+            <th className="w-[36%] border border-slate-200 px-3 py-2 text-start font-bold dark:border-slate-700">{t('massServant')}</th>
+            <th className="w-[30%] border border-slate-200 px-3 py-2 text-start font-bold dark:border-slate-700">{t('massServed')}</th>
+            <th className="border border-slate-200 px-3 py-2 text-start font-bold dark:border-slate-700">{t('massService')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {MASS_GROUPS.map(g => (
+            <Fragment key={g.key}>
+              <tr>
+                <th colSpan={3} className="border border-slate-200 bg-indigo-50 px-3 py-2 text-start text-sm font-bold text-indigo-700 dark:border-slate-700 dark:bg-indigo-500/10 dark:text-indigo-300">
+                  {g.title}
+                </th>
+              </tr>
+              {g.items.flatMap(it =>
+                (it.double ? [1, 2] : [1]).map(slot => {
+                  const [servant, child] = pickers(it.key, slot)
+                  return (
+                    <tr key={keyOf(it.key, slot)}>
+                      <td className="border border-slate-200 p-1.5 dark:border-slate-700">{servant}</td>
+                      <td className="border border-slate-200 p-1.5 dark:border-slate-700">{child}</td>
+                      <td className="border border-slate-200 px-3 py-1.5 font-semibold dark:border-slate-700">{slotLabel(it.label, slot, !!it.double)}</td>
+                    </tr>
+                  )
+                }),
+              )}
+            </Fragment>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+
+  const toggle = (on: boolean) =>
+    `rounded-md px-3 py-1 text-sm font-semibold ${on ? 'bg-white text-indigo-700 shadow-sm dark:bg-slate-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-300'}`
 
   return (
     <div className="mx-auto max-w-5xl space-y-5 pb-16">
@@ -249,24 +345,40 @@ export function MassPage({ id }: { id: string }) {
       <OfflineNote />
       {error && <p className={errorBox}>{error}</p>}
 
-      <h2 className="flex items-center gap-2 text-xl font-bold">
-        <ChurchIcon className="size-6 shrink-0 text-indigo-600 dark:text-indigo-300" />
-        {massDay(mass.mass_date)}
-      </h2>
-
-      {/* column titles, only where the rows are laid out as a table (not on a phone) */}
-      <div className="hidden grid-cols-3 gap-2 px-3 text-sm font-bold text-slate-500 sm:grid">
-        <span>{t('massServant')}</span>
-        <span>{t('massServed')}</span>
-        <span>{t('massService')}</span>
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="flex min-w-0 flex-1 items-center gap-2 text-xl font-bold">
+          <ChurchIcon className="size-6 shrink-0 text-indigo-600 dark:text-indigo-300" />
+          <MassDay iso={mass.mass_date} />
+        </h2>
+        <div role="group" aria-label={t('massView')} className="flex rounded-lg bg-slate-100 p-0.5 dark:bg-slate-800">
+          <button className={toggle(view === 'table')} aria-pressed={view === 'table'} onClick={() => setView('table')}>
+            {t('massViewTable')}
+          </button>
+          <button className={toggle(view === 'cards')} aria-pressed={view === 'cards'} onClick={() => setView('cards')}>
+            {t('massViewCards')}
+          </button>
+        </div>
       </div>
 
-      {MASS_GROUPS.map(g => (
-        <section key={g.key} className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-          <h3 className="bg-indigo-50 px-3 py-2 text-sm font-bold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">{g.title}</h3>
-          {g.items.flatMap(it => (it.double ? [1, 2] : [1]).map(slot => line(it.key, it.label, slot, !!it.double)))}
-        </section>
-      ))}
+      {view === 'table' ? (
+        sheet
+      ) : (
+        <>
+          {/* column titles, only where the rows are laid out as columns (not on a phone) */}
+          <div className="hidden grid-cols-3 gap-2 px-3 text-sm font-bold text-slate-500 sm:grid">
+            <span>{t('massServant')}</span>
+            <span>{t('massServed')}</span>
+            <span>{t('massService')}</span>
+          </div>
+
+          {MASS_GROUPS.map(g => (
+            <section key={g.key} className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+              <h3 className="bg-indigo-50 px-3 py-2 text-sm font-bold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">{g.title}</h3>
+              {g.items.flatMap(it => (it.double ? [1, 2] : [1]).map(slot => line(it.key, it.label, slot, !!it.double)))}
+            </section>
+          ))}
+        </>
+      )}
     </div>
   )
 }
@@ -321,6 +433,7 @@ export function MassNamesPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-5 pb-16">
       <MassTabs active="names" />
+      <NamesTabs active="names" />
       <OfflineNote />
       {error && <p className={errorBox}>{error}</p>}
 
@@ -344,6 +457,151 @@ export function MassNamesPage() {
           <ClassCard key={c.id} id={c.id} name={c.name} onEdit={() => setEditClass(c.id)} onDelete={() => removeClass(c.id, c.name)} />
         ),
       )}
+    </div>
+  )
+}
+
+/** الخدام: only the classes, as a plain list. */
+export function MassServantsPage() {
+  const { t } = useI18n()
+  const { online } = useStore()
+  const { classes, children, loaded, error } = useMass()
+  const [edit, setEdit] = useState<string | 'new' | null>(null)
+
+  useEffect(() => {
+    loadMass()
+  }, [])
+
+  async function remove(id: string, name: string) {
+    const count = children.filter(c => c.class_id === id).length
+    const ok = await confirmDialog({ title: t('deleteMassClass'), message: t('deleteMassClassConfirm').replace('{name}', name).replace('{n}', String(count)), confirmLabel: t('deleteMassClass'), danger: true })
+    if (!ok) return
+    const err = await deleteClass(id)
+    if (err) toast(err)
+  }
+
+  if (!loaded) return <Loading />
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-5 pb-16">
+      <MassTabs active="names" />
+      <NamesTabs active="servants" />
+      <OfflineNote />
+      {error && <p className={errorBox}>{error}</p>}
+
+      {edit === 'new' ? (
+        <ClassForm title={t('addMassClass')} initial="" onDone={() => setEdit(null)} id={null} />
+      ) : (
+        <button
+          onClick={() => setEdit('new')}
+          disabled={!online}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-indigo-300 py-3 font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-500/40 dark:text-indigo-300 dark:hover:bg-indigo-500/10"
+        >
+          <PlusIcon className="size-5" />
+          {t('addMassClass')}
+        </button>
+      )}
+
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        {classes.map(c =>
+          edit === c.id ? (
+            <ClassForm key={c.id} title={t('editMassClass')} initial={c.name} id={c.id} onDone={() => setEdit(null)} />
+          ) : (
+            <div key={c.id} className="flex items-center gap-1 border-t border-slate-100 ps-3 pe-1 first:border-t-0 dark:border-slate-800">
+              <div className="min-w-0 flex-1 py-2">
+                <div className="font-semibold">{c.name}</div>
+                <div className="text-sm text-slate-500">{children.filter(x => x.class_id === c.id).length} {t('massChildren')}</div>
+              </div>
+              <button onClick={() => setEdit(c.id)} disabled={!online} title={t('editMassClass')} aria-label={t('editMassClass')} className={`${iconBtn} text-slate-500`}>
+                <PencilIcon />
+              </button>
+              <button onClick={() => remove(c.id, c.name)} disabled={!online} title={t('deleteMassClass')} aria-label={t('deleteMassClass')} className={`${iconBtn} text-red-500`}>
+                <TrashIcon />
+              </button>
+            </div>
+          ),
+        )}
+      </section>
+    </div>
+  )
+}
+
+/** الأولاد: every child in one list, with their class; search by name; add / edit with a class picker. */
+export function MassChildrenPage() {
+  const { t } = useI18n()
+  const { online } = useStore()
+  const { classes, children, loaded, error } = useMass()
+  const [edit, setEdit] = useState<string | 'new' | null>(null)
+  const [q, setQ] = useState('')
+
+  useEffect(() => {
+    loadMass()
+  }, [])
+
+  async function remove(id: string, name: string) {
+    const ok = await confirmDialog({ title: t('deleteMassChild'), message: t('deleteMassChildConfirm').replace('{name}', name), confirmLabel: t('deleteMassChild'), danger: true })
+    if (!ok) return
+    const err = await deleteChild(id)
+    if (err) toast(err)
+  }
+
+  if (!loaded) return <Loading />
+
+  const className = (id: string) => classes.find(c => c.id === id)?.name ?? ''
+  const query = q.trim()
+  const shown = children.filter(c => !query || c.name.includes(query))
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-5 pb-16">
+      <MassTabs active="names" />
+      <NamesTabs active="children" />
+      <OfflineNote />
+      {error && <p className={errorBox}>{error}</p>}
+
+      {edit === 'new' ? (
+        <section className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+          <ChildForm classId="" child={null} classes={classes} onDone={() => setEdit(null)} />
+        </section>
+      ) : (
+        <button
+          onClick={() => setEdit('new')}
+          disabled={!online}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-indigo-300 py-3 font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-500/40 dark:text-indigo-300 dark:hover:bg-indigo-500/10"
+        >
+          <PlusIcon className="size-5" />
+          {t('addMassChild')}
+        </button>
+      )}
+
+      <input className={input} value={q} onChange={e => setQ(e.target.value)} placeholder={t('searchName')} aria-label={t('searchName')} />
+
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        {shown.length === 0 && <p className="p-4 text-center text-sm text-slate-500">{t('noMassChildren')}</p>}
+        {shown.map(c =>
+          edit === c.id ? (
+            <ChildForm key={c.id} classId={c.class_id} child={c} classes={classes} onDone={() => setEdit(null)} />
+          ) : (
+            <div key={c.id} className="flex items-center gap-1 border-t border-slate-100 ps-3 pe-1 first:border-t-0 dark:border-slate-800">
+              <div className="min-w-0 flex-1 py-2">
+                <div className="font-semibold">{c.name}</div>
+                <div className="text-sm text-indigo-700 dark:text-indigo-300">{className(c.class_id)}</div>
+                {(c.phone || c.note) && (
+                  <div className="flex flex-wrap gap-x-3 text-sm text-slate-500">
+                    {c.phone && <PhoneLinks phone={c.phone} />}
+                    {c.note && <span>{c.note}</span>}
+                  </div>
+                )}
+              </div>
+              <button onClick={() => setEdit(c.id)} disabled={!online} title={t('edit')} aria-label={t('edit')} className={`${iconBtn} text-slate-500`}>
+                <PencilIcon />
+              </button>
+              <button onClick={() => remove(c.id, c.name)} disabled={!online} title={t('deleteMassChild')} aria-label={t('deleteMassChild')} className={`${iconBtn} text-red-500`}>
+                <TrashIcon />
+              </button>
+            </div>
+          ),
+        )}
+      </section>
     </div>
   )
 }
@@ -447,13 +705,15 @@ function ClassCard({ id, name, onEdit, onDelete }: { id: string; name: string; o
   )
 }
 
-function ChildForm({ classId, child, onDone }: { classId: string; child: { id: string; name: string; phone: string | null; note: string | null } | null; onDone: () => void }) {
+/** `classes`: given → the form lets you pick the class (the flat children list); otherwise the child stays in `classId`. */
+function ChildForm({ classId: initialClass, child, classes, onDone }: { classId: string; child: { id: string; name: string; phone: string | null; note: string | null } | null; classes?: MassClass[]; onDone: () => void }) {
   const { t } = useI18n()
   const { online } = useStore()
+  const [classId, setClassId] = useState(initialClass)
   const [d, setD] = useState({ name: child?.name ?? '', phone: child?.phone ?? '', note: child?.note ?? '' })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const changed = !child || d.name !== child.name || d.phone !== (child.phone ?? '') || d.note !== (child.note ?? '')
+  const changed = !child || classId !== initialClass || d.name !== child.name || d.phone !== (child.phone ?? '') || d.note !== (child.note ?? '')
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -467,6 +727,19 @@ function ChildForm({ classId, child, onDone }: { classId: string; child: { id: s
 
   return (
     <form onSubmit={submit} className="space-y-3 border-t border-slate-100 p-3 dark:border-slate-800">
+      {classes && (
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-semibold">{t('massServant')}</span>
+          <select required className={input} value={classId} onChange={e => setClassId(e.target.value)} disabled={busy}>
+            <option value="">{t('pickServant')}</option>
+            {classes.map(c => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <div className="grid gap-3 sm:grid-cols-3">
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-semibold">{t('name')}</span>
@@ -484,7 +757,7 @@ function ChildForm({ classId, child, onDone }: { classId: string; child: { id: s
       </div>
       {error && <p className={errorBox}>{error}</p>}
       <div className="flex gap-2">
-        <button disabled={!online || busy || !d.name.trim() || !changed} className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+        <button disabled={!online || busy || !d.name.trim() || !classId || !changed} className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
           {t('save')}
         </button>
         <button type="button" onClick={onDone} disabled={busy} className="rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
