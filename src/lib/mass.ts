@@ -101,14 +101,15 @@ export const COPTIC_MONTHS = ['توت', 'بابه', 'هاتور', 'كيهك', '�
 
 const isLeap = (y: number) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0
 
-/** "2026-12-04" → "25 هاتور". 1 توت is 11 September, or 12 September when the next Gregorian year is a leap year. */
+/** "2026-12-04" → "25 هاتور 1743" (the Coptic year is the Gregorian one − 283 from 1 توت on, − 284 before it). 1 توت is 11 September, or 12 September when the next Gregorian year is a leap year. */
 export function copticDate(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number)
   const day = Date.UTC(y, m - 1, d)
   const newYear = (year: number) => Date.UTC(year, 8, isLeap(year + 1) ? 12 : 11)
-  const start = day >= newYear(y) ? newYear(y) : newYear(y - 1)
+  const afterNewYear = day >= newYear(y)
+  const start = afterNewYear ? newYear(y) : newYear(y - 1)
   const n = Math.round((day - start) / 86400000)
-  return `${(n % 30) + 1} ${COPTIC_MONTHS[Math.floor(n / 30)]}`
+  return `${(n % 30) + 1} ${COPTIC_MONTHS[Math.floor(n / 30)]} ${afterNewYear ? y - 283 : y - 284}`
 }
 
 // ---- data -------------------------------------------------------------------------------------

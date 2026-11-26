@@ -25,7 +25,7 @@ import { telLink, whatsappLink } from '../lib/phones'
 import { Loading } from '../components/Loading'
 import { toast } from '../components/Toast'
 import { confirmDialog } from '../components/ConfirmDialog'
-import { ArrowBackIcon, ChurchIcon, CloudOffIcon, PencilIcon, PhoneIcon, PlusIcon, TrashIcon, WhatsAppIcon } from '../components/Icons'
+import { ArrowBackIcon, ChurchIcon, CloudOffIcon, PencilIcon, PhoneIcon, PlusIcon, TrashIcon, WhatsAppIcon, XIcon } from '../components/Icons'
 
 const input =
   'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800'
@@ -251,28 +251,46 @@ export function MassPage({ id }: { id: string }) {
 
   const select = 'w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800'
 
-  /** The two dropdowns of one line, the same in both views: servant class, then one of its children. */
+  /**
+   * The two dropdowns of one line, the same in both views: servant class, then a child. With no
+   * servant picked the child list holds everyone, grouped by class; picking a child then does not
+   * fill the servant. A × beside a field (only when it has a value) empties it and saves at once.
+   */
   const pickers = (service: string, slot: number) => {
     const a = rows[keyOf(service, slot)]
     const classId = a?.class_id ?? ''
-    const pickable = children.filter(c => c.class_id === classId)
+    const childId = a?.child_id ?? ''
+    const clear = (label: string, onClear: () => void) => (
+      <button type="button" onClick={onClear} disabled={!online} title={t('clear')} aria-label={`${t('clear')}: ${label}`} className="grid size-9 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-red-600 disabled:opacity-40 dark:hover:bg-slate-700">
+        <XIcon className="size-4" />
+      </button>
+    )
+    const option = (c: { id: string; name: string }) => (
+      <option key={c.id} value={c.id}>
+        {c.name}
+      </option>
+    )
     return [
-      <select key="s" className={select} disabled={!online} value={classId} aria-label={t('massServant')} onChange={e => change(service, slot, { class_id: e.target.value || null, child_id: null })}>
-        <option value="">{t('pickServant')}</option>
-        {classes.map(c => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
-        ))}
-      </select>,
-      <select key="c" className={select} disabled={!online || !classId} value={a?.child_id ?? ''} aria-label={t('massServed')} onChange={e => change(service, slot, { class_id: classId || null, child_id: e.target.value || null })}>
-        <option value="">{t('pickChild')}</option>
-        {pickable.map(c => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
-        ))}
-      </select>,
+      <div key="s" className="flex items-center gap-1">
+        <select className={select} disabled={!online} value={classId} aria-label={t('massServant')} onChange={e => change(service, slot, { class_id: e.target.value || null, child_id: null })}>
+          <option value="">{t('pickServant')}</option>
+          {classes.map(option)}
+        </select>
+        {classId && clear(t('massServant'), () => change(service, slot, { class_id: null, child_id: null }))}
+      </div>,
+      <div key="c" className="flex items-center gap-1">
+        <select className={select} disabled={!online} value={childId} aria-label={t('massServed')} onChange={e => change(service, slot, { class_id: classId || null, child_id: e.target.value || null })}>
+          <option value="">{t('pickChild')}</option>
+          {classId
+            ? children.filter(c => c.class_id === classId).map(option)
+            : classes.map(cl => (
+                <optgroup key={cl.id} label={cl.name}>
+                  {children.filter(c => c.class_id === cl.id).map(option)}
+                </optgroup>
+              ))}
+        </select>
+        {childId && clear(t('massServed'), () => change(service, slot, { class_id: classId || null, child_id: null }))}
+      </div>,
     ]
   }
 
