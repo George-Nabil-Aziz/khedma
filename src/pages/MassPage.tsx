@@ -273,14 +273,14 @@ export function MassPage({ id }: { id: string }) {
     return [
       <div key="s" className="flex items-center gap-1">
         <select className={select} disabled={!online} value={classId} aria-label={t('massServant')} onChange={e => change(service, slot, { class_id: e.target.value || null, child_id: null })}>
-          <option value="">{t('pickServant')}</option>
+          <option value="" disabled hidden>{t('pickServant')}</option>
           {classes.map(option)}
         </select>
         {classId && clear(t('massServant'), () => change(service, slot, { class_id: null, child_id: null }))}
       </div>,
       <div key="c" className="flex items-center gap-1">
         <select className={select} disabled={!online} value={childId} aria-label={t('massServed')} onChange={e => change(service, slot, { class_id: classId || null, child_id: e.target.value || null })}>
-          <option value="">{t('pickChild')}</option>
+          <option value="" disabled hidden>{t('pickChild')}</option>
           {classId
             ? children.filter(c => c.class_id === classId).map(option)
             : classes.map(cl => (
@@ -749,7 +749,7 @@ function ChildForm({ classId: initialClass, child, classes, onDone }: { classId:
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-semibold">{t('massServant')}</span>
           <select required className={input} value={classId} onChange={e => setClassId(e.target.value)} disabled={busy}>
-            <option value="">{t('pickServant')}</option>
+            <option value="" disabled hidden>{t('pickServant')}</option>
             {classes.map(c => (
               <option key={c.id} value={c.id}>
                 {c.name}
