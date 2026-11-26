@@ -6,13 +6,13 @@ import { dmy } from '../lib/serviceYear'
 import {
   MASS_PALETTE,
   classColor,
+  copticDate,
   massCounts,
   setClassColor,
   renameGroup,
   saveServiceOrder,
   renameService,
   type MassItem,
-  copticDate,
   createMass,
   deleteChild,
   deleteClass,
@@ -308,6 +308,8 @@ export function MassesPage() {
 const keyOf = (service: string, slot: number) => `${service}#${slot}`
 const VIEW_KEY = 'massView'
 const COLLAPSED_KEY = 'massCollapsed'
+/** A button of the export row. */
+const outBtn = 'min-w-0 truncate rounded-lg border border-slate-300 px-3 py-1.5 text-center text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'
 
 /** The schedule of one mass: per service, a class of servants and one of its children. */
 export function MassPage({ id }: { id: string }) {
@@ -315,6 +317,7 @@ export function MassPage({ id }: { id: string }) {
   const { online } = useStore()
   const { masses, classes, children, loaded, groups } = useMass()
   const [exporting, setExporting] = useState(false)
+  const [textOpen, setTextOpen] = useState(false)
   const [rows, setRows] = useState<Record<string, MassAssignment> | null>(null)
   const [error, setError] = useState('')
   // جدول (the sheet) or كروت (cards): remembered on this device
@@ -470,23 +473,53 @@ export function MassPage({ id }: { id: string }) {
     </div>
   )
 
-  // the file is built only when asked for (exceljs is a big library)
-  async function exportExcel() {
+  /** This mass as the exports need it, with the saved service names and order. */
+  const sheetData = () => ({ dateText: dmy(mass!.mass_date), copticText: copticDate(mass!.mass_date), groups, rows: rows ?? {}, classes, children })
+  const headings = () => ({ servant: t('massServant'), served: t('massServed'), service: t('massService') })
+
+  // each file is built only when asked for (exceljs and html2canvas are big libraries)
+  async function run(make: () => Promise<void>) {
     setExporting(true)
     try {
-      const { exportMass } = await import('../lib/exportMass')
-      await exportMass({
-        dateText: dmy(mass!.mass_date),
-        groups,
-        rows: rows ?? {},
-        classes,
-        children,
-        labels: { servant: t('massServant'), served: t('massServed'), service: t('massService'), counts: t('massViewCounts'), childrenServing: t('massChildrenServing'), count: t('massCount') },
-      })
+      await make()
     } catch (e) {
       toast((e as Error).message)
     }
     setExporting(false)
+  }
+  const exportExcel = () =>
+    run(async () => {
+      const { exportMass } = await import('../lib/exportMass')
+      await exportMass({ ...sheetData(), labels: headings() })
+    })
+  const exportImage = () =>
+    run(async () => {
+      const { massImage } = await import('../lib/massShare')
+      await massImage(sheetData(), headings())
+    })
+
+  // نص: WhatsApp-formatted text — copied, or sent to WhatsApp (the share sheet on a phone)
+  async function textAction(kind: 'copy' | 'whatsapp') {
+    const { massText } = await import('../lib/massShare')
+    const text = massText(sheetData())
+    if (kind === 'copy') {
+      try {
+        await navigator.clipboard.writeText(text)
+        toast(t('copied'))
+      } catch {
+        toast(t('massCopyFailed'))
+      }
+      return
+    }
+    if (matchMedia('(pointer: coarse)').matches && navigator.share) {
+      try {
+        await navigator.share({ text })
+        return
+      } catch (e) {
+        if ((e as Error).name === 'AbortError') return // closed on purpose
+      }
+    }
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener')
   }
 
   const toggle = (on: boolean) =>
@@ -520,10 +553,29 @@ export function MassPage({ id }: { id: string }) {
         </div>
       </div>
 
-      <div className="flex">
-        <button onClick={exportExcel} disabled={exporting} className="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50 sm:w-auto dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-          {t('massExport')}
-        </button>
+      {/* the ways out: Excel, a picture, a text — one row on a phone */}
+      <div className="space-y-2">
+        <div className="grid grid-cols-3 gap-2 sm:flex">
+          <button onClick={exportExcel} disabled={exporting} className={outBtn}>
+            {t('massExport')}
+          </button>
+          <button onClick={exportImage} disabled={exporting} className={outBtn}>
+            {t('massImage')}
+          </button>
+          <button onClick={() => setTextOpen(o => !o)} aria-expanded={textOpen} className={`${outBtn} ${textOpen ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300' : ''}`}>
+            {t('massText')}
+          </button>
+        </div>
+        {textOpen && (
+          <div className="grid grid-cols-2 gap-2 sm:flex">
+            <button onClick={() => textAction('copy')} className={outBtn}>
+              {t('copy')}
+            </button>
+            <button onClick={() => textAction('whatsapp')} className={outBtn}>
+              {t('massWhatsapp')}
+            </button>
+          </div>
+        )}
       </div>
 
       {view === 'counts' ? (

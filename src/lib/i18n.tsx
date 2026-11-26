@@ -803,6 +803,10 @@ const dict = {
   massExpandAll: { ar: "فتح الكل", en: "Expand all" },
   massCollapse: { ar: "طي", en: "Collapse" },
   massExpand: { ar: "فتح", en: "Expand" },
+  massImage: { ar: "صورة", en: "Image" },
+  massText: { ar: "نص", en: "Text" },
+  massWhatsapp: { ar: "واتساب", en: "WhatsApp" },
+  massCopyFailed: { ar: "ماتنسخش", en: "Could not copy" },
 } satisfies Record<string, Record<Lang, string>>;
 
 export type TKey = keyof typeof dict;
