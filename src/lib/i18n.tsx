@@ -786,6 +786,12 @@ const dict = {
   massViewCards: { ar: "كروت", en: "Cards" },
   clear: { ar: "مسح", en: "Clear" },
   massAll: { ar: "الكل", en: "All" },
+  massServices: { ar: "الخدمات", en: "Services" },
+  massServicesHelp: { ar: "غيّر أسماء العناوين والخدمات أو رتّبهم. الاسم بيتحفظ أول ما تخرج من الخانة.", en: "Rename the group titles and services, or reorder them. A name is saved when you leave the field." },
+  massServicesMissing: { ar: "لازم يتشغّل ملف 037_mass_services.sql في Supabase الأول عشان تقدر تغيّر الأسماء. دلوقتي الأسماء الأصلية هي اللي ظاهرة.", en: "Run 037_mass_services.sql in Supabase first to rename things. The built-in names show for now." },
+  massSlotLabel: { ar: "اسم السطر {n} (فاضي = رقم بس)", en: "Line {n} name (empty = just the number)" },
+  massSaved: { ar: "اتحفظ ✓", en: "Saved ✓" },
+  massReorder: { ar: "ترتيب", en: "Reorder" },
 } satisfies Record<string, Record<Lang, string>>;
 
 export type TKey = keyof typeof dict;

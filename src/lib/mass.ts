@@ -9,7 +9,14 @@ import { supabase } from './supabase'
 
 // ---- the services (a constant: the DB only keeps who serves what, by key) ---------------------
 
-export type MassItem = { key: string; label: string; /** two lines (two servant + child pairs) */ double?: boolean }
+export type MassItem = {
+  key: string
+  label: string
+  /** two lines (two servant + child pairs) */
+  double?: boolean
+  /** a name per line of a two-line service (empty = just the number) */
+  slotLabels?: string[]
+}
 export type MassGroup = { key: string; title: string; items: MassItem[] }
 
 export const MASS_GROUPS: MassGroup[] = [
@@ -38,10 +45,10 @@ export const MASS_GROUPS: MassGroup[] = [
     title: 'القراءات',
     items: [
       { key: 'bolos', label: 'قرأة البولس' },
-      { key: 'bolos_round', label: 'دورة البولس', double: true },
+      { key: 'bolos_round', label: 'دورة البولس', double: true, slotLabels: ['الصليب', 'البشارة'] },
       { key: 'catholicon', label: 'الكاثوليكون' },
       { key: 'abraksis', label: 'الابركسيس' },
-      { key: 'abraksis_round', label: 'دورة الابركسيس', double: true },
+      { key: 'abraksis_round', label: 'دورة الابركسيس', double: true, slotLabels: ['الصليب', 'البشارة'] },
       { key: 'gospel_prayer', label: 'اوشية الأنجيل' },
       { key: 'gospel', label: 'الأنجيل' },
       { key: 'ensofia', label: 'انصوفيا' },
@@ -119,9 +126,25 @@ export type MassChild = { id: string; class_id: string; name: string; phone: str
 export type Mass = { id: string; mass_date: string; notes: string | null }
 export type MassAssignment = { mass_id: string; service_key: string; slot: number; class_id: string | null; child_id: string | null }
 
-type State = { masses: Mass[]; classes: MassClass[]; children: MassChild[]; loaded: boolean; error: string | null }
+/**
+ * The schedule as shown: the built-in MASS_GROUPS (the source of truth for keys and how many
+ * lines a service has) with what the admins edited (037) laid over it — group titles, service names,
+ * the labels of two-line services, and the order of the groups and of the services in a group.
+ */
+type State = {
+  masses: Mass[]
+  classes: MassClass[]
+  children: MassChild[]
+  loaded: boolean
+  error: string | null
+  groups: MassGroup[]
+  /** false until the 037 tables were read: then the built-in names are shown and renaming is off */
+  servicesReady: boolean
+}
 
-let state: State = { masses: [], classes: [], children: [], loaded: false, error: null }
+const EMPTY: State = { masses: [], classes: [], children: [], loaded: false, error: null, groups: MASS_GROUPS, servicesReady: false }
+
+let state: State = EMPTY
 const listeners = new Set<() => void>()
 
 function set(patch: Partial<State>) {
@@ -150,13 +173,77 @@ export async function loadMass() {
   ])
   const error = masses.error ?? classes.error ?? children.error
   if (error) return set({ loaded: true, error: error.message })
+  // the 037 names: missing tables or any failure → the built-in names, silently
+  const [g, sv] = await Promise.all([supabase.from('mass_service_groups').select('key,title,position'), supabase.from('mass_services').select('key,name,slot_labels,position')])
+  const ready = !g.error && !sv.error
   set({
+    groups: ready ? mergeNames(g.data as GroupRow[], sv.data as ServiceRow[]) : MASS_GROUPS,
+    servicesReady: ready,
     loaded: true,
     error: null,
     masses: masses.data as Mass[],
     classes: (classes.data as MassClass[]).sort(byPosition),
     children: (children.data as MassChild[]).sort(byPosition),
   })
+}
+
+type GroupRow = { key: string; title: string; position: number }
+type ServiceRow = { key: string; name: string; slot_labels: string[] | null; position: number }
+
+function mergeNames(gs: GroupRow[], ss: ServiceRow[]): MassGroup[] {
+  const grow = new Map(gs.map(g => [g.key, g]))
+  const svc = new Map(ss.map(s => [s.key, s]))
+  // the saved order (037); a key the DB doesn't have yet keeps its place from the built-in list
+  const gpos = (g: MassGroup, i: number) => grow.get(g.key)?.position ?? i + 1
+  return MASS_GROUPS.map((g, gi) => ({
+    ...g,
+    title: grow.get(g.key)?.title.trim() || g.title,
+    items: g.items
+      .map((it, ii) => {
+        const row = svc.get(it.key)
+        const item = row ? { ...it, label: row.name.trim() || it.label, slotLabels: it.double ? (row.slot_labels ?? it.slotLabels) : undefined } : it
+        return { item, pos: row?.position ?? ii + 1 }
+      })
+      .sort((x, y) => x.pos - y.pos)
+      .map(x => x.item),
+    pos: gpos(g, gi),
+  }))
+    .sort((x, y) => x.pos - y.pos)
+    .map(({ pos: _pos, ...g }) => g)
+}
+
+/** الخدمات: save a new order — the groups, and the services inside each (they stay in their group). */
+export async function saveServiceOrder(groupKeys: string[], itemKeys: Record<string, string[]>): Promise<string | null> {
+  const current = state.groups
+  const groupRows = groupKeys.map((key, i) => ({ key, title: current.find(g => g.key === key)!.title, position: i + 1 }))
+  const serviceRows = groupKeys.flatMap(gk => {
+    const g = current.find(x => x.key === gk)!
+    return itemKeys[gk].map((key, i) => {
+      const it = g.items.find(x => x.key === key)!
+      return { key, group_key: gk, name: it.label, slots: it.double ? 2 : 1, slot_labels: it.double ? (it.slotLabels ?? ['', '']) : null, position: i + 1 }
+    })
+  })
+  const g1 = await supabase.from('mass_service_groups').upsert(groupRows, { onConflict: 'key' })
+  if (g1.error) return g1.error.message
+  const g2 = await supabase.from('mass_services').upsert(serviceRows, { onConflict: 'key' })
+  if (g2.error) return g2.error.message
+  await loadMass()
+  return null
+}
+
+/** الخدمات: rename a group (037). Returns the error text, or null. */
+export async function renameGroup(key: string, title: string): Promise<string | null> {
+  const position = state.groups.findIndex(g => g.key === key) + 1 // the place it has now
+  return write(() => supabase.from('mass_service_groups').upsert({ key, title: title.trim(), position }, { onConflict: 'key' }))
+}
+
+/** الخدمات: rename a service and (two-line ones) its line labels, '' = just the number. */
+export async function renameService(key: string, name: string, slotLabels: string[]): Promise<string | null> {
+  const g = state.groups.find(x => x.items.some(i => i.key === key))!
+  const it = g.items.find(i => i.key === key)!
+  const slots = it.double ? 2 : 1
+  const row = { key, group_key: g.key, name: name.trim(), slots, slot_labels: it.double ? slotLabels.slice(0, 2).map(l => l.trim()) : null, position: g.items.indexOf(it) + 1 }
+  return write(() => supabase.from('mass_services').upsert(row, { onConflict: 'key' }))
 }
 
 /** Runs a write, then pulls everything again. Returns the error text, or null. */
@@ -228,7 +315,7 @@ export function useMassAccess() {
 /** Signing out: the next account starts hidden again. */
 export function resetMassAccess() {
   access = false
-  state = { masses: [], classes: [], children: [], loaded: false, error: null }
+  state = EMPTY
   accessListeners.forEach(l => l())
   listeners.forEach(l => l())
 }

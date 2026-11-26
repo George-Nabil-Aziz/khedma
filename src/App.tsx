@@ -24,7 +24,7 @@ import { HelpPage, InstallPage, SettingsPage, SettingsTabs } from './pages/Setti
 import { TripPage, TripsPage } from './pages/TripsPage'
 import { NotificationsPage } from './pages/NotificationsPage'
 import { DaysPage } from './pages/DaysPage'
-import { MassChildrenPage, MassNamesPage, MassPage, MassServantsPage, MassesPage } from './pages/MassPage'
+import { MassChildrenPage, MassNamesPage, MassPage, MassServantsPage, MassServicesPage, MassesPage } from './pages/MassPage'
 import { MassSharePage } from './pages/MassSharePage'
 import { refreshMassAccess, useMassAccess } from './lib/mass'
 import { ExportPage } from './pages/ExportPage'
@@ -112,6 +112,7 @@ function Routes({ email, userId, admin }: { email: string; userId: string; admin
   if (admin && route.name === 'audit') return page('audit', <AuditPage />)
   if (mass && route.name === 'mass-share') return page('mass', <MassSharePage admin={admin} />)
   if (mass && route.name === 'masses') return page('mass', <MassesPage />)
+  if (mass && route.name === 'mass-services') return page('mass', <MassServicesPage />)
   if (mass && route.name === 'mass-names') return page('mass', <MassNamesPage />)
   if (mass && route.name === 'mass-servants') return page('mass', <MassServantsPage />)
   if (mass && route.name === 'mass-children') return page('mass', <MassChildrenPage />)

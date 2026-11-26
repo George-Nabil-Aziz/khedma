@@ -131,7 +131,7 @@ export function Layout({ email, admin, mass, title, children }: { email: string;
             {t('export')}
           </button>
           {mass && (
-            <button className={item(route.name === 'masses' || route.name === 'mass' || route.name === 'mass-names' || route.name === 'mass-servants' || route.name === 'mass-children' || route.name === 'mass-share')} onClick={() => nav('/masses')}>
+            <button className={item(route.name === 'masses' || route.name === 'mass' || route.name === 'mass-names' || route.name === 'mass-servants' || route.name === 'mass-children' || route.name === 'mass-share' || route.name === 'mass-services')} onClick={() => nav('/masses')}>
               <ChurchIcon />
               {t('mass')}
             </button>

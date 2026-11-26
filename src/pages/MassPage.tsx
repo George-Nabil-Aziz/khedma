@@ -4,7 +4,10 @@ import { go } from '../lib/router'
 import { useStore } from '../lib/store'
 import { dmy } from '../lib/serviceYear'
 import {
-  MASS_GROUPS,
+  renameGroup,
+  saveServiceOrder,
+  renameService,
+  type MassItem,
   copticDate,
   createMass,
   deleteChild,
@@ -23,9 +26,10 @@ import { openPicker } from '../lib/picker'
 import { load, save } from '../lib/storage'
 import { telLink, whatsappLink } from '../lib/phones'
 import { Loading } from '../components/Loading'
+import { SortableList } from '../components/SortableList'
 import { toast } from '../components/Toast'
 import { confirmDialog } from '../components/ConfirmDialog'
-import { ArrowBackIcon, ChurchIcon, CloudOffIcon, PencilIcon, PhoneIcon, PlusIcon, TrashIcon, WhatsAppIcon, XIcon } from '../components/Icons'
+import { ArrowBackIcon, ChurchIcon, CloudOffIcon, PencilIcon, PhoneIcon, GripIcon, PlusIcon, TrashIcon, WhatsAppIcon, XIcon } from '../components/Icons'
 
 const input =
   'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800'
@@ -67,7 +71,7 @@ function Num({ n }: { n: number }) {
 }
 
 /** The tabs of القداس: the masses, the names to pick from, and sharing. */
-export function MassTabs({ active }: { active: 'masses' | 'names' | 'share' }) {
+export function MassTabs({ active }: { active: 'masses' | 'names' | 'services' | 'share' }) {
   const { t } = useI18n()
   const tab = (on: boolean) =>
     `rounded-lg px-4 py-2 text-sm font-semibold ${
@@ -80,6 +84,9 @@ export function MassTabs({ active }: { active: 'masses' | 'names' | 'share' }) {
       </button>
       <button className={tab(active === 'names')} onClick={() => go('/mass-names')}>
         {t('massNames')}
+      </button>
+      <button className={tab(active === 'services')} onClick={() => go('/mass-services')}>
+        {t('massServices')}
       </button>
       <button className={tab(active === 'share')} onClick={() => go('/mass-share')}>
         {t('share')}
@@ -216,7 +223,7 @@ const VIEW_KEY = 'massView'
 export function MassPage({ id }: { id: string }) {
   const { t } = useI18n()
   const { online } = useStore()
-  const { masses, classes, children, loaded } = useMass()
+  const { masses, classes, children, loaded, groups } = useMass()
   const [rows, setRows] = useState<Record<string, MassAssignment> | null>(null)
   const [error, setError] = useState('')
   // جدول (the sheet) or كروت (cards): remembered on this device
@@ -303,21 +310,26 @@ export function MassPage({ id }: { id: string }) {
     ]
   }
 
-  const slotLabel = (label: string, slot: number, double: boolean) => (
+  const slotLabel = (it: MassItem, slot: number) => (
     <>
-      {label}
-      {double && <span className="ms-1 text-sm font-normal text-slate-500">({slot})</span>}
+      {it.label}
+      {it.double && (
+        <span className="ms-1 text-sm font-normal text-slate-500">
+          ({slot}){it.slotLabels?.[slot - 1] ? ` ${it.slotLabels[slot - 1]}` : ''}
+        </span>
+      )}
     </>
   )
 
   // كروت: a card per group, a row per line (on a phone the service is the row's title)
-  const line = (service: string, label: string, slot: number, double: boolean) => {
+  const line = (it: MassItem, slot: number) => {
+    const service = it.key
     const [servant, child] = pickers(service, slot)
     return (
       <div key={keyOf(service, slot)} className="grid gap-2 border-t border-slate-100 p-3 first:border-t-0 dark:border-slate-800 sm:grid-cols-3 sm:items-center">
         {servant}
         {child}
-        <span className="font-semibold max-sm:order-first">{slotLabel(label, slot, double)}</span>
+        <span className="font-semibold max-sm:order-first">{slotLabel(it, slot)}</span>
       </div>
     )
   }
@@ -334,7 +346,7 @@ export function MassPage({ id }: { id: string }) {
           </tr>
         </thead>
         <tbody>
-          {MASS_GROUPS.map(g => (
+          {groups.map(g => (
             <Fragment key={g.key}>
               <tr>
                 <th colSpan={3} className="border border-slate-200 bg-indigo-50 px-3 py-2 text-start text-sm font-bold text-indigo-700 dark:border-slate-700 dark:bg-indigo-500/10 dark:text-indigo-300">
@@ -348,7 +360,7 @@ export function MassPage({ id }: { id: string }) {
                     <tr key={keyOf(it.key, slot)}>
                       <td className="border border-slate-200 p-1.5 dark:border-slate-700">{servant}</td>
                       <td className="border border-slate-200 p-1.5 dark:border-slate-700">{child}</td>
-                      <td className="border border-slate-200 px-3 py-1.5 font-semibold dark:border-slate-700">{slotLabel(it.label, slot, !!it.double)}</td>
+                      <td className="border border-slate-200 px-3 py-1.5 font-semibold dark:border-slate-700">{slotLabel(it, slot)}</td>
                     </tr>
                   )
                 }),
@@ -398,10 +410,10 @@ export function MassPage({ id }: { id: string }) {
             <span>{t('massService')}</span>
           </div>
 
-          {MASS_GROUPS.map(g => (
+          {groups.map(g => (
             <section key={g.key} className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
               <h3 className="bg-indigo-50 px-3 py-2 text-sm font-bold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">{g.title}</h3>
-              {g.items.flatMap(it => (it.double ? [1, 2] : [1]).map(slot => line(it.key, it.label, slot, !!it.double)))}
+              {g.items.flatMap(it => (it.double ? [1, 2] : [1]).map(slot => line(it, slot)))}
             </section>
           ))}
         </>
@@ -484,6 +496,187 @@ export function MassNamesPage() {
           <ClassCard key={c.id} num={i + 1} id={c.id} name={c.name} onEdit={() => setEditClass(c.id)} onDelete={() => removeClass(c.id, c.name)} />
         ),
       )}
+    </div>
+  )
+}
+
+/** A text field that saves when you leave it (or press Enter), only if it changed. */
+function EditText({ value, onSave, label, placeholder, allowEmpty = false, disabled }: { value: string; onSave: (v: string) => Promise<string | null>; label: string; placeholder?: string; allowEmpty?: boolean; disabled?: boolean }) {
+  const { t } = useI18n()
+  const [v, setV] = useState(value)
+  const [busy, setBusy] = useState(false)
+  // another value arrived (a save, or a reload)
+  useEffect(() => setV(value), [value])
+
+  async function commit() {
+    const text = v.trim()
+    if (text === value.trim()) return setV(value)
+    if (!text && !allowEmpty) return setV(value)
+    setBusy(true)
+    const err = await onSave(text)
+    setBusy(false)
+    if (err) {
+      setV(value)
+      toast(err)
+    } else toast(t('massSaved'))
+  }
+
+  return (
+    <input
+      className={input}
+      value={v}
+      aria-label={label}
+      placeholder={placeholder}
+      disabled={disabled || busy}
+      onChange={e => setV(e.target.value)}
+      onBlur={commit}
+      onKeyDown={e => e.key === 'Enter' && e.currentTarget.blur()}
+    />
+  )
+}
+
+/** الخدمات: rename the group titles, the services and the lines of two-line services, or put them in another order (nothing is added or removed). */
+export function MassServicesPage() {
+  const { t } = useI18n()
+  const { online } = useStore()
+  const { groups, servicesReady, loaded, error } = useMass()
+  const [reordering, setReordering] = useState(false)
+
+  useEffect(() => {
+    loadMass()
+  }, [])
+
+  if (!loaded) return <Loading />
+  const off = !online || !servicesReady
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-5 pb-16">
+      <MassTabs active="services" />
+      <OfflineNote />
+      {error && <p className={errorBox}>{error}</p>}
+      {!servicesReady && !error && online && <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">{t('massServicesMissing')}</p>}
+
+      {reordering ? (
+        <ServicesReorder onClose={() => setReordering(false)} />
+      ) : (
+        <>
+          <div className="flex items-center gap-2">
+            <p className="min-w-0 flex-1 text-sm text-slate-500">{t('massServicesHelp')}</p>
+            <button onClick={() => setReordering(true)} disabled={off} className="shrink-0 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+              {t('massReorder')}
+            </button>
+          </div>
+
+          {groups.map((g, gi) => (
+            <section key={g.key} className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center gap-1 bg-indigo-50 p-2 dark:bg-indigo-500/10">
+                <Num n={gi + 1} />
+                <EditText value={g.title} label={g.title} disabled={off} onSave={v => renameGroup(g.key, v)} />
+              </div>
+              {g.items.map((it, ii) => (
+                <div key={it.key} className="space-y-2 border-t border-slate-100 p-2 dark:border-slate-800">
+                  <div className="flex items-center gap-1">
+                    <Num n={ii + 1} />
+                    <EditText value={it.label} label={it.label} disabled={off} onSave={v => renameService(it.key, v, it.slotLabels ?? ['', ''])} />
+                  </div>
+                  {it.double &&
+                    [1, 2].map(n => (
+                      <div key={n} className="flex items-center gap-1 ps-8">
+                        <span dir="ltr" className="w-7 shrink-0 text-center text-sm text-slate-400">
+                          ({n})
+                        </span>
+                        <EditText
+                          value={it.slotLabels?.[n - 1] ?? ''}
+                          allowEmpty
+                          label={t('massSlotLabel').replace('{n}', String(n))}
+                          placeholder={t('massSlotLabel').replace('{n}', String(n))}
+                          disabled={off}
+                          onSave={v => {
+                            const labels = [it.slotLabels?.[0] ?? '', it.slotLabels?.[1] ?? '']
+                            labels[n - 1] = v
+                            return renameService(it.key, it.label, labels)
+                          }}
+                        />
+                      </div>
+                    ))}
+                </div>
+              ))}
+            </section>
+          ))}
+        </>
+      )}
+    </div>
+  )
+}
+
+/** Drag the groups, and the services inside a group; «حفظ» saves the order, «إلغاء» drops it. */
+function ServicesReorder({ onClose }: { onClose: () => void }) {
+  const { t } = useI18n()
+  const { groups } = useMass()
+  const [order, setOrder] = useState(() => groups.map(g => ({ id: g.key })))
+  const [items, setItems] = useState(() => Object.fromEntries(groups.map(g => [g.key, g.items.map(i => ({ id: i.key }))])))
+  const [busy, setBusy] = useState(false)
+
+  const same = (a: { id: string }[], b: string[]) => a.every((x, i) => x.id === b[i])
+  const changed = !same(order, groups.map(g => g.key)) || groups.some(g => !same(items[g.key], g.items.map(i => i.key)))
+
+  async function save() {
+    if (!changed) return onClose()
+    setBusy(true)
+    const err = await saveServiceOrder(order.map(o => o.id), Object.fromEntries(Object.entries(items).map(([k, v]) => [k, v.map(i => i.id)])))
+    setBusy(false)
+    if (err) return toast(err)
+    toast(t('massSaved'))
+    onClose()
+  }
+
+  const grip = 'touch-manipulation select-none [-webkit-touch-callout:none]'
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-end gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 dark:border-indigo-500/30 dark:bg-indigo-500/10">
+        <button onClick={onClose} disabled={busy} className="rounded-lg border border-slate-300 bg-white px-4 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">
+          {t('cancel')}
+        </button>
+        <button onClick={save} disabled={busy} className="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+          {t('save')}
+        </button>
+      </div>
+
+      <SortableList
+        items={order}
+        onChange={setOrder}
+        className="space-y-3"
+        renderItem={(o, gi, handle, dragging) => {
+          const g = groups.find(x => x.key === o.id)!
+          return (
+            <section className={`overflow-hidden rounded-xl border bg-white dark:bg-slate-900 ${dragging ? 'border-indigo-400 shadow-lg ring-2 ring-indigo-500/30' : 'border-slate-200 dark:border-slate-800'}`}>
+              {/* the group is dragged by its title bar; its services by their own rows */}
+              <div {...handle} aria-label={`${t('dragToReorder')}: ${g.title}`} className={`${grip} flex cursor-grab items-center gap-3 bg-indigo-50 px-3 py-2.5 dark:bg-indigo-500/10`}>
+                <GripIcon className="size-4 shrink-0 text-slate-400" />
+                <span className="w-6 shrink-0 text-center text-sm text-slate-400">{gi + 1}</span>
+                <span className="min-w-0 flex-1 truncate font-bold text-indigo-700 dark:text-indigo-300">{g.title}</span>
+              </div>
+              <div className="p-2">
+                <SortableList
+                  items={items[g.key]}
+                  onChange={v => setItems(prev => ({ ...prev, [g.key]: v }))}
+                  renderItem={(it, ii, h, drag) => {
+                    const item = g.items.find(x => x.key === it.id)!
+                    return (
+                      <div {...h} aria-label={`${t('dragToReorder')}: ${item.label}`} className={`${grip} flex cursor-grab items-center gap-3 rounded-lg border bg-white px-3 py-2 dark:bg-slate-900 ${drag ? 'border-indigo-400 shadow-lg ring-2 ring-indigo-500/30' : 'border-slate-200 dark:border-slate-800'}`}>
+                        <GripIcon className="size-4 shrink-0 text-slate-400" />
+                        <span className="w-6 shrink-0 text-center text-sm text-slate-400">{ii + 1}</span>
+                        <span className="min-w-0 flex-1 truncate font-semibold">{item.label}</span>
+                      </div>
+                    )
+                  }}
+                />
+              </div>
+            </section>
+          )
+        }}
+      />
     </div>
   )
 }
