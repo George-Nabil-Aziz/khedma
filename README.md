@@ -19,6 +19,8 @@ Run these once, in order, in the Supabase SQL Editor:
 11. `supabase/011_class_servants.sql`: the list of servants in a class (members and admins only).
 12. `supabase/012_delete_class.sql`: admins can delete a whole class (each deleted child stays in the audit log).
 13. `supabase/013_rename_schema.sql`: renames the schema `khedma_2027` → `khedma` (files 002–012 still say `khedma_2027`; that was its name when they ran).
+14. `supabase/035_mass.sql`: القداس (admins only) — the mass schedule, plus the servant classes and children to pick from (10 classes, 53 children, seeded; safe to re-run). Run it after 034.
+15. `supabase/036_mass_sharing.sql`: share القداس with a one-time code (the same input as class codes), mass members who can leave or be removed by an admin. Run it after 035.
 
 Anyone can create an account from the sign-in page, but a new account sees no children until it creates a class or joins one with a share code. Turn on **Allow new users to sign up** in Supabase only **after** running 006. The admin can also add servants from the **Users** page.
 

@@ -12,6 +12,7 @@ import { confirmDialog } from './ConfirmDialog'
 import {
   BusIcon,
   CalendarCheckIcon,
+  ChurchIcon,
   ChevronDownIcon,
   DownloadIcon,
   HistoryIcon,
@@ -29,7 +30,7 @@ import {
   UsersIcon,
 } from './Icons'
 
-export function Layout({ email, admin, title, children }: { email: string; admin: boolean; title: string; children: ReactNode }) {
+export function Layout({ email, admin, mass, title, children }: { email: string; admin: boolean; mass: boolean; title: string; children: ReactNode }) {
   const [open, setOpen] = useState(false)
   const { t } = useI18n()
   const route = useRoute()
@@ -129,6 +130,12 @@ export function Layout({ email, admin, title, children }: { email: string; admin
             <DownloadIcon />
             {t('export')}
           </button>
+          {mass && (
+            <button className={item(route.name === 'masses' || route.name === 'mass' || route.name === 'mass-names' || route.name === 'mass-share')} onClick={() => nav('/masses')}>
+              <ChurchIcon />
+              {t('mass')}
+            </button>
+          )}
           <div className="mx-3 my-2 border-t border-slate-200 dark:border-slate-800" />
           <button className={item(route.name === 'classes')} onClick={() => nav('/classes')}>
             <SchoolIcon />

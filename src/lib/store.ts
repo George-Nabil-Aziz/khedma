@@ -4,6 +4,7 @@ import { CORE_FIELDS, TEXT_FIELDS, supabase, type Child, type ChildInput, type C
 import { load, save } from './storage'
 import { FRIDAY, iso, setYearEndWeeks } from './serviceYear'
 import { resetTrips } from './trips'
+import { refreshMassAccess, resetMassAccess } from './mass'
 
 /*
  * Offline-first store.
@@ -268,6 +269,7 @@ export async function resetStore() {
   save('class', '')
   save('lastActive', '') // the idle sign-out clock (idle.ts) starts again at the next sign-in
   resetTrips()
+  resetMassAccess()
   openedDefault = false // the next user to sign in gets their own ⭐ class
   // The next account signing in without a refresh loads its own data again. Until then nothing
   // syncs (loaded: false): signed out, a sync would store an empty class list, and the next
@@ -451,7 +453,12 @@ export async function createInvite(classId: string): Promise<Result<{ code: stri
 export async function joinClass(code: string): Promise<Result<string>> {
   const { data, error } = await supabase.rpc('join_class', { p_code: code })
   if (error) return { ok: false, error: error.message }
-  const r = data as { class_id?: string; error?: 'invalid' | 'too_many' }
+  const r = data as { class_id?: string; mass?: boolean; error?: 'invalid' | 'too_many' }
+  // a القداس code (036): the same input takes both kinds
+  if (r.mass) {
+    await refreshMassAccess()
+    return { ok: true, value: 'mass' }
+  }
   if (!r.class_id) return { ok: false, error: r.error ?? 'invalid' }
   setCurrentClass(r.class_id)
   await sync()

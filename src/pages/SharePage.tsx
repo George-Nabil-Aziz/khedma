@@ -145,7 +145,7 @@ function Join() {
     const r = await joinClass(full)
     setBusy(false)
     setCode('')
-    if (r.ok) go('/')
+    if (r.ok) go(r.value === 'mass' ? '/masses' : '/')
     else setError(r.error === 'too_many' ? t('codeTooMany') : r.error === 'invalid' ? t('codeInvalid') : r.error)
   }
 

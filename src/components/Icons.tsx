@@ -98,6 +98,9 @@ export const PhoneIcon = ({ className = 'size-4' }: P) => (
 export const HomeIcon = ({ className = 'size-4' }: P) => (
   <svg {...base} className={className}><path d="M3 10.5 12 3l9 7.5M5 9v11a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9" /></svg>
 )
+export const ChurchIcon = ({ className = 'size-5' }: P) => (
+  <svg {...base} className={className}><path d="M12 2v5M10 4.5h4M12 7l-5 4v10h10V11ZM3 21h18M10 21v-4a2 2 0 0 1 4 0v4M5 13H3v8M19 13h2v8" /></svg>
+)
 export const BusIcon =({ className = 'size-5' }: P) => (
   <svg {...base} className={className}><path d="M8 6v6M15 6v6M2 12h19.6M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3M9 18h5" /><circle cx="7" cy="18" r="2" /><circle cx="16" cy="18" r="2" /></svg>
 )

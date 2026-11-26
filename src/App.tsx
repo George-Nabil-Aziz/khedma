@@ -24,6 +24,9 @@ import { HelpPage, InstallPage, SettingsPage, SettingsTabs } from './pages/Setti
 import { TripPage, TripsPage } from './pages/TripsPage'
 import { NotificationsPage } from './pages/NotificationsPage'
 import { DaysPage } from './pages/DaysPage'
+import { MassNamesPage, MassPage, MassesPage } from './pages/MassPage'
+import { MassSharePage } from './pages/MassSharePage'
+import { refreshMassAccess, useMassAccess } from './lib/mass'
 import { ExportPage } from './pages/ExportPage'
 
 export default function App() {
@@ -69,17 +72,21 @@ function Routes({ email, userId, admin }: { email: string; userId: string; admin
   const { t, lang } = useI18n()
   const route = useRoute()
   const { classes, lastSyncAt, syncError } = useStore()
+  // القداس: admins, and members who joined with a code (hidden until the server says so)
+  const massAccess = useMassAccess()
+  const mass = admin || massAccess
 
   // Mounted only once AccountGate let the account in — then start loading / syncing.
   useEffect(() => {
     startStore(userId)
     keepPushOn(lang)
+    refreshMassAccess()
   }, [userId])
   // opened after 30 days idle: straight to signing in, never the app first and then out on a tap
   if (useIdleSignOut()) return <div className="h-full" />
 
   const page = (title: TKey, body: ReactNode) => (
-    <Layout email={email} admin={admin} title={t(title)}>
+    <Layout email={email} admin={admin} mass={mass} title={t(title)}>
       {body}
     </Layout>
   )
@@ -103,6 +110,10 @@ function Routes({ email, userId, admin }: { email: string; userId: string; admin
   if (route.name === 'profile') return page('profile', <ProfilePage email={email} admin={admin} />)
   if (admin && route.name === 'users') return page('users', <UsersPage myId={userId} />)
   if (admin && route.name === 'audit') return page('audit', <AuditPage />)
+  if (mass && route.name === 'mass-share') return page('mass', <MassSharePage admin={admin} />)
+  if (mass && route.name === 'masses') return page('mass', <MassesPage />)
+  if (mass && route.name === 'mass-names') return page('mass', <MassNamesPage />)
+  if (mass && route.name === 'mass') return page('mass', <MassPage id={route.id} />)
   if (admin && route.name === 'settings') return settings(<SettingsPage />)
   if (route.name === 'classes') return page('classes', <ClassesPage admin={admin} />)
   // No class yet: say so, and offer to create one or join a colleague's with a code.
