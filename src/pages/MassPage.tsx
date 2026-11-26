@@ -193,13 +193,14 @@ export function MassTabs({ active }: { active: 'masses' | 'names' | 'services' |
 /** The three sub-tabs of الأسماء: classes with their children, only the classes, only the children. */
 function NamesTabs({ active }: { active: 'names' | 'servants' | 'children' }) {
   const { t } = useI18n()
+  const { classes, children } = useMass() // live totals in the tab names
   return (
     <TabBar
       cols={3}
       tabs={[
-        { on: active === 'names', label: t('massAll'), path: '/mass-names' },
-        { on: active === 'servants', label: t('massServants'), path: '/mass-servants' },
-        { on: active === 'children', label: t('massChildren'), path: '/mass-children' },
+        { on: active === 'names', label: `${t('massAll')} (${classes.length + children.length})`, path: '/mass-names' },
+        { on: active === 'servants', label: `${t('massServants')} (${classes.length})`, path: '/mass-servants' },
+        { on: active === 'children', label: `${t('massChildren')} (${children.length})`, path: '/mass-children' },
       ]}
     />
   )
