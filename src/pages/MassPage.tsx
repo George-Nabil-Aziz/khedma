@@ -57,6 +57,15 @@ function OfflineNote() {
   )
 }
 
+/** A small muted running number before an entry; a fixed width so the names line up. */
+function Num({ n }: { n: number }) {
+  return (
+    <span dir="ltr" className="w-7 shrink-0 text-center text-sm tabular-nums text-slate-400">
+      {n}
+    </span>
+  )
+}
+
 /** The tabs of القداس: the masses, the names to pick from, and sharing. */
 export function MassTabs({ active }: { active: 'masses' | 'names' | 'share' }) {
   const { t } = useI18n()
@@ -89,7 +98,7 @@ function NamesTabs({ active }: { active: 'names' | 'servants' | 'children' }) {
   return (
     <nav className="flex flex-wrap gap-2">
       <button className={tab(active === 'names')} onClick={() => go('/mass-names')}>
-        {t('massNames')}
+        {t('massAll')}
       </button>
       <button className={tab(active === 'servants')} onClick={() => go('/mass-servants')}>
         {t('massServants')}
@@ -468,11 +477,11 @@ export function MassNamesPage() {
         </button>
       )}
 
-      {classes.map(c =>
+      {classes.map((c, i) =>
         editClass === c.id ? (
           <ClassForm key={c.id} title={t('editMassClass')} initial={c.name} id={c.id} onDone={() => setEditClass(null)} />
         ) : (
-          <ClassCard key={c.id} id={c.id} name={c.name} onEdit={() => setEditClass(c.id)} onDelete={() => removeClass(c.id, c.name)} />
+          <ClassCard key={c.id} num={i + 1} id={c.id} name={c.name} onEdit={() => setEditClass(c.id)} onDelete={() => removeClass(c.id, c.name)} />
         ),
       )}
     </div>
@@ -521,11 +530,12 @@ export function MassServantsPage() {
       )}
 
       <section className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        {classes.map(c =>
+        {classes.map((c, i) =>
           edit === c.id ? (
             <ClassForm key={c.id} title={t('editMassClass')} initial={c.name} id={c.id} onDone={() => setEdit(null)} />
           ) : (
-            <div key={c.id} className="flex items-center gap-1 border-t border-slate-100 ps-3 pe-1 first:border-t-0 dark:border-slate-800">
+            <div key={c.id} className="flex items-center gap-1 border-t border-slate-100 ps-1 pe-1 first:border-t-0 dark:border-slate-800">
+              <Num n={i + 1} />
               <div className="min-w-0 flex-1 py-2">
                 <div className="font-semibold">{c.name}</div>
                 <div className="text-sm text-slate-500">{children.filter(x => x.class_id === c.id).length} {t('massChildren')}</div>
@@ -595,11 +605,12 @@ export function MassChildrenPage() {
 
       <section className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         {shown.length === 0 && <p className="p-4 text-center text-sm text-slate-500">{t('noMassChildren')}</p>}
-        {shown.map(c =>
+        {shown.map((c, i) =>
           edit === c.id ? (
             <ChildForm key={c.id} classId={c.class_id} child={c} classes={classes} onDone={() => setEdit(null)} />
           ) : (
-            <div key={c.id} className="flex items-center gap-1 border-t border-slate-100 ps-3 pe-1 first:border-t-0 dark:border-slate-800">
+            <div key={c.id} className="flex items-center gap-1 border-t border-slate-100 ps-1 pe-1 first:border-t-0 dark:border-slate-800">
+              <Num n={i + 1} />
               <div className="min-w-0 flex-1 py-2">
                 <div className="font-semibold">{c.name}</div>
                 <div className="text-sm text-indigo-700 dark:text-indigo-300">{className(c.class_id)}</div>
@@ -661,7 +672,7 @@ function ClassForm({ id, title, initial, onDone }: { id: string | null; title: s
   )
 }
 
-function ClassCard({ id, name, onEdit, onDelete }: { id: string; name: string; onEdit: () => void; onDelete: () => void }) {
+function ClassCard({ num, id, name, onEdit, onDelete }: { num: number; id: string; name: string; onEdit: () => void; onDelete: () => void }) {
   const { t } = useI18n()
   const { online } = useStore()
   const { children } = useMass()
@@ -677,7 +688,8 @@ function ClassCard({ id, name, onEdit, onDelete }: { id: string; name: string; o
 
   return (
     <section className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-      <div className="flex items-center gap-1 bg-indigo-50 ps-3 pe-1 dark:bg-indigo-500/10">
+      <div className="flex items-center gap-1 bg-indigo-50 ps-1 pe-1 dark:bg-indigo-500/10">
+        <Num n={num} />
         <h3 className="min-w-0 flex-1 py-2 font-bold text-indigo-700 dark:text-indigo-300">{name}</h3>
         <button onClick={onEdit} disabled={!online} title={t('editMassClass')} aria-label={t('editMassClass')} className={`${iconBtn} text-slate-500`}>
           <PencilIcon />
@@ -687,11 +699,12 @@ function ClassCard({ id, name, onEdit, onDelete }: { id: string; name: string; o
         </button>
       </div>
 
-      {mine.map(c =>
+      {mine.map((c, i) =>
         editing === c.id ? (
           <ChildForm key={c.id} classId={id} child={c} onDone={() => setEditing(null)} />
         ) : (
-          <div key={c.id} className="flex items-center gap-1 border-t border-slate-100 ps-3 pe-1 dark:border-slate-800">
+          <div key={c.id} className="flex items-center gap-1 border-t border-slate-100 ps-1 pe-1 dark:border-slate-800">
+            <Num n={i + 1} />
             <div className="min-w-0 flex-1 py-2">
               <div className="font-semibold">{c.name}</div>
               {(c.phone || c.note) && (

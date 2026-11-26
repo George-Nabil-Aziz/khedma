@@ -785,6 +785,7 @@ const dict = {
   massViewTable: { ar: "جدول", en: "Table" },
   massViewCards: { ar: "كروت", en: "Cards" },
   clear: { ar: "مسح", en: "Clear" },
+  massAll: { ar: "الكل", en: "All" },
 } satisfies Record<string, Record<Lang, string>>;
 
 export type TKey = keyof typeof dict;
