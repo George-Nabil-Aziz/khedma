@@ -33,7 +33,7 @@ import { Loading } from '../components/Loading'
 import { SortableList } from '../components/SortableList'
 import { toast } from '../components/Toast'
 import { confirmDialog } from '../components/ConfirmDialog'
-import { ArrowBackIcon, ChurchIcon, CloudOffIcon, PencilIcon, PhoneIcon, GripIcon, PlusIcon, TrashIcon, WhatsAppIcon, XIcon } from '../components/Icons'
+import { ArrowBackIcon, ChurchIcon, CloudOffIcon, PencilIcon, PhoneIcon, ChevronDownIcon, GripIcon, PlusIcon, TrashIcon, WhatsAppIcon, XIcon } from '../components/Icons'
 
 const input =
   'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800'
@@ -306,6 +306,7 @@ export function MassesPage() {
 
 const keyOf = (service: string, slot: number) => `${service}#${slot}`
 const VIEW_KEY = 'massView'
+const COLLAPSED_KEY = 'massCollapsed'
 
 /** The schedule of one mass: per service, a class of servants and one of its children. */
 export function MassPage({ id }: { id: string }) {
@@ -581,6 +582,21 @@ export function MassNamesPage() {
   const { online } = useStore()
   const { classes, children, loaded, error } = useMass()
   const [editClass, setEditClass] = useState<string | 'new' | null>(null)
+  // the classes folded shut, remembered on this device; a class not in the list (a new one) is open
+  const [collapsed, setCollapsedState] = useState<string[]>(() => {
+    try {
+      const v = JSON.parse(load(COLLAPSED_KEY) ?? '[]')
+      return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
+    } catch {
+      return []
+    }
+  })
+  const setCollapsed = (ids: string[]) => {
+    setCollapsedState(ids)
+    save(COLLAPSED_KEY, JSON.stringify(ids))
+  }
+  const isOpen = (id: string) => !collapsed.includes(id)
+  const anyOpen = classes.some(c => isOpen(c.id))
 
   useEffect(() => {
     loadMass()
@@ -606,21 +622,31 @@ export function MassNamesPage() {
       {editClass === 'new' ? (
         <ClassForm title={t('addMassClass')} initial="" onDone={() => setEditClass(null)} id={null} />
       ) : (
-        <button
-          onClick={() => setEditClass('new')}
-          disabled={!online}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-indigo-300 py-3 font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-500/40 dark:text-indigo-300 dark:hover:bg-indigo-500/10"
-        >
-          <PlusIcon className="size-5" />
-          {t('addMassClass')}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setEditClass('new')}
+            disabled={!online}
+            className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-indigo-300 py-3 font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-500/40 dark:text-indigo-300 dark:hover:bg-indigo-500/10"
+          >
+            <PlusIcon className="size-5" />
+            {t('addMassClass')}
+          </button>
+          {classes.length > 0 && (
+            <button
+              onClick={() => setCollapsed(anyOpen ? classes.map(c => c.id) : [])}
+              className="shrink-0 whitespace-nowrap rounded-xl border border-slate-300 px-4 font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              {anyOpen ? t('massCollapseAll') : t('massExpandAll')}
+            </button>
+          )}
+        </div>
       )}
 
       {classes.map((c, i) =>
         editClass === c.id ? (
           <ClassForm key={c.id} title={t('editMassClass')} initial={c.name} id={c.id} onDone={() => setEditClass(null)} />
         ) : (
-          <ClassCard key={c.id} num={i + 1} id={c.id} name={c.name} onEdit={() => setEditClass(c.id)} onDelete={() => removeClass(c.id, c.name)} />
+          <ClassCard key={c.id} num={i + 1} id={c.id} name={c.name} open={isOpen(c.id)} onToggle={() => setCollapsed(isOpen(c.id) ? [...collapsed, c.id] : collapsed.filter(x => x !== c.id))} onEdit={() => setEditClass(c.id)} onDelete={() => removeClass(c.id, c.name)} />
         ),
       )}
     </div>
@@ -871,9 +897,10 @@ export function MassServantsPage() {
               <div className="min-w-0 flex-1 py-2">
                 <div className="flex items-center gap-2 font-semibold">
                   <ClassDot id={c.id} onClick={() => setPicking(p => (p === c.id ? null : c.id))} />
-                  <span className="min-w-0">{c.name}</span>
+                  <span className="min-w-0">
+                    {c.name} <span dir="ltr">({children.filter(x => x.class_id === c.id).length})</span>
+                  </span>
                 </div>
-                <div className="text-sm text-slate-500">{children.filter(x => x.class_id === c.id).length} {t('massChildren')}</div>
               </div>
               <button onClick={() => setEdit(c.id)} disabled={!online} title={t('editMassClass')} aria-label={t('editMassClass')} className={`${iconBtn} text-slate-500`}>
                 <PencilIcon />
@@ -1009,7 +1036,7 @@ function ClassForm({ id, title, initial, onDone }: { id: string | null; title: s
   )
 }
 
-function ClassCard({ num, id, name, onEdit, onDelete }: { num: number; id: string; name: string; onEdit: () => void; onDelete: () => void }) {
+function ClassCard({ num, id, name, open, onToggle, onEdit, onDelete }: { num: number; id: string; name: string; open: boolean; onToggle: () => void; onEdit: () => void; onDelete: () => void }) {
   const { t } = useI18n()
   const { online } = useStore()
   const { children } = useMass()
@@ -1026,11 +1053,21 @@ function ClassCard({ num, id, name, onEdit, onDelete }: { num: number; id: strin
 
   return (
     <section className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-      <div className="flex items-center gap-1 bg-indigo-50 ps-1 pe-1 dark:bg-indigo-500/10">
+      {/* a tap on the header (not on its buttons) folds the class shut or open */}
+      <div
+        onClick={e => !(e.target as HTMLElement).closest('button') && onToggle()}
+        className="flex cursor-pointer items-center gap-1 bg-indigo-50 ps-1 pe-1 dark:bg-indigo-500/10"
+      >
+        <button type="button" onClick={onToggle} aria-expanded={open} title={t(open ? 'massCollapse' : 'massExpand')} aria-label={t(open ? 'massCollapse' : 'massExpand')} className={`${iconBtn} size-8 text-slate-500`}>
+          <ChevronDownIcon className={`size-4 transition-transform ${open ? '' : 'ltr:-rotate-90 rtl:rotate-90'}`} />
+        </button>
         <Num n={num} />
         <h3 className="flex min-w-0 flex-1 items-center gap-2 py-2 font-bold text-indigo-700 dark:text-indigo-300">
           <ClassDot id={id} onClick={() => setPicking(p => !p)} />
-          <span className="min-w-0">{name}</span>
+          {/* the number of children, which is what stays visible when it is folded */}
+          <span className="min-w-0">
+            {name} <span dir="ltr">({mine.length})</span>
+          </span>
         </h3>
         <button onClick={onEdit} disabled={!online} title={t('editMassClass')} aria-label={t('editMassClass')} className={`${iconBtn} text-slate-500`}>
           <PencilIcon />
@@ -1041,7 +1078,7 @@ function ClassCard({ num, id, name, onEdit, onDelete }: { num: number; id: strin
       </div>
       {picking && <ColorRow id={id} onDone={() => setPicking(false)} />}
 
-      {mine.map((c, i) =>
+      {open && mine.map((c, i) =>
         editing === c.id ? (
           <ChildForm key={c.id} classId={id} child={c} onDone={() => setEditing(null)} />
         ) : (
@@ -1066,7 +1103,7 @@ function ClassCard({ num, id, name, onEdit, onDelete }: { num: number; id: strin
         ),
       )}
 
-      {editing === 'new' ? (
+      {!open ? null : editing === 'new' ? (
         <ChildForm classId={id} child={null} onDone={() => setEditing(null)} />
       ) : (
         <button onClick={() => setEditing('new')} disabled={!online} className="flex w-full items-center justify-center gap-2 border-t border-slate-100 py-2.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:border-slate-800 dark:text-indigo-300 dark:hover:bg-indigo-500/10">

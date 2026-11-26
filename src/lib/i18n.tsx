@@ -799,6 +799,10 @@ const dict = {
   massColor: { ar: "لون الفصل", en: "Class colour" },
   massTotalServices: { ar: "إجمالي الخدمات", en: "Total services" },
   massTotalLines: { ar: "إجمالي الأولاد المطلوبين", en: "Total children needed" },
+  massCollapseAll: { ar: "طي الكل", en: "Collapse all" },
+  massExpandAll: { ar: "فتح الكل", en: "Expand all" },
+  massCollapse: { ar: "طي", en: "Collapse" },
+  massExpand: { ar: "فتح", en: "Expand" },
 } satisfies Record<string, Record<Lang, string>>;
 
 export type TKey = keyof typeof dict;
