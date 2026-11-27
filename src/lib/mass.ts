@@ -17,7 +17,13 @@ export type MassItem = {
   /** a name per line of a two-line service (empty = just the number) */
   slotLabels?: string[]
 }
-export type MassGroup = { key: string; title: string; items: MassItem[] }
+export type MassGroup = {
+  key: string
+  title: string
+  items: MassItem[]
+  /** the fill of its title row, hex without '#' (040); absent = the built-in one for its key */
+  color?: string | null
+}
 
 export const MASS_GROUPS: MassGroup[] = [
   {
@@ -81,6 +87,7 @@ export const MASS_GROUPS: MassGroup[] = [
       { key: 'bow_to_god', label: 'اسجدوا لله بخوف' },
       { key: 'listen_amen', label: 'ننصت أمين' },
       { key: 'offerings_prayer', label: 'اوشية القرابين' },
+      { key: 'readers', label: 'القارئون' },
     ],
   },
   {
@@ -92,7 +99,6 @@ export const MASS_GROUPS: MassGroup[] = [
     key: 'responses_4',
     title: 'باقى المردات',
     items: [
-      { key: 'readers', label: 'القارئون' },
       { key: 'amen_amen', label: 'أمين أمين صلوا' },
       { key: 'taski_falas', label: 'طاسكي فالاس' },
       { key: 'abros_khomin', label: 'أبروس خومين' },
@@ -100,7 +106,29 @@ export const MASS_GROUPS: MassGroup[] = [
       { key: 'confession', label: 'الاعتراف' },
     ],
   },
+  { key: 'after_fraction', title: 'مردات بعد القسمة', items: [] },
 ]
+
+// ---- the colour of a group (its title row, as on the owner's sheet) ---------------------------
+
+/** The sheet's fills for a group title row, to pick from; the first four are the sheet's own. */
+export const GROUP_FILLS = [
+  { hex: 'FFFF00', name: 'أصفر' },
+  { hex: 'E49EDD', name: 'بمبى' },
+  { hex: 'FF9900', name: 'برتقالى' },
+  { hex: '6D9EEB', name: 'أزرق' },
+  { hex: '93C47D', name: 'أخضر' },
+  { hex: 'D9D9D9', name: 'رمادى' },
+]
+
+/** The built-in colour of each built-in group (before 040 stores one). */
+const BUILT_IN_FILL: Record<string, string> = { hold_lamb: 'E49EDD', hold_readers: 'E49EDD', readings: 'FF9900', incense: '6D9EEB' }
+
+/** A group's title-row fill: the stored one, else the built-in one, else yellow (the المردات rows). Shared by the app, Excel and the picture. */
+export function groupFill(g: Pick<MassGroup, 'key' | 'color'>): { hex: string; bold: boolean } {
+  const hex = g.color && /^[0-9A-F]{6}$/i.test(g.color) ? g.color.toUpperCase() : (BUILT_IN_FILL[g.key] ?? 'FFFF00')
+  return { hex, bold: true }
+}
 
 // ---- Coptic date ------------------------------------------------------------------------------
 
@@ -219,11 +247,13 @@ export async function loadMass() {
   }
   const error = masses.error ?? classRows.error ?? children.error
   if (error) return set({ loaded: true, error: error.message })
-  // the 037 names: missing tables or any failure → the built-in names, silently
-  const [g, sv] = await Promise.all([supabase.from('mass_service_groups').select('key,title,position'), supabase.from('mass_services').select('key,name,slot_labels,position')])
+  // the 037 list: missing tables or any failure → the built-in list, silently
+  const sv = await supabase.from('mass_services').select('key,group_key,name,slots,slot_labels,position')
+  let g = await supabase.from('mass_service_groups').select('key,title,position,color')
+  if (g.error) g = (await supabase.from('mass_service_groups').select('key,title,position')) as typeof g // 040 not run yet
   const ready = !g.error && !sv.error
   set({
-    groups: ready ? mergeNames(g.data as GroupRow[], sv.data as ServiceRow[]) : MASS_GROUPS,
+    groups: ready ? fromRows(g.data as GroupRow[], sv.data as ServiceRow[]) : MASS_GROUPS,
     servicesReady: ready,
     loaded: true,
     error: null,
@@ -234,29 +264,26 @@ export async function loadMass() {
   })
 }
 
-type GroupRow = { key: string; title: string; position: number }
-type ServiceRow = { key: string; name: string; slot_labels: string[] | null; position: number }
+type GroupRow = { key: string; title: string; position: number; color?: string | null }
+type ServiceRow = { key: string; group_key: string; name: string; slots: number; slot_labels: string[] | null; position: number }
 
-function mergeNames(gs: GroupRow[], ss: ServiceRow[]): MassGroup[] {
-  const grow = new Map(gs.map(g => [g.key, g]))
-  const svc = new Map(ss.map(s => [s.key, s]))
-  // the saved order (037); a key the DB doesn't have yet keeps its place from the built-in list
-  const gpos = (g: MassGroup, i: number) => grow.get(g.key)?.position ?? i + 1
-  return MASS_GROUPS.map((g, gi) => ({
-    ...g,
-    title: grow.get(g.key)?.title.trim() || g.title,
-    items: g.items
-      .map((it, ii) => {
-        const row = svc.get(it.key)
-        const item = row ? { ...it, label: row.name.trim() || it.label, slotLabels: it.double ? (row.slot_labels ?? it.slotLabels) : undefined } : it
-        return { item, pos: row?.position ?? ii + 1 }
-      })
-      .sort((x, y) => x.pos - y.pos)
-      .map(x => x.item),
-    pos: gpos(g, gi),
-  }))
-    .sort((x, y) => x.pos - y.pos)
-    .map(({ pos: _pos, ...g }) => g)
+/**
+ * The schedule from the 037 tables — they hold the whole list (groups and services are added, moved and
+ * deleted in the app). Tables that were never seeded → the built-in list.
+ */
+function fromRows(gs: GroupRow[], ss: ServiceRow[]): MassGroup[] {
+  if (!gs.length) return MASS_GROUPS
+  return [...gs]
+    .sort((a, b) => a.position - b.position)
+    .map(g => ({
+      key: g.key,
+      title: g.title.trim(),
+      color: g.color ?? null,
+      items: ss
+        .filter(s => s.group_key === g.key)
+        .sort((a, b) => a.position - b.position)
+        .map((s): MassItem => (s.slots === 2 ? { key: s.key, label: s.name.trim(), double: true, slotLabels: s.slot_labels ?? ['', ''] } : { key: s.key, label: s.name.trim() })),
+    }))
 }
 
 /** الخدمات: save a new order — the groups, and the services inside each (they stay in their group). */
@@ -278,20 +305,58 @@ export async function saveServiceOrder(groupKeys: string[], itemKeys: Record<str
   return null
 }
 
-/** الخدمات: rename a group (037). Returns the error text, or null. */
-export async function renameGroup(key: string, title: string): Promise<string | null> {
-  const position = state.groups.findIndex(g => g.key === key) + 1 // the place it has now
-  return write(() => supabase.from('mass_service_groups').upsert({ key, title: title.trim(), position }, { onConflict: 'key' }))
+/** A key for a service or group made in the app (the built-in ones keep theirs). */
+const newKey = (prefix: string) => `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+
+/** The colour column exists only after 040: without it the group is saved without its colour. */
+async function upsertGroup(row: { key: string; title: string; position: number; color: string | null }) {
+  const first = await supabase.from('mass_service_groups').upsert(row, { onConflict: 'key' })
+  if (!first.error || !first.error.message.includes('color')) return first
+  const { color: _color, ...plain } = row
+  return supabase.from('mass_service_groups').upsert(plain, { onConflict: 'key' })
 }
 
-/** الخدمات: rename a service and (two-line ones) its line labels, '' = just the number. */
-export async function renameService(key: string, name: string, slotLabels: string[]): Promise<string | null> {
-  const g = state.groups.find(x => x.items.some(i => i.key === key))!
-  const it = g.items.find(i => i.key === key)!
-  const slots = it.double ? 2 : 1
-  const row = { key, group_key: g.key, name: name.trim(), slots, slot_labels: it.double ? slotLabels.slice(0, 2).map(l => l.trim()) : null, position: g.items.indexOf(it) + 1 }
-  return write(() => supabase.from('mass_services').upsert(row, { onConflict: 'key' }))
+/** الخدمات: a new group at the end. */
+export function addGroup(title: string, color: string | null): Promise<string | null> {
+  return write(() => upsertGroup({ key: newKey('g'), title: title.trim(), position: state.groups.length + 1, color }))
 }
+
+/** الخدمات: rename a group and/or change its colour. */
+export function updateGroup(key: string, title: string, color: string | null): Promise<string | null> {
+  const position = state.groups.findIndex(g => g.key === key) + 1 // the place it has now
+  return write(() => upsertGroup({ key, title: title.trim(), position, color }))
+}
+
+/** الخدمات: delete a group and its services (the database cascades). */
+export const deleteGroup = (key: string) => write(() => supabase.from('mass_service_groups').delete().eq('key', key))
+
+export type ServiceInput = { name: string; groupKey: string; double: boolean; slotLabels: string[] }
+
+const serviceRow = (key: string, d: ServiceInput, position: number) => ({
+  key,
+  group_key: d.groupKey,
+  name: d.name.trim(),
+  slots: d.double ? 2 : 1,
+  slot_labels: d.double ? [d.slotLabels[0] ?? '', d.slotLabels[1] ?? ''].map(l => l.trim()) : null,
+  position,
+})
+
+/** الخدمات: a new service at the end of its group. */
+export function addService(d: ServiceInput): Promise<string | null> {
+  const position = (state.groups.find(g => g.key === d.groupKey)?.items.length ?? 0) + 1
+  return write(() => supabase.from('mass_services').insert(serviceRow(newKey('s'), d, position)))
+}
+
+/** الخدمات: change a service — name, one or two lines and their labels, its group (moved → the end of the new one). */
+export function updateService(key: string, d: ServiceInput): Promise<string | null> {
+  const from = state.groups.find(g => g.items.some(i => i.key === key))
+  const to = state.groups.find(g => g.key === d.groupKey)
+  const position = from?.key === d.groupKey ? from.items.findIndex(i => i.key === key) + 1 : (to?.items.length ?? 0) + 1
+  return write(() => supabase.from('mass_services').upsert(serviceRow(key, d, position), { onConflict: 'key' }))
+}
+
+/** الخدمات: delete a service (who served it in past masses is simply no longer shown). */
+export const deleteService = (key: string) => write(() => supabase.from('mass_services').delete().eq('key', key))
 
 /** Runs a write, then pulls everything again. Returns the error text, or null. */
 async function write(run: () => PromiseLike<{ error: { message: string } | null }>): Promise<string | null> {

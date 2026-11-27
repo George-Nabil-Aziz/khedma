@@ -1,6 +1,6 @@
 // القداس → what leaves the app besides Excel: a picture of the schedule and a WhatsApp text.
 import { download } from './exportFile'
-import { classColor, type MassAssignment, type MassChild, type MassClass, type MassGroup, type MassItem } from './mass'
+import { classColor, groupFill, type MassAssignment, type MassChild, type MassClass, type MassGroup, type MassItem } from './mass'
 
 /** One mass, ready to be drawn or written. */
 export type MassSheetData = {
@@ -13,19 +13,6 @@ export type MassSheetData = {
   classes: MassClass[]
   children: MassChild[]
 }
-
-/** The fill of a group's title row (the owner's sheet): shared by Excel and the picture. */
-export const GROUP_FILL: Record<string, { hex: string; bold?: boolean }> = {
-  hold_lamb: { hex: 'E49EDD' },
-  hold_readers: { hex: 'E49EDD' },
-  readings: { hex: 'FF9900' },
-  incense: { hex: '6D9EEB' },
-  responses_1: { hex: 'FFFF00', bold: true },
-  responses_2: { hex: 'FFFF00', bold: true },
-  responses_3: { hex: 'FFFF00', bold: true },
-  responses_4: { hex: 'FFFF00', bold: true },
-}
-export const groupFill = (key: string) => GROUP_FILL[key] ?? { hex: 'FFFF00', bold: true }
 
 /** The lines of a service: one, or two with their numbers and labels. */
 export const slotsOf = (it: MassItem) => (it.double ? [1, 2] : [1])
@@ -73,7 +60,7 @@ export async function massImage(d: MassSheetData, labels: { servant: string; ser
   const cell = 'border:1px solid #000;padding:7px 10px;font-size:18px;line-height:1.35;'
   const rowsHtml = d.groups
     .map(g => {
-      const f = groupFill(g.key)
+      const f = groupFill(g)
       const title = `<tr><td colspan="3" style="${cell}background:#${f.hex};text-align:center;font-weight:700;">${esc(g.title)}</td></tr>`
       const lines = g.items
         .flatMap(it =>

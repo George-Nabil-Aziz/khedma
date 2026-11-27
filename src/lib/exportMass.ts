@@ -2,8 +2,8 @@
 // coloured group rows; the servant cell tinted with its class colour).
 import ExcelJS from 'exceljs'
 import { download } from './exportFile'
-import { classColor } from './mass'
-import { groupFill, serviceName, slotsOf, type MassSheetData } from './massShare'
+import { classColor, groupFill } from './mass'
+import { serviceName, slotsOf, type MassSheetData } from './massShare'
 
 const FONT = 'Arial'
 const thin = { style: 'thin' as const, color: { argb: 'FF000000' } }
@@ -31,7 +31,7 @@ export async function exportMass(d: MassExport) {
   head.eachCell(c => style(c, { bold: true, fill: '000000', color: 'FFFFFFFF', center: true }))
 
   for (const g of d.groups) {
-    const fill = groupFill(g.key)
+    const fill = groupFill(g)
     const title = ws.addRow([g.title])
     title.height = 26
     ws.mergeCells(title.number, 1, title.number, 3)

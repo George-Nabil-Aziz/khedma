@@ -9,9 +9,16 @@ import {
   copticDate,
   massCounts,
   setClassColor,
-  renameGroup,
   saveServiceOrder,
-  renameService,
+  addGroup,
+  updateGroup,
+  deleteGroup,
+  addService,
+  updateService,
+  deleteService,
+  groupFill,
+  GROUP_FILLS,
+  type ServiceInput,
   type MassItem,
   createMass,
   deleteChild,
@@ -449,7 +456,7 @@ export function MassPage({ id }: { id: string }) {
           {groups.map(g => (
             <Fragment key={g.key}>
               <tr>
-                <th colSpan={3} className="border border-slate-200 bg-indigo-50 px-3 py-2 text-start text-sm font-bold text-indigo-700 dark:border-slate-700 dark:bg-indigo-500/10 dark:text-indigo-300">
+                <th colSpan={3} style={groupBar(g).style} className="border border-slate-200 px-3 py-2 text-center text-sm font-bold text-slate-900 dark:border-slate-700">
                   {g.title}
                 </th>
               </tr>
@@ -576,7 +583,7 @@ export function MassPage({ id }: { id: string }) {
 
           {groups.map(g => (
             <section key={g.key} className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-              <h3 className="bg-indigo-50 px-3 py-2 text-sm font-bold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">{g.title}</h3>
+              <h3 style={groupBar(g).style} className="px-3 py-2 text-sm font-bold text-slate-900">{g.title}</h3>
               {g.items.flatMap(it => (it.double ? [1, 2] : [1]).map(slot => line(it, slot)))}
             </section>
           ))}
@@ -689,47 +696,20 @@ export function MassNamesPage() {
   )
 }
 
-/** A text field that saves when you leave it (or press Enter), only if it changed. */
-function EditText({ value, onSave, label, placeholder, allowEmpty = false, disabled }: { value: string; onSave: (v: string) => Promise<string | null>; label: string; placeholder?: string; allowEmpty?: boolean; disabled?: boolean }) {
-  const { t } = useI18n()
-  const [v, setV] = useState(value)
-  const [busy, setBusy] = useState(false)
-  // another value arrived (a save, or a reload)
-  useEffect(() => setV(value), [value])
-
-  async function commit() {
-    const text = v.trim()
-    if (text === value.trim()) return setV(value)
-    if (!text && !allowEmpty) return setV(value)
-    setBusy(true)
-    const err = await onSave(text)
-    setBusy(false)
-    if (err) {
-      setV(value)
-      toast(err)
-    } else toast(t('massSaved'))
-  }
-
-  return (
-    <input
-      className={input}
-      value={v}
-      aria-label={label}
-      placeholder={placeholder}
-      disabled={disabled || busy}
-      onChange={e => setV(e.target.value)}
-      onBlur={commit}
-      onKeyDown={e => e.key === 'Enter' && e.currentTarget.blur()}
-    />
-  )
+/** A group's title bar in the sheet's colour (the same fill as Excel and the picture), dark text always. */
+function groupBar(g: { key: string; color?: string | null }) {
+  return { style: { backgroundColor: `#${groupFill(g).hex}` }, className: 'text-slate-900' }
 }
 
-/** الخدمات: rename the group titles, the services and the lines of two-line services, or put them in another order (nothing is added or removed). */
+type Editing = { kind: 'service'; key: string } | { kind: 'newService'; group: string } | { kind: 'group'; key: string } | { kind: 'newGroup' } | null
+
+/** الخدمات: add, change (name, one or two lines, group), delete and reorder the services and their groups. */
 export function MassServicesPage() {
   const { t } = useI18n()
   const { online } = useStore()
   const { groups, servicesReady, loaded, error } = useMass()
   const [reordering, setReordering] = useState(false)
+  const [editing, setEditing] = useState<Editing>(null)
 
   useEffect(() => {
     loadMass()
@@ -737,6 +717,23 @@ export function MassServicesPage() {
 
   if (!loaded) return <Loading />
   const off = !online || !servicesReady
+  const done = () => setEditing(null)
+
+  async function removeService(key: string, name: string) {
+    const ok = await confirmDialog({ title: t('massDeleteService'), message: t('massDeleteServiceConfirm').replace('{name}', name), confirmLabel: t('massDeleteService'), danger: true })
+    if (!ok) return
+    const err = await deleteService(key)
+    toast(err ?? t('massSaved'))
+  }
+
+  async function removeGroup(key: string, title: string, n: number) {
+    const ok = await confirmDialog({ title: t('massDeleteGroup'), message: t('massDeleteGroupConfirm').replace('{name}', title).replace('{n}', String(n)), confirmLabel: t('massDeleteGroup'), danger: true })
+    if (!ok) return
+    const err = await deleteGroup(key)
+    toast(err ?? t('massSaved'))
+  }
+
+  const smallBtn = 'grid size-8 shrink-0 place-items-center rounded-lg hover:bg-black/10 disabled:opacity-40'
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 pb-16">
@@ -761,50 +758,221 @@ export function MassServicesPage() {
             </button>
           </div>
 
-          {groups.map((g, gi) => (
-            <section key={g.key} className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-              <div className="flex items-center gap-1 bg-indigo-50 p-2 dark:bg-indigo-500/10">
-                <Num n={gi + 1} />
-                <EditText value={g.title} label={g.title} disabled={off} onSave={v => renameGroup(g.key, v)} />
-                {/* how many services in the group, and (when a two-line one makes it more) how many lines */}
-                <span dir="ltr" title={t('massTotalServices')} className="shrink-0 rounded-full bg-white px-2 py-0.5 text-xs font-bold text-indigo-700 ring-1 ring-indigo-200 dark:bg-slate-900 dark:text-indigo-300 dark:ring-indigo-500/30">
-                  {g.items.length}
-                  {g.items.some(it => it.double) && ` / ${g.items.reduce((m, it) => m + (it.double ? 2 : 1), 0)}`}
-                </span>
-              </div>
-              {g.items.map((it, ii) => (
-                <div key={it.key} className="space-y-2 border-t border-slate-100 p-2 dark:border-slate-800">
-                  <div className="flex items-center gap-1">
-                    <Num n={ii + 1} />
-                    <EditText value={it.label} label={it.label} disabled={off} onSave={v => renameService(it.key, v, it.slotLabels ?? ['', ''])} />
+          {groups.map((g, gi) => {
+            const bar = groupBar(g)
+            return (
+              <section key={g.key} className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+                {editing?.kind === 'group' && editing.key === g.key ? (
+                  <GroupForm groupKey={g.key} initialTitle={g.title} initialColor={groupFill(g).hex} onDone={done} />
+                ) : (
+                  <div style={bar.style} className={`${bar.className} flex items-center gap-1 p-2`}>
+                    <span dir="ltr" className="w-7 shrink-0 text-center text-sm tabular-nums text-slate-700">
+                      {gi + 1}
+                    </span>
+                    <h3 className="min-w-0 flex-1 break-words font-bold">{g.title}</h3>
+                    {/* how many services in the group, and (when a two-line one makes it more) how many lines */}
+                    <span dir="ltr" title={t('massTotalServices')} className="shrink-0 rounded-full bg-white/80 px-2 py-0.5 text-xs font-bold text-slate-800 ring-1 ring-black/10">
+                      {g.items.length}
+                      {g.items.some(it => it.double) && ` / ${g.items.reduce((m, it) => m + (it.double ? 2 : 1), 0)}`}
+                    </span>
+                    <button className={smallBtn} disabled={off} onClick={() => setEditing({ kind: 'group', key: g.key })} aria-label={`${t('edit')}: ${g.title}`}>
+                      <PencilIcon className="size-4" />
+                    </button>
+                    <button className={smallBtn} disabled={off} onClick={() => removeGroup(g.key, g.title, g.items.length)} aria-label={`${t('massDeleteGroup')}: ${g.title}`}>
+                      <TrashIcon className="size-4" />
+                    </button>
                   </div>
-                  {it.double &&
-                    [1, 2].map(n => (
-                      <div key={n} className="flex items-center gap-1 ps-8">
-                        <span dir="ltr" className="w-7 shrink-0 text-center text-sm text-slate-400">
-                          ({n})
-                        </span>
-                        <EditText
-                          value={it.slotLabels?.[n - 1] ?? ''}
-                          allowEmpty
-                          label={t('massSlotLabel').replace('{n}', String(n))}
-                          placeholder={t('massSlotLabel').replace('{n}', String(n))}
-                          disabled={off}
-                          onSave={v => {
-                            const labels = [it.slotLabels?.[0] ?? '', it.slotLabels?.[1] ?? '']
-                            labels[n - 1] = v
-                            return renameService(it.key, it.label, labels)
-                          }}
-                        />
+                )}
+
+                {g.items.map((it, ii) =>
+                  editing?.kind === 'service' && editing.key === it.key ? (
+                    <ServiceForm key={it.key} serviceKey={it.key} initial={{ name: it.label, groupKey: g.key, double: !!it.double, slotLabels: it.slotLabels ?? ['', ''] }} onDone={done} />
+                  ) : (
+                    <div key={it.key} className="flex items-start gap-1 border-t border-slate-100 p-2 dark:border-slate-800">
+                      <span className="pt-1.5">
+                        <Num n={ii + 1} />
+                      </span>
+                      {/* plain text that wraps — no field here, so a long name never scrolls on its own */}
+                      <div className="min-w-0 flex-1 py-1.5">
+                        <p className="break-words font-semibold">{it.label}</p>
+                        {it.double && (
+                          <p className="break-words text-sm text-slate-500">
+                            {[1, 2].map(n => `(${n})${it.slotLabels?.[n - 1] ? ` ${it.slotLabels[n - 1]}` : ''}`).join(' · ')}
+                          </p>
+                        )}
                       </div>
-                    ))}
-                </div>
-              ))}
+                      <button className={iconBtn} disabled={off} onClick={() => setEditing({ kind: 'service', key: it.key })} aria-label={`${t('edit')}: ${it.label}`}>
+                        <PencilIcon className="size-4 text-slate-500" />
+                      </button>
+                      <button className={iconBtn} disabled={off} onClick={() => removeService(it.key, it.label)} aria-label={`${t('massDeleteService')}: ${it.label}`}>
+                        <TrashIcon className="size-4 text-red-500" />
+                      </button>
+                    </div>
+                  ),
+                )}
+
+                {editing?.kind === 'newService' && editing.group === g.key ? (
+                  <ServiceForm serviceKey={null} initial={{ name: '', groupKey: g.key, double: false, slotLabels: ['', ''] }} onDone={done} />
+                ) : (
+                  <button
+                    onClick={() => setEditing({ kind: 'newService', group: g.key })}
+                    disabled={off}
+                    className="flex w-full items-center justify-center gap-1.5 border-t border-dashed border-slate-200 p-2 text-sm font-semibold text-indigo-600 hover:bg-indigo-50 disabled:opacity-50 dark:border-slate-800 dark:text-indigo-300 dark:hover:bg-indigo-500/10"
+                  >
+                    <PlusIcon className="size-4" />
+                    {t('massAddService')}
+                  </button>
+                )}
+              </section>
+            )
+          })}
+
+          {editing?.kind === 'newGroup' ? (
+            <section className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+              <GroupForm groupKey={null} initialTitle="" initialColor={GROUP_FILLS[0].hex} onDone={done} />
             </section>
-          ))}
+          ) : (
+            <button
+              onClick={() => setEditing({ kind: 'newGroup' })}
+              disabled={off}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 p-3 font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              <PlusIcon className="size-5" />
+              {t('massAddGroup')}
+            </button>
+          )}
         </>
       )}
     </div>
+  )
+}
+
+/** Add or change a service: its name, its group, one line or two (with a name for each line). */
+function ServiceForm({ serviceKey, initial, onDone }: { serviceKey: string | null; initial: ServiceInput; onDone: () => void }) {
+  const { t } = useI18n()
+  const { online } = useStore()
+  const { groups } = useMass()
+  const [d, setD] = useState(initial)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    setBusy(true)
+    setError('')
+    const err = serviceKey ? await updateService(serviceKey, d) : await addService(d)
+    setBusy(false)
+    if (err) return setError(err)
+    toast(t('massSaved'))
+    onDone()
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-3 border-t border-slate-100 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/40">
+      <label className="flex flex-col gap-1.5">
+        <span className="text-sm font-semibold">{t('massServiceName')}</span>
+        <input required className={input} value={d.name} onChange={e => setD({ ...d, name: e.target.value })} disabled={busy} autoFocus />
+      </label>
+      <label className="flex flex-col gap-1.5">
+        <span className="text-sm font-semibold">{t('massServiceGroup')}</span>
+        <select className={input} value={d.groupKey} onChange={e => setD({ ...d, groupKey: e.target.value })} disabled={busy}>
+          {groups.map((g, i) => (
+            <option key={g.key} value={g.key}>
+              {i + 1}. {g.title}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="flex items-center gap-2 text-sm font-semibold">
+        <input type="checkbox" className="size-4" checked={d.double} onChange={e => setD({ ...d, double: e.target.checked })} disabled={busy} />
+        {t('massTwoLines')}
+      </label>
+      {d.double &&
+        [1, 2].map(n => (
+          <div key={n} className="flex items-center gap-1 ps-4">
+            <span dir="ltr" className="w-7 shrink-0 text-center text-sm text-slate-400">
+              ({n})
+            </span>
+            <input
+              className={input}
+              value={d.slotLabels[n - 1] ?? ''}
+              aria-label={t('massSlotLabel').replace('{n}', String(n))}
+              placeholder={t('massSlotLabel').replace('{n}', String(n))}
+              disabled={busy}
+              onChange={e => {
+                const labels = [d.slotLabels[0] ?? '', d.slotLabels[1] ?? '']
+                labels[n - 1] = e.target.value
+                setD({ ...d, slotLabels: labels })
+              }}
+            />
+          </div>
+        ))}
+      {error && <p className={errorBox}>{error}</p>}
+      <div className="flex gap-2">
+        <button disabled={!online || busy || !d.name.trim()} className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+          {t('save')}
+        </button>
+        <button type="button" onClick={onDone} disabled={busy} className="rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+          {t('cancel')}
+        </button>
+      </div>
+    </form>
+  )
+}
+
+/** Add or change a group: its title and the colour of its title row (the sheet's colours). */
+function GroupForm({ groupKey, initialTitle, initialColor, onDone }: { groupKey: string | null; initialTitle: string; initialColor: string; onDone: () => void }) {
+  const { t } = useI18n()
+  const { online } = useStore()
+  const [title, setTitle] = useState(initialTitle)
+  const [color, setColor] = useState(initialColor)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    setBusy(true)
+    setError('')
+    const err = groupKey ? await updateGroup(groupKey, title, color) : await addGroup(title, color)
+    setBusy(false)
+    if (err) return setError(err)
+    toast(t('massSaved'))
+    onDone()
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-3 bg-slate-50 p-3 dark:bg-slate-800/40">
+      <label className="flex flex-col gap-1.5">
+        <span className="text-sm font-semibold">{t('massGroupTitle')}</span>
+        <input required className={input} value={title} onChange={e => setTitle(e.target.value)} disabled={busy} autoFocus />
+      </label>
+      <div className="space-y-1.5">
+        <span className="text-sm font-semibold">{t('massGroupColor')}</span>
+        <div className="flex flex-wrap gap-2">
+          {GROUP_FILLS.map(f => (
+            <button
+              key={f.hex}
+              type="button"
+              onClick={() => setColor(f.hex)}
+              aria-label={f.name}
+              aria-pressed={color === f.hex}
+              title={f.name}
+              style={{ backgroundColor: `#${f.hex}` }}
+              className={`size-9 rounded-full ring-1 ring-black/20 ${color === f.hex ? 'outline outline-2 outline-offset-2 outline-indigo-600 dark:outline-indigo-300' : ''}`}
+            />
+          ))}
+        </div>
+      </div>
+      {error && <p className={errorBox}>{error}</p>}
+      <div className="flex gap-2">
+        <button disabled={!online || busy || !title.trim()} className="rounded-lg bg-indigo-600 px-4 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+          {t('save')}
+        </button>
+        <button type="button" onClick={onDone} disabled={busy} className="rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+          {t('cancel')}
+        </button>
+      </div>
+    </form>
   )
 }
 
@@ -851,10 +1019,10 @@ function ServicesReorder({ onClose }: { onClose: () => void }) {
           return (
             <section className={`overflow-hidden rounded-xl border bg-white dark:bg-slate-900 ${dragging ? 'border-indigo-400 shadow-lg ring-2 ring-indigo-500/30' : 'border-slate-200 dark:border-slate-800'}`}>
               {/* the group is dragged by its title bar; its services by their own rows */}
-              <div {...handle} aria-label={`${t('dragToReorder')}: ${g.title}`} className={`${grip} flex cursor-grab items-center gap-3 bg-indigo-50 px-3 py-2.5 dark:bg-indigo-500/10`}>
+              <div {...handle} aria-label={`${t('dragToReorder')}: ${g.title}`} style={groupBar(g).style} className={`${grip} flex cursor-grab items-center gap-3 px-3 py-2.5 text-slate-900`}>
                 <GripIcon className="size-4 shrink-0 text-slate-400" />
                 <span className="w-6 shrink-0 text-center text-sm text-slate-400">{gi + 1}</span>
-                <span className="min-w-0 flex-1 truncate font-bold text-indigo-700 dark:text-indigo-300">{g.title}</span>
+                <span className="min-w-0 flex-1 truncate font-bold">{g.title}</span>
               </div>
               <div className="p-2">
                 <SortableList
